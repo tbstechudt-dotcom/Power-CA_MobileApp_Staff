@@ -1,0 +1,108 @@
+name: powerca_mobile
+description: PowerCA - Auditor WorkLog Mobile App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_bloc: ^8.1.3
+  bloc: ^8.1.2
+  equatable: ^2.0.5
+
+  # Dependency Injection
+  get_it: ^7.6.4
+  injectable: ^2.3.2
+
+  # Backend - Supabase
+  supabase_flutter: ^2.0.0
+
+  # Networking
+  dio: ^5.3.3
+  connectivity_plus: ^5.0.2
+
+  # Local Storage
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Navigation
+  go_router: ^12.1.1
+
+  # JSON
+  json_annotation: ^4.8.1
+  freezed_annotation: ^2.4.1
+
+  # Functional Programming
+  dartz: ^0.10.1
+
+  # UI
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  flutter_screenutil: ^5.9.0
+
+  # Date & Time
+  intl: ^0.18.1
+  table_calendar: ^3.0.9
+  timeago: ^3.6.0
+
+  # Utilities
+  permission_handler: ^11.0.1
+  url_launcher: ^6.2.1
+  image_picker: ^1.0.4
+  file_picker: ^6.1.1
+  path_provider: ^2.1.1
+
+  # Encryption
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
+
+  # Charts
+  fl_chart: ^0.65.0
+
+  # Notifications
+  flutter_local_notifications: ^16.3.0
+  # firebase_messaging: ^14.7.4  # Only for mobile - disabled for web testing
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+  # Code Generation
+  build_runner: ^2.4.6
+  json_serializable: ^6.7.1
+  freezed: ^2.4.5
+  injectable_generator: ^2.4.1
+  hive_generator: ^2.0.1
+
+  # Testing
+  bloc_test: ^9.1.5
+  mockito: ^5.4.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/splash/
+    - assets/icons/
+
+  # Fonts loaded via google_fonts package (no local files needed)
+  # fonts:
+  #   - family: Poppins
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Regular.ttf
+  #       - asset: assets/fonts/Poppins-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Poppins-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Poppins-Bold.ttf
+  #         weight: 700

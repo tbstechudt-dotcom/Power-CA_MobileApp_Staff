@@ -1,0 +1,206 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║           PowerCA Mobile - Deployment Bundle Quick Start                    ║
+║                  Minimal Sync Engine Deployment                             ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ RECOMMENDATION: Use Minimal Deployment Bundle                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ✅ RECOMMENDED: Deploy only sync engines (~5-10 MB)
+     - Faster deployment
+     - Easier maintenance
+     - Cleaner server
+     - Less disk space
+
+  ❌ NOT RECOMMENDED: Full project deployment (~500+ MB)
+     - Includes Flutter app code (not needed)
+     - Includes documentation (not needed on server)
+     - Includes development tools (not needed)
+     - Wastes disk space
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ CREATE DEPLOYMENT BUNDLE (On Development Machine)                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Step 1: Run deployment script
+    cd "D:\PowerCA Mobile"
+    node deployment\create-deployment-bundle.js
+
+  Step 2: Find output
+    File: D:\PowerCA Mobile\PowerCA-Sync-Deploy.zip
+    Size: ~5-10 MB (much smaller than full project!)
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ DEPLOY TO LOCAL SERVER                                                      │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Step 1: Transfer ZIP file to server
+    - USB drive
+    - Network share: \\SERVER\C$\Deploy\
+    - Email (if < 10 MB)
+    - Remote desktop copy/paste
+
+  Step 2: Extract on server
+    Extract to: C:\PowerCA-Sync\
+    (or any location you prefer)
+
+  Step 3: Install Node.js (if not already installed)
+    Download: https://nodejs.org/ (LTS version)
+    Verify: node --version
+
+  Step 4: Install dependencies
+    cd C:\PowerCA-Sync
+    npm install
+
+  Step 5: Configure credentials
+    copy .env.example .env
+    notepad .env
+    (Fill in your database passwords)
+
+  Step 6: Test connection
+    node scripts\test-scheduling-setup.js
+
+  Step 7: Setup automation
+    powershell -ExecutionPolicy Bypass -File batch-scripts\automated\setup-windows-scheduler.ps1
+
+  Step 8: Test manual sync
+    batch-scripts\manual\sync-menu.bat
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ WHAT'S INCLUDED IN DEPLOYMENT BUNDLE                                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Sync Engines (Production):
+    ✓ sync/production/runner-staging.js
+    ✓ sync/production/engine-staging.js
+    ✓ sync/production/reverse-sync-engine.js
+    ✓ sync/production/config.js
+
+  Batch Scripts (Manual):
+    ✓ batch-scripts/manual/sync-menu.bat        (Interactive menu)
+    ✓ batch-scripts/manual/sync-full.bat
+    ✓ batch-scripts/manual/sync-incremental.bat
+    ✓ batch-scripts/manual/sync-reverse.bat
+
+  Batch Scripts (Automated):
+    ✓ batch-scripts/automated/forward-sync-full.bat
+    ✓ batch-scripts/automated/forward-sync-incremental.bat
+    ✓ batch-scripts/automated/reverse-sync.bat
+    ✓ batch-scripts/automated/setup-windows-scheduler.ps1
+
+  Support Scripts:
+    ✓ scripts/create-sync-metadata-table.js
+    ✓ scripts/create-reverse-sync-metadata-table.js
+    ✓ scripts/verify-all-tables.js
+    ✓ scripts/test-scheduling-setup.js
+
+  Configuration:
+    ✓ package.json                    (Node.js dependencies)
+    ✓ .env.example                    (Credentials template)
+    ✓ README.md                       (Quick start guide)
+    ✓ SETUP.md                        (Detailed instructions)
+
+  Total: ~30 files, ~5-10 MB
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ WHAT'S NOT INCLUDED (Saved Space!)                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ✗ Flutter app code (lib/, android/, ios/)      ~100 MB
+  ✗ Documentation files (docs/)                  ~5 MB
+  ✗ Development scripts (sync/development/)      ~500 KB
+  ✗ Git repository (.git/)                       ~50 MB
+  ✗ Build artifacts (build/)                     ~200 MB
+  ✗ Node modules from dev (node_modules/)        ~150 MB
+  ✗ Other project files                          ~50 MB
+
+  Space Saved: ~545 MB!
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ SCHEDULED SYNC TIMES (Office Hours)                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  10:00 AM  →  Forward Full Sync        (Desktop → Supabase)
+  12:00 PM  →  Forward Incremental      (Desktop → Supabase)
+  5:00 PM   →  Forward Incremental      (Desktop → Supabase)
+  5:30 PM   →  Reverse Sync             (Supabase → Desktop)
+
+  Note: System must be ON at these times!
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ UPDATING DEPLOYMENT                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  When to Update:
+    - Bug fixes applied to sync engines
+    - New features added
+    - Configuration changes
+
+  How to Update:
+
+    Option A: Full Redeployment
+      1. Create new bundle: node deployment\create-deployment-bundle.js
+      2. Stop tasks: schtasks /Change /TN PowerCA* /DISABLE
+      3. Extract new bundle over old
+      4. Restart tasks: schtasks /Change /TN PowerCA* /ENABLE
+
+    Option B: Single File Update
+      1. Copy updated file to server
+      2. Replace old file
+      3. No restart needed (next sync uses new version)
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ COMPARISON: Full Project vs Deployment Bundle                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────┬─────────────────┬──────────────────────────┐
+  │ Aspect          │ Full Project    │ Deployment Bundle        │
+  ├─────────────────┼─────────────────┼──────────────────────────┤
+  │ Size            │ ~500+ MB        │ ~5-10 MB        ✓        │
+  │ Files           │ ~5,000+ files   │ ~30 files       ✓        │
+  │ Setup Time      │ 30+ minutes     │ 5 minutes       ✓        │
+  │ Maintenance     │ Complex         │ Simple          ✓        │
+  │ Updates         │ Git pull        │ File copy       ✓        │
+  │ Disk Space      │ High            │ Low             ✓        │
+  │ Dependencies    │ Many            │ Minimal (pg, dotenv) ✓   │
+  └─────────────────┴─────────────────┴──────────────────────────┘
+
+  ✅ Deployment Bundle is HIGHLY RECOMMENDED for production!
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  "Module not found" error:
+    → Run: npm install
+
+  "Cannot connect to database" error:
+    → Check PostgreSQL is running on port 5433
+    → Verify .env file has correct credentials
+
+  Scheduled task not running:
+    → Check system is ON at scheduled time
+    → Verify task enabled: schtasks /Query /TN PowerCA*
+
+  View logs:
+    → dir /b /o-d C:\PowerCA-Sync\logs\*.log
+    → type C:\PowerCA-Sync\logs\[latest-log].log
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ SUPPORT FILES                                                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  In deployment ZIP:
+    - README.md          → Quick start guide
+    - SETUP.md           → Detailed deployment instructions
+    - .env.example       → Credentials template
+
+  For more information:
+    - See full DEPLOYMENT-GUIDE.md in development project
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Version: 1.0
+Date: 2025-11-01
+Recommendation: Use Deployment Bundle (saves 545 MB!)

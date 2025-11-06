@@ -1,0 +1,43 @@
+{
+  "name": "powerca-mobile-sync",
+  "version": "1.0.0",
+  "description": "Data synchronization tool for Power CA Desktop → Supabase Cloud",
+  "main": "sync/runner.js",
+  "scripts": {
+    "sync:full": "node sync/runner.js --mode=full",
+    "sync:incremental": "node sync/runner.js --mode=incremental",
+    "sync:test": "node sync/runner.js --test",
+    "sync:dry-run": "node sync/runner.js --mode=full --dry-run",
+    "sync:reverse": "node sync/reverse-sync-runner.js",
+    "sync:bidirectional": "npm run sync:incremental && npm run sync:reverse",
+    "sync:full:optimized": "node sync/runner-optimized.js --mode=full",
+    "sync:incremental:optimized": "node sync/runner-optimized.js --mode=incremental",
+    "sync:bidirectional:optimized": "npm run sync:incremental:optimized && npm run sync:reverse",
+    "test-connection": "node scripts/test-supabase-connection.js"
+  },
+  "keywords": [
+    "sync",
+    "postgresql",
+    "supabase",
+    "database",
+    "replication"
+  ],
+  "author": "Power CA Team",
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.13.1",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/powerca-mobile.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/powerca-mobile/issues"
+  }
+}

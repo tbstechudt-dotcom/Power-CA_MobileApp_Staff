@@ -1,0 +1,115 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  PowerCA Mobile - Automated Sync Quick Start                 ║
+║                         Custom Schedule (Office Hours)                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ AUTOMATED SCHEDULE                                                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  10:00 AM  →  Forward Full Sync        (Desktop → Supabase, all records)
+  12:00 PM  →  Forward Incremental      (Desktop → Supabase, changed only)
+  5:00 PM   →  Forward Incremental      (Desktop → Supabase, changed only)
+  5:30 PM   →  Reverse Sync             (Supabase → Desktop, mobile data)
+
+  Note: System must be ON and running at these times!
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ONE-TIME SETUP (5 minutes)                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  1. Open PowerShell as Administrator
+     (Right-click PowerShell → "Run as Administrator")
+
+  2. Run this command:
+     cd "D:\PowerCA Mobile"
+     powershell -ExecutionPolicy Bypass -File batch-scripts\automated\setup-windows-scheduler.ps1
+
+  3. Verify tasks created:
+     schtasks /Query /TN PowerCA*
+
+  4. You're done! Syncs will run automatically.
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ FOLDER STRUCTURE                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  batch-scripts/
+  ├── manual/              # For testing (double-click to run)
+  │   ├── sync-menu.bat           ← Interactive menu (USE THIS for testing)
+  │   ├── sync-full.bat           ← Manual full sync
+  │   ├── sync-incremental.bat    ← Manual incremental
+  │   └── sync-reverse.bat        ← Manual reverse
+  │
+  └── automated/           # For Task Scheduler (runs automatically)
+      ├── forward-sync-full.bat          ← Scheduled full sync
+      ├── forward-sync-incremental.bat   ← Scheduled incremental
+      ├── reverse-sync.bat               ← Scheduled reverse
+      └── setup-windows-scheduler.ps1    ← Setup script
+
+  logs/                    # All sync logs (auto-created)
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TESTING BEFORE AUTOMATION                                                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Use the interactive menu for manual testing:
+
+  Double-click: batch-scripts\manual\sync-menu.bat
+
+  This gives you a menu to choose which sync to run manually.
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ MONITORING                                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  View logs:
+    dir /b /o-d logs\*.log                    (list recent logs)
+    type logs\forward-sync-full_*.log         (view specific log)
+    findstr /I "ERROR" logs\*.log             (search for errors)
+
+  Check scheduled tasks:
+    taskschd.msc                              (open Task Scheduler GUI)
+    schtasks /Query /TN PowerCA*              (command line)
+
+  Test a task manually:
+    schtasks /Run /TN "PowerCA_ReverseSync_Daily"
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ USEFUL COMMANDS                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  # Disable a task
+  schtasks /Change /TN "PowerCA_ForwardSync_Full" /DISABLE
+
+  # Enable a task
+  schtasks /Change /TN "PowerCA_ForwardSync_Full" /ENABLE
+
+  # Delete all tasks
+  schtasks /Delete /TN "PowerCA_ForwardSync_Full" /F
+  schtasks /Delete /TN "PowerCA_ForwardSync_Incremental" /F
+  schtasks /Delete /TN "PowerCA_ReverseSync_Daily" /F
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ DOCUMENTATION                                                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  README.md                          - This folder's documentation
+  ../SETUP-AUTOMATED-SYNC.md         - Detailed setup guide
+  ../docs/SYNC-SCHEDULING-GUIDE.md   - Complete scheduling documentation
+  ../CLAUDE.md                       - Full project guide
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ NEED HELP?                                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  1. Check logs: dir /b /o-d logs\*.log
+  2. Read README.md in this folder
+  3. Read SETUP-AUTOMATED-SYNC.md in project root
+  4. Test manually with: batch-scripts\manual\sync-menu.bat
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Version: 1.0
+Date: 2025-11-01
+Custom Schedule: Office Hours (10:00 AM - 5:30 PM)

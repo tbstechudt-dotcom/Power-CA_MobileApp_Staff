@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@72.60.220.188 \"pwd && ls -la\")",
+      "Bash(ssh:*)",
+      "Bash(node sync/runner.js:*)",
+      "Bash(timeout 10 sleep:*)",
+      "Bash(node sync/runner-optimized.js:*)",
+      "Bash(node -e:*)",
+      "Bash(node scripts/check-taskchecklist-columns.js:*)",
+      "Bash(node:*)",
+      "Bash(psql:*)",
+      "Bash(cmd /c \"if not exist C:\\dev mkdir C:\\dev\")",
+      "Bash(flutter doctor:*)",
+      "Bash(curl:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_441e85a37d7043d40767e85e3736e6b19f2c10bb npx supabase link:*)",
+      "Bash(cat:*)",
+      "Bash(flutter run:*)",
+      "Bash(dart run:*)",
+      "Bash(export:*)",
+      "Bash(npx supabase functions deploy:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

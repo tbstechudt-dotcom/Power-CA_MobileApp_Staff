@@ -1,0 +1,236 @@
+CREATE TABLE mbstaff (
+    org_id         NUMERIC(3)    NOT NULL,
+    con_id         INTEGER       NOT NULL,
+    loc_id         NUMERIC(3)    NOT NULL,
+    staff_id       NUMERIC(8)    PRIMARY KEY NOT NULL,
+    app_username   VARCHAR(50),
+    app_pw         VARCHAR(50),
+    stafftype       numeric(1),
+    name           VARCHAR(50),
+    phonumber      VARCHAR(30),
+    dob            DATE,
+    email          VARCHAR(50),
+    whetherca      VARCHAR(10),
+    ca_mem_no      VARCHAR(10),
+    des_id        NUMERIC(5),
+    spdoj          DATE,
+    createdby      VARCHAR(15),
+    createddate    DATE,
+    suspendedby    VARCHAR(15),
+    suspendeddate  DATE,
+    revokedby      VARCHAR(15),
+    revokeddate    DATE,
+    terminatedby   VARCHAR(15),
+    terminateddate DATE,
+    active_status  NUMERIC(1),
+    source         char(1)
+);
+
+CREATE TABLE jobshead (
+    org_id           NUMERIC(3)   NOT NULL,
+    con_id           INTEGER      NOT NULL,
+    loc_id           NUMERIC(3)   NOT NULL,
+    job_id           NUMERIC(10)  PRIMARY KEY NOT NULL,
+    year_id          NUMERIC(8),
+    client_id        NUMERIC(7)   NOT NULL,
+    jobdate          DATE,
+    targetdate       DATE,
+    job_nature       CHAR(1),
+    work_desc        VARCHAR(100),
+    worklocation     VARCHAR(15),
+    act_man_min      NUMERIC(10),
+    drivefolderpath  VARCHAR(100),
+    drivefolderkey   VARCHAR(100),
+    job_status       CHAR(1),
+    source         char(1)
+);
+
+CREATE TABLE jobtasks (
+    org_id            NUMERIC(3)     NOT NULL,
+    con_id            INTEGER        NOT NULL,
+    loc_id            NUMERIC(3)     NOT NULL,
+    job_id            NUMERIC(10)    NOT NULL REFERENCES jobshead(job_id),
+    year_id           NUMERIC(8),
+    client_id         NUMERIC(7)     NOT NULL,
+    task_id           NUMERIC(7)  NOT NULL REFERENCES taskmaster(task_id),
+    taskorder         NUMERIC(10),
+    task_desc         VARCHAR(40),
+    jobdet_man_hrs    NUMERIC(8,2),
+    actual_man_hrs    TIME WITHOUT TIME ZONE,
+    actual_man_min    NUMERIC(10),
+    checklistlinked   CHAR(1),
+    createdby         VARCHAR(15),
+    createddate       DATE,
+    task_status       NUMERIC(1),
+    source         char(1)
+);
+
+CREATE TABLE taskchecklist (
+    org_id           NUMERIC(3)    NOT NULL,
+    con_id           INTEGER       NOT NULL,
+    loc_id           NUMERIC(3)    NOT NULL,
+    job_id           NUMERIC(10)   NOT NULL REFERENCES jobshead(job_id),
+    year_id          NUMERIC(8)    NOT NULL,
+    client_id        NUMERIC(7)    NOT NULL,
+    task_id          NUMERIC(7)    NOT NULL REFERENCES taskmaster(task_id),
+    checklistdesc    VARCHAR(100),
+    applicable       VARCHAR(15),
+    formatdoc        VARCHAR(15),
+    completedby      VARCHAR(15),
+    completeddate    DATE,
+    comments         VARCHAR(100),
+    checkliststatus  NUMERIC(1),
+    source         char(1)
+);
+
+CREATE TABLE workdiary (
+    org_id        NUMERIC(3)   NOT NULL,
+    con_id        INTEGER      NOT NULL,
+    loc_id        NUMERIC(3)   NOT NULL,
+    wd_id         NUMERIC(8)   PRIMARY KEY NOT NULL,
+    staff_id      NUMERIC(8)   NOT NULL REFERENCES staff(staff_id),
+    job_id        NUMERIC(10)  NOT NULL REFERENCES jobshead(job_id),
+    client_id     NUMERIC(7)   NOT NULL,
+    cma_id        NUMERIC(5)   NOT NULL,
+    task_id       NUMERIC(7)   NOT NULL REFERENCES taskmaster(task_id),
+    date          DATE,
+    timefrom      TIMESTAMP,
+    timeto        TIMESTAMP,
+    minutes       NUMERIC(4),
+    tasknotes     VARCHAR(50),
+    attachment    CHAR(1),
+    doc_ref       VARCHAR(15),
+    source         char(1)
+);
+
+CREATE TABLE taskmaster (
+    org_id      NUMERIC(3)   NOT NULL,
+    con_id      INTEGER      NOT NULL,
+    loc_id      NUMERIC(3)   NOT NULL,
+    task_id     NUMERIC(7)   PRIMARY KEY NOT NULL,
+    task_desc    VARCHAR(40),
+    task_status  NUMERIC(1),
+    source         char(1)
+);
+
+CREATE TABLE climaster (
+    org_id      NUMERIC(3)   NOT NULL,
+    con_id      INTEGER      NOT NULL,
+    loc_id      NUMERIC(3)   NOT NULL,
+    client_id   NUMERIC(7)   PRIMARY KEY NOT NULL,
+    clientname  VARCHAR(80),
+    clientmail  VARCHAR(60),
+    clientphone VARCHAR(25),
+    source         char(1)
+);
+
+CREATE TABLE locmaster (
+    org_id   NUMERIC(3)   NOT NULL,
+    loc_id   NUMERIC(3)   PRIMARY KEY NOT NULL,
+    locname  VARCHAR(100),
+    source         char(1)
+);
+
+CREATE TABLE conmaster (
+    org_id    NUMERIC(3)   NOT NULL,
+    con_id    INTEGER      PRIMARY KEY NOT NULL,
+    conname   VARCHAR(60),
+    conmail   VARCHAR(60),
+    conphone  VARCHAR(25),
+    source         char(1)
+);
+
+CREATE TABLE cliunimaster (
+    org_id             NUMERIC(3)   NOT NULL,
+    con_id             INTEGER      NOT NULL,
+    loc_id             NUMERIC(3)   NOT NULL,
+    client_id          NUMERIC(7)   NOT NULL REFERENCES climaster(client_id),
+    cliunit_id         NUMERIC(7)   PRIMARY KEY NOT NULL,
+    cliunitname        VARCHAR(80),
+    cliunitadd1        VARCHAR(50),
+    cliunitadd2        VARCHAR(50),
+    cliunitcity        VARCHAR(50),
+    cliunitpin         VARCHAR(8),
+    cliunitstate       VARCHAR(35),
+    cliunitcountry     VARCHAR(35),
+    clientgeolocation  VARCHAR(100),
+    cliunitmail        VARCHAR(40),
+    cliunitphone       VARCHAR(25),
+    cliunitcontactname VARCHAR(60),
+    source         char(1)
+);
+
+CREATE TABLE reminder (
+    rem_id         NUMERIC(8)   PRIMARY KEY NOT NULL,
+    org_id         NUMERIC(3)   NOT NULL,
+    loc_id         NUMERIC(3)   NOT NULL,
+    year_id        NUMERIC(9)   NOT NULL,
+    staff_id       NUMERIC(8)   NOT NULL REFERENCES staff(staff_id),
+    remdate        DATE,
+    client_id      NUMERIC(7)   NOT NULL REFERENCES climaster(client_id),
+    client_name    VARCHAR(80),
+    remtype        VARCHAR(30),
+    remnotes       VARCHAR(100),
+    remduedate     DATE,
+    user_create    VARCHAR(15),
+    user_modify    VARCHAR(15),
+    user_create_dt DATE,
+    user_modify_dt DATE,
+    remtotype      CHAR(1),
+    remstatus      NUMERIC(1),
+    remtime        TIME WITHOUT TIME ZONE,
+    remtitle       VARCHAR(100),
+    color          INTEGER,
+    source         char(1)
+);
+
+
+CREATE TABLE remdetail (
+    remdetid     NUMERIC(8) PRIMARY KEY NOT NULL,
+    rem_id       NUMERIC(8) NOT NULL REFERENCES reminder(rem_id),
+    staff_id     NUMERIC(8) NOT NULL REFERENCES staff(staff_id),
+    remresponse  VARCHAR(150),
+    remresstatus CHAR(1),
+    source         char(1)
+);
+
+CREATE TABLE learequest (
+    org_id          NUMERIC(3) NOT NULL,
+    con_id          INTEGER NOT NULL,
+    loc_id          NUMERIC(3) NOT NULL,
+    learequest_id   NUMERIC(5) PRIMARY KEY NOT NULL,
+    requestdate     DATE,
+    fromdate        DATE,
+    todate          DATE,
+    fhvalue         CHAR(2),
+    shvalue         CHAR(2),
+    leavetype       CHAR(2),
+    leaveremarks    VARCHAR(50),
+    createdby       VARCHAR(15),
+    createddate     DATE,
+    approval_status CHAR(1),
+    approvedby      VARCHAR(30),
+    approveddate    DATE,
+    source         char(1)
+);
+
+CREATE TABLE orgmaster (
+    org_id   NUMERIC(3)   PRIMARY KEY NOT NULL,
+    orgname  VARCHAR(100),
+    source         char(1)
+);
+
+CREATE TABLE jobmaster (
+    org_id     NUMERIC(3)   NOT NULL,
+    con_id     INTEGER      NOT NULL,
+    loc_id     NUMERIC(3)   NOT NULL,
+    job_id     NUMERIC(10)  PRIMARY KEY NOT NULL,
+    jobdesc    VARCHAR(100),
+    jobstatus  CHAR(1),
+    source         char(1)
+);
+
+
+
+
+

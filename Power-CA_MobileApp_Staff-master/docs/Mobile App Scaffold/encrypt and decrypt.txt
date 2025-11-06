@@ -1,0 +1,90 @@
+Decrypt
+===========
+Blob lblb_key,lblb_iv
+blob lblb_decrypt,lblb_decoded
+string ls_decdata
+datastore lds_code 
+long ll_code
+string ls_encrypt
+
+// Step 1: Create CoderObject
+CoderObject lnv_coder
+lnv_coder = CREATE CoderObject
+
+// Step 2: Decode Base64 string to blob
+lblb_decoded= lnv_coder.Base64Decode(ls_data)
+
+//code genrate for decript encript
+lds_code = create datastore
+lds_code.dataobject='ds_encript_code'
+lds_code.settransobject(sqlca)
+ll_code=lds_code.retrieve()
+if ll_code > 0 then
+	ls_encrypt=trim(lds_code.object.tbsrencryptpass[lds_code.getrow()])
+	//messagebox(gs_mess,ls_encrypt)
+else 
+	messagebox(gs_mess,"Product Code Retrieval Error")
+	return ls_data
+end if
+//
+
+lblb_key = Blob(ls_encrypt, EncodingANSI!) //  specifying the secret key.
+lblb_iv = Blob(ls_encrypt, EncodingANSI!) //A blob specifying the initialization vector. Zeros filledby default. In the AES algorithm, the effective length of the ivis 16 bytes 
+
+CrypterObject lnv_CrypterObject
+lnv_CrypterObject = Create CrypterObject
+
+if  len(lblb_decoded)>0  then
+	// Decrypt data using AES
+	lblb_decrypt = lnv_CrypterObject.SymmetricDecrypt(AES!,  lblb_decoded, lblb_key, &
+		OperationModeCBC!, lblb_iv, PKCSPadding!)		
+		ls_decdata = string(lblb_decrypt, EncodingANSI!)
+else	
+	ls_decdata= ls_data
+end if;	
+	
+return ls_decdata
+----------------------------------
+Encrypt
+===========
+Blob lblb_data
+Blob lblb_key
+Blob lblb_iv
+Blob lblb_encrypt
+string ls_base64 
+datastore lds_code 
+long ll_code
+string ls_encrypt
+
+//code genrate for decript encript
+lds_code = create datastore
+lds_code.dataobject='ds_encript_code'
+lds_code.settransobject(sqlca)
+ll_code=lds_code.retrieve()
+if ll_code > 0 then
+	ls_encrypt=trim(lds_code.object.tbsrencryptpass[lds_code.getrow()])
+//	messagebox(gs_mess,ls_encrypt)
+else 
+	messagebox(gs_mess,"Product Code Retrieval Error")
+	//return 
+end if
+//
+
+lblb_data = Blob(ls_data, EncodingANSI!) //the data you want to encrypt 
+lblb_key = Blob(ls_encrypt, EncodingANSI!) //  specifying the secret key.
+lblb_iv = Blob(ls_encrypt, EncodingANSI!) //A blob specifying the initialization vector. Zeros filledby default. In the AES algorithm, the effective length of the ivis 16 bytes 
+
+CrypterObject lnv_CrypterObject
+lnv_CrypterObject = Create CrypterObject
+
+// Encrypt data using AES
+lblb_encrypt = lnv_CrypterObject.SymmetricEncrypt(AES!, lblb_data, lblb_key, &
+	OperationModeCBC!, lblb_iv, PKCSPadding!)
+
+CoderObject lnv_coder
+lnv_coder = CREATE CoderObject
+
+//Decode blob to Base64 
+ls_base64= lnv_coder.Base64Encode(lblb_encrypt)
+
+Return ls_base64

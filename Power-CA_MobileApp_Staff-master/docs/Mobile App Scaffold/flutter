@@ -1,0 +1,1042 @@
+I'll create a comprehensive step-by-step guide you can follow to set up the PowerCA Flutter app from scratch!
+
+## 🚀 PowerCA Mobile - Complete Setup Guide
+
+### Step 1: Create Flutter Project
+
+```bash
+# Create new Flutter project
+flutter create powerca_mobile
+cd powerca_mobile
+
+# Open in your IDE
+code . # for VS Code
+# or
+idea . # for Android Studio
+```
+
+### Step 2: Create Folder Structure
+
+```bash
+# Create all necessary folders
+mkdir -p lib/core/{constants,config,errors,network,utils}
+mkdir -p lib/features/auth/{data/{models,repositories,datasources},domain/{entities,repositories,usecases},presentation/{bloc,pages,widgets}}
+mkdir -p lib/features/dashboard/presentation/{pages,widgets}
+mkdir -p lib/features/jobs/{data/{models,repositories,datasources},domain/{entities,repositories,usecases},presentation/{bloc,pages,widgets}}
+mkdir -p lib/features/work_diary/{data/{models,repositories,datasources},domain/{entities,repositories,usecases},presentation/{bloc,pages,widgets}}
+mkdir -p lib/features/clients/{data/{models,repositories,datasources},domain/{entities,repositories,usecases},presentation/{bloc,pages,widgets}}
+mkdir -p lib/features/reminders/{data/{models,repositories,datasources},domain/{entities,repositories,usecases},presentation/{bloc,pages,widgets}}
+mkdir -p lib/features/staff/{data/{models,repositories,datasources},domain/{entities,repositories,usecases},presentation/{bloc,pages,widgets}}
+mkdir -p lib/features/leave/{data/{models,repositories,datasources},domain/{entities,repositories,usecases},presentation/{bloc,pages,widgets}}
+mkdir -p lib/shared/{widgets,extensions}
+mkdir -p assets/{images,icons,fonts}
+mkdir -p test/{unit,widget,integration}
+```
+
+### Step 3: Update pubspec.yaml
+
+Replace the content of `pubspec.yaml` with:
+
+```yaml
+name: powerca_mobile
+description: PowerCA - Practice Management Software
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_bloc: ^8.1.3
+  bloc: ^8.1.2
+  equatable: ^2.0.5
+  
+  # Dependency Injection
+  get_it: ^7.6.4
+  injectable: ^2.3.2
+  
+  # Networking
+  dio: ^5.3.3
+  retrofit: ^4.0.3
+  pretty_dio_logger: ^1.3.1
+  connectivity_plus: ^5.0.2
+  
+  # Local Storage
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  
+  # Navigation
+  go_router: ^12.1.1
+  
+  # JSON
+  json_annotation: ^4.8.1
+  freezed_annotation: ^2.4.1
+  
+  # Functional Programming
+  dartz: ^0.10.1
+  
+  # UI
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  flutter_screenutil: ^5.9.0
+  
+  # Date & Time
+  intl: ^0.18.1
+  table_calendar: ^3.0.9
+  
+  # Utilities
+  permission_handler: ^11.0.1
+  url_launcher: ^6.2.1
+  image_picker: ^1.0.4
+  file_picker: ^6.1.1
+  
+  # Charts
+  fl_chart: ^0.65.0
+  
+  # Notifications
+  flutter_local_notifications: ^16.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  
+  # Code Generation
+  build_runner: ^2.4.6
+  retrofit_generator: ^8.0.4
+  json_serializable: ^6.7.1
+  freezed: ^2.4.5
+  injectable_generator: ^2.4.1
+  hive_generator: ^2.0.1
+  
+  # Testing
+  bloc_test: ^9.1.5
+  mockito: ^5.4.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+```
+
+Then run:
+```bash
+flutter pub get
+```
+
+### Step 4: Core Configuration Files
+
+#### 4.1 Create `lib/core/constants/api_constants.dart`
+
+```dart
+class ApiConstants {
+  // Base URLs
+  static const String baseUrl = 'https://api.powerca.in/api/v1/';
+  
+  // Timeout
+  static const Duration connectionTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(seconds: 30);
+  
+  // Auth Endpoints
+  static const String login = 'auth/login';
+  static const String logout = 'auth/logout';
+  static const String refreshToken = 'auth/refresh';
+  
+  // Dashboard
+  static const String dashboard = 'dashboard/stats';
+  
+  // Jobs
+  static const String jobs = 'jobs';
+  static String jobById(int id) => 'jobs/$id';
+  
+  // Work Diary
+  static const String workDiary = 'work-diary';
+  
+  // Clients
+  static const String clients = 'clients';
+  
+  // Reminders
+  static const String reminders = 'reminders';
+  
+  // Staff
+  static const String staff = 'staff';
+  
+  // Leave
+  static const String leaveRequests = 'leave/requests';
+}
+```
+
+#### 4.2 Create `lib/core/constants/app_constants.dart`
+
+```dart
+class AppConstants {
+  static const String appName = 'PowerCA';
+  static const String appVersion = '1.0.0';
+  
+  // Pagination
+  static const int defaultPageSize = 20;
+  
+  // Date Formats
+  static const String dateFormat = 'dd-MM-yyyy';
+  static const String timeFormat = 'HH:mm';
+  static const String dateTimeFormat = 'dd-MM-yyyy HH:mm';
+  
+  // Job Status
+  static const String jobStatusPending = 'P';
+  static const String jobStatusInProgress = 'I';
+  static const String jobStatusCompleted = 'C';
+  
+  // Error Messages
+  static const String errorGeneric = 'Something went wrong. Please try again.';
+  static const String errorNetwork = 'No internet connection.';
+  static const String errorTimeout = 'Request timeout. Please try again.';
+}
+
+class StorageConstants {
+  static const String keyAccessToken = 'access_token';
+  static const String keyRefreshToken = 'refresh_token';
+  static const String keyUserId = 'user_id';
+  static const String keyIsLoggedIn = 'is_logged_in';
+}
+```
+
+#### 4.3 Create `lib/core/errors/failures.dart`
+
+```dart
+import 'package:equatable/equatable.dart';
+
+abstract class Failure extends Equatable {
+  final String message;
+  
+  const Failure(this.message);
+  
+  @override
+  List<Object> get props => [message];
+}
+
+class ServerFailure extends Failure {
+  const ServerFailure(super.message);
+}
+
+class NetworkFailure extends Failure {
+  const NetworkFailure(super.message);
+}
+
+class AuthenticationFailure extends Failure {
+  const AuthenticationFailure(super.message);
+}
+
+class CacheFailure extends Failure {
+  const CacheFailure(super.message);
+}
+```
+
+#### 4.4 Create `lib/core/errors/exceptions.dart`
+
+```dart
+class ServerException implements Exception {
+  final String message;
+  ServerException(this.message);
+}
+
+class UnauthorizedException implements Exception {
+  final String message;
+  UnauthorizedException(this.message);
+}
+
+class NetworkException implements Exception {
+  final String message;
+  NetworkException(this.message);
+}
+```
+
+#### 4.5 Create `lib/core/network/network_info.dart`
+
+```dart
+import 'package:connectivity_plus/connectivity_plus.dart';
+
+abstract class NetworkInfo {
+  Future<bool> get isConnected;
+}
+
+class NetworkInfoImpl implements NetworkInfo {
+  final Connectivity connectivity;
+  
+  NetworkInfoImpl(this.connectivity);
+  
+  @override
+  Future<bool> get isConnected async {
+    final result = await connectivity.checkConnectivity();
+    return result != ConnectivityResult.none;
+  }
+}
+```
+
+#### 4.6 Create `lib/core/config/injection.dart`
+
+```dart
+import 'package:get_it/get_it.dart';
+import 'package:injectable/injectable.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+
+final getIt = GetIt.instance;
+
+@InjectableInit()
+Future<void> configureDependencies() async {
+  // Register SharedPreferences
+  final sharedPreferences = await SharedPreferences.getInstance();
+  getIt.registerSingleton<SharedPreferences>(sharedPreferences);
+  
+  // Register Dio
+  getIt.registerSingleton<Dio>(Dio());
+  
+  // Register Connectivity
+  getIt.registerSingleton<Connectivity>(Connectivity());
+  
+  // You can add more dependencies here
+}
+```
+
+### Step 5: Theme Configuration
+
+#### Create `lib/app/theme.dart`
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class AppTheme {
+  // Colors
+  static const Color primaryColor = Color(0xFF2196F3);
+  static const Color secondaryColor = Color(0xFF1976D2);
+  static const Color accentColor = Color(0xFFFF9800);
+  static const Color successColor = Color(0xFF4CAF50);
+  static const Color errorColor = Color(0xFFF44336);
+  
+  static const Color backgroundColor = Color(0xFFF5F5F5);
+  static const Color surfaceColor = Color(0xFFFFFFFF);
+  static const Color textPrimaryColor = Color(0xFF212121);
+  static const Color textSecondaryColor = Color(0xFF757575);
+  
+  static ThemeData get lightTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: backgroundColor,
+      colorScheme: const ColorScheme.light(
+        primary: primaryColor,
+        secondary: secondaryColor,
+        error: errorColor,
+        surface: surfaceColor,
+      ),
+      
+      appBarTheme: AppBarTheme(
+        backgroundColor: surfaceColor,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: const IconThemeData(color: textPrimaryColor),
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: textPrimaryColor,
+        ),
+      ),
+      
+      textTheme: TextTheme(
+        displayLarge: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold),
+        displayMedium: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.bold),
+        displaySmall: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w600),
+        headlineLarge: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600),
+        headlineMedium: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600),
+        headlineSmall: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+        bodyLarge: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w400),
+        bodyMedium: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
+        bodySmall: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400),
+      ),
+      
+      cardTheme: CardTheme(
+        color: surfaceColor,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+      
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surfaceColor,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
+        ),
+      ),
+    );
+  }
+}
+```
+
+### Step 6: Authentication Feature
+
+#### 6.1 Create `lib/features/auth/domain/entities/user.dart`
+
+```dart
+import 'package:equatable/equatable.dart';
+
+class User extends Equatable {
+  final int staffId;
+  final String name;
+  final String email;
+  final String? phoneNumber;
+  final int staffType;
+  final bool isActive;
+  
+  const User({
+    required this.staffId,
+    required this.name,
+    required this.email,
+    this.phoneNumber,
+    required this.staffType,
+    required this.isActive,
+  });
+  
+  bool get isAdmin => staffType == 0;
+  bool get isSenior => staffType == 1;
+  bool get isJunior => staffType == 2;
+  
+  @override
+  List<Object?> get props => [staffId, name, email, phoneNumber, staffType, isActive];
+}
+```
+
+#### 6.2 Create `lib/features/auth/domain/repositories/auth_repository.dart`
+
+```dart
+import 'package:dartz/dartz.dart';
+import '../../../../core/errors/failures.dart';
+import '../entities/user.dart';
+
+abstract class AuthRepository {
+  Future<Either<Failure, User>> login({
+    required String username,
+    required String password,
+  });
+  
+  Future<Either<Failure, void>> logout();
+  
+  Future<Either<Failure, bool>> isLoggedIn();
+}
+```
+
+#### 6.3 Create `lib/features/auth/domain/usecases/login_usecase.dart`
+
+```dart
+import 'package:dartz/dartz.dart';
+import 'package:equatable/equatable.dart';
+import '../../../../core/errors/failures.dart';
+import '../entities/user.dart';
+import '../repositories/auth_repository.dart';
+
+class LoginUseCase {
+  final AuthRepository repository;
+  
+  LoginUseCase(this.repository);
+  
+  Future<Either<Failure, User>> call(LoginParams params) async {
+    return await repository.login(
+      username: params.username,
+      password: params.password,
+    );
+  }
+}
+
+class LoginParams extends Equatable {
+  final String username;
+  final String password;
+  
+  const LoginParams({required this.username, required this.password});
+  
+  @override
+  List<Object> get props => [username, password];
+}
+```
+
+#### 6.4 Create `lib/features/auth/presentation/bloc/auth_event.dart`
+
+```dart
+import 'package:equatable/equatable.dart';
+
+abstract class AuthEvent extends Equatable {
+  const AuthEvent();
+  
+  @override
+  List<Object?> get props => [];
+}
+
+class LoginRequested extends AuthEvent {
+  final String username;
+  final String password;
+  
+  const LoginRequested({required this.username, required this.password});
+  
+  @override
+  List<Object> get props => [username, password];
+}
+
+class LogoutRequested extends AuthEvent {}
+
+class CheckAuthStatus extends AuthEvent {}
+```
+
+#### 6.5 Create `lib/features/auth/presentation/bloc/auth_state.dart`
+
+```dart
+import 'package:equatable/equatable.dart';
+import '../../domain/entities/user.dart';
+
+abstract class AuthState extends Equatable {
+  const AuthState();
+  
+  @override
+  List<Object?> get props => [];
+}
+
+class AuthInitial extends AuthState {}
+
+class AuthLoading extends AuthState {}
+
+class Authenticated extends AuthState {
+  final User user;
+  
+  const Authenticated(this.user);
+  
+  @override
+  List<Object> get props => [user];
+}
+
+class Unauthenticated extends AuthState {}
+
+class AuthError extends AuthState {
+  final String message;
+  
+  const AuthError(this.message);
+  
+  @override
+  List<Object> get props => [message];
+}
+```
+
+#### 6.6 Create `lib/features/auth/presentation/bloc/auth_bloc.dart`
+
+```dart
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/usecases/login_usecase.dart';
+import 'auth_event.dart';
+import 'auth_state.dart';
+
+class AuthBloc extends Bloc<AuthEvent, AuthState> {
+  final LoginUseCase loginUseCase;
+  
+  AuthBloc({required this.loginUseCase}) : super(AuthInitial()) {
+    on<LoginRequested>(_onLoginRequested);
+    on<LogoutRequested>(_onLogoutRequested);
+  }
+  
+  Future<void> _onLoginRequested(
+    LoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    
+    final result = await loginUseCase(
+      LoginParams(username: event.username, password: event.password),
+    );
+    
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (user) => emit(Authenticated(user)),
+    );
+  }
+  
+  Future<void> _onLogoutRequested(
+    LogoutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(Unauthenticated());
+  }
+}
+```
+
+#### 6.7 Create `lib/features/auth/presentation/pages/login_page.dart`
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_event.dart';
+import '../bloc/auth_state.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() {
+    if (_formKey.currentState!.validate()) {
+      context.read<AuthBloc>().add(
+        LoginRequested(
+          username: _usernameController.text.trim(),
+          password: _passwordController.text,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BlocConsumer<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is Authenticated) {
+            Navigator.of(context).pushReplacementNamed('/dashboard');
+          } else if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            );
+          }
+        },
+        builder: (context, state) {
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 60),
+                    
+                    // Logo
+                    Icon(Icons.business, size: 80, color: Theme.of(context).primaryColor),
+                    const SizedBox(height: 16),
+                    
+                    Text(
+                      'Welcome Back!',
+                      style: Theme.of(context).textTheme.displaySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    Text(
+                      'Sign in to PowerCA',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    
+                    const SizedBox(height: 48),
+                    
+                    // Username
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter username';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      obscureText: _obscurePassword,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter password';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Login Button
+                    SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: state is AuthLoading ? null : _handleLogin,
+                        child: state is AuthLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text('Login'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+```
+
+### Step 7: Main App Setup
+
+#### Create `lib/main.dart`
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'app/theme.dart';
+import 'core/config/injection.dart';
+import 'features/auth/presentation/pages/login_page.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await configureDependencies();
+  
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
+  runApp(const PowerCAApp());
+}
+
+class PowerCAApp extends StatelessWidget {
+  const PowerCAApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ScreenUtilInit(
+      designSize: const Size(375, 812),
+      minTextAdapt: true,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'PowerCA',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          home: const LoginPage(),
+        );
+      },
+    );
+  }
+}
+```
+
+### Step 8: Shared Widgets
+
+#### Create `lib/shared/widgets/custom_button.dart`
+
+```dart
+import 'package:flutter/material.dart';
+
+class CustomButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final IconData? icon;
+  
+  const CustomButton({
+    super.key,
+    required this.text,
+    this.onPressed,
+    this.isLoading = false,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        child: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              )
+            : icon != null
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 20),
+                      const SizedBox(width: 8),
+                      Text(text),
+                    ],
+                  )
+                : Text(text),
+      ),
+    );
+  }
+}
+```
+
+#### Create `lib/shared/widgets/loading_indicator.dart`
+
+```dart
+import 'package:flutter/material.dart';
+
+class LoadingIndicator extends StatelessWidget {
+  final String? message;
+  
+  const LoadingIndicator({super.key, this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          if (message != null) ...[
+            const SizedBox(height: 16),
+            Text(message!, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        ],
+      ),
+    );
+  }
+}
+```
+
+#### Create `lib/shared/widgets/empty_state.dart`
+
+```dart
+import 'package:flutter/material.dart';
+
+class EmptyState extends StatelessWidget {
+  final String message;
+  final String? description;
+  final IconData? icon;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  
+  const EmptyState({
+    super.key,
+    required this.message,
+    this.description,
+    this.icon,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon ?? Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 24),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            if (description != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                description!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+              ),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 24),
+              ElevatedButton(onPressed: onAction, child: Text(actionLabel!)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+### Step 9: Run the App
+
+```bash
+# Get dependencies
+flutter pub get
+
+# Run code generation (if needed later)
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# Run the app
+flutter run
+```
+
+---
+
+## 📋 Next Steps - Feature Implementation Pattern
+
+For each new feature (Jobs, Work Diary, Clients, etc.), follow this pattern:
+
+### 1. Domain Layer (Business Logic)
+```
+domain/
+  ├── entities/         # Pure business objects
+  ├── repositories/     # Abstract interfaces
+  └── usecases/        # Business logic operations
+```
+
+### 2. Data Layer (Data Management)
+```
+data/
+  ├── models/          # JSON models (extend entities)
+  ├── repositories/    # Concrete implementations
+  └── datasources/     # API calls, local storage
+```
+
+### 3. Presentation Layer (UI)
+```
+presentation/
+  ├── bloc/           # State management (events, states, bloc)
+  ├── pages/          # Screen widgets
+  └── widgets/        # Reusable components
+```
+
+### Example: Jobs Feature Structure
+
+```dart
+// 1. Entity (domain/entities/job.dart)
+class Job {
+  final int id;
+  final String title;
+  final String status;
+  // ... properties
+}
+
+// 2. Repository Interface (domain/repositories/job_repository.dart)
+abstract class JobRepository {
+  Future<Either<Failure, List<Job>>> getJobs();
+}
+
+// 3. Use Case (domain/usecases/get_jobs_usecase.dart)
+class GetJobsUseCase {
+  final JobRepository repository;
+  Future<Either<Failure, List<Job>>> call() => repository.getJobs();
+}
+
+// 4. BLoC Events (presentation/bloc/job_event.dart)
+abstract class JobEvent {}
+class LoadJobs extends JobEvent {}
+
+// 5. BLoC States (presentation/bloc/job_state.dart)
+abstract class JobState {}
+class JobsLoaded extends JobState {
+  final List<Job> jobs;
+}
+
+// 6. BLoC (presentation/bloc/job_bloc.dart)
+class JobBloc extends Bloc<JobEvent, JobState> {
+  final GetJobsUseCase getJobsUseCase;
+  // Handle events...
+}
+
+// 7. Page (presentation/pages/jobs_page.dart)
+class JobsPage extends StatelessWidget {
+  // Use BlocBuilder to display data
+}
+```
+
+---
+
+## 🎯 Quick Reference Commands
+
+```bash
+# Create new feature folders
+mkdir -p lib/features/FEATURE_NAME/{data/{models,repositories,datasources},domain/{entities,repositories,usecases},presentation/{bloc,pages,widgets}}
+
+# Run code generation
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# Watch for changes (continuous generation)
+flutter pub run build_runner watch
+
+# Clean build
+flutter clean && flutter pub get
+
+# Run tests
+flutter test
+
+# Build APK
+flutter build apk --release
+
+# Format code
+flutter format lib/
+```
+
+This guide gives you everything you need to build PowerCA! Start with authentication (provided above), then replicate the pattern for other features. Good luck! 🚀
