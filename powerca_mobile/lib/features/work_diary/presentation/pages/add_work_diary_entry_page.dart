@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/theme.dart';
 import '../../../auth/domain/entities/staff.dart';
-import '../../../jobs/domain/entities/job.dart';
+import '../../domain/entities/job.dart';
 import '../../domain/entities/work_diary_entry.dart';
 import '../bloc/work_diary_bloc.dart';
 import '../bloc/work_diary_event.dart';
@@ -153,7 +153,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           ),
           SizedBox(height: 8.h),
           Text(
-            widget.job.clientName,
+            widget.job.clientName ?? 'No Client',
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 13.sp,

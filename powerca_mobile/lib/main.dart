@@ -6,15 +6,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/theme.dart';
 import 'core/config/injection.dart';
 import 'core/config/supabase_config.dart';
-import 'features/auth/presentation/pages/splash_page.dart';
+import 'features/auth/domain/entities/staff.dart';
 import 'features/auth/presentation/pages/sign_in_page.dart';
 import 'features/auth/presentation/pages/sign_up_page.dart';
+import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/home/presentation/pages/dashboard_page.dart';
-import 'features/jobs/presentation/pages/jobs_list_page.dart';
+import 'features/jobs/presentation/pages/jobs_page.dart';
+import 'features/leave/presentation/pages/leave_page.dart';
+import 'features/pinboard/presentation/pages/pinboard_page.dart';
+import 'features/work_diary/domain/entities/job.dart';
 import 'features/work_diary/presentation/pages/work_diary_list_page.dart';
-import 'features/leave_requests/presentation/pages/leave_requests_list_page.dart';
-import 'features/auth/domain/entities/staff.dart';
-import 'features/jobs/domain/entities/job.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -35,14 +36,10 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
+  // Hide status bar on all pages
+  SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.immersiveSticky,
+    overlays: [],
   );
 
   runApp(const PowerCAApp());
@@ -53,8 +50,24 @@ class PowerCAApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Create a mock staff for development/testing
+    final mockStaff = Staff(
+      staffId: 2,
+      name: 'MUTHAMMAL M',
+      username: 'MM',
+      orgId: 1,
+      locId: 1,
+      conId: 1,
+      email: 'logaram2009@gmail.com',
+      phoneNumber: '9842865699',
+      dateOfBirth: DateTime(1971, 4, 15),
+      staffType: 1,
+      isActive: true,
+    );
+
     return ScreenUtilInit(
-      designSize: const Size(393, 852), // Based on Figma design (Splash Screen dimensions)
+      designSize: const Size(
+          393, 852,), // Based on Figma design (Splash Screen dimensions)
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -62,7 +75,7 @@ class PowerCAApp extends StatelessWidget {
           title: 'PowerCA - Auditor WorkLog',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          home: const SplashPage(),
+          home: DashboardPage(currentStaff: mockStaff),
           onGenerateRoute: (settings) {
             switch (settings.name) {
               case '/':
@@ -80,17 +93,22 @@ class PowerCAApp extends StatelessWidget {
               case '/jobs':
                 final staff = settings.arguments as Staff;
                 return MaterialPageRoute(
-                  builder: (_) => JobsListPage(currentStaff: staff),
+                  builder: (_) => JobsPage(currentStaff: staff),
+                );
+              case '/leave':
+                final staff = settings.arguments as Staff;
+                return MaterialPageRoute(
+                  builder: (_) => LeavePage(currentStaff: staff),
+                );
+              case '/pinboard':
+                final staff = settings.arguments as Staff;
+                return MaterialPageRoute(
+                  builder: (_) => PinboardPage(currentStaff: staff),
                 );
               case '/work-diary':
                 final job = settings.arguments as Job;
                 return MaterialPageRoute(
                   builder: (_) => WorkDiaryListPage(job: job),
-                );
-              case '/leave-requests':
-                final staff = settings.arguments as Staff;
-                return MaterialPageRoute(
-                  builder: (_) => LeaveRequestsListPage(currentStaff: staff),
                 );
               default:
                 return MaterialPageRoute(builder: (_) => const SplashPage());
