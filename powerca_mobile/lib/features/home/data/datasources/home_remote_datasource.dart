@@ -25,7 +25,18 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
           .from('mbstaff')
           .select('org_id')
           .eq('staff_id', staffId)
-          .single();
+          .maybeSingle();
+
+      // If staff not found, return empty stats
+      if (staffResponse == null) {
+        return const DashboardStatsModel(
+          activeJobsCount: 0,
+          pendingTasksCount: 0,
+          hoursWorkedThisWeek: 0.0,
+          upcomingRemindersCount: 0,
+          pendingLeaveRequestsCount: 0,
+        );
+      }
 
       final orgId = staffResponse['org_id'];
 
@@ -107,7 +118,12 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
           .from('mbstaff')
           .select('org_id')
           .eq('staff_id', staffId)
-          .single();
+          .maybeSingle();
+
+      // If staff not found, return empty activities list
+      if (staffResponse == null) {
+        return [];
+      }
 
       final orgId = staffResponse['org_id'];
 
