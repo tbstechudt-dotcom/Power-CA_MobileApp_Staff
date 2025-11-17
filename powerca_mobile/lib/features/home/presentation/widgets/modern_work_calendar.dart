@@ -5,6 +5,7 @@ import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart';
 import 'package:flutter_calendar_carousel/classes/event.dart';
 
 import '../../../../app/theme.dart';
+import '../pages/work_log_entry_form_page.dart';
 
 /// Modern calendar widget with proper weekend coloring using flutter_calendar_carousel
 class ModernWorkCalendar extends StatefulWidget {
@@ -21,9 +22,13 @@ class ModernWorkCalendar extends StatefulWidget {
 
 class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
   Map<DateTime, int> _workDays = {};
+  Map<DateTime, List<Map<String, dynamic>>> _workEntriesByDate = {};
+  List<Map<String, dynamic>> _allWorkEntries = [];
   bool _isLoading = true;
   String? _errorMessage;
   EventList<Event> _markedDateMap = EventList<Event>(events: {});
+  DateTime? _selectedDate;
+  List<Map<String, dynamic>> _selectedDateEntries = [];
 
   @override
   void initState() {
@@ -41,11 +46,14 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
       final supabase = Supabase.instance.client;
       final response = await supabase
           .from('workdiary')
-          .select('wdate')
-          .eq('staff_id', widget.staffId);
+          .select('*')
+          .eq('staff_id', widget.staffId)
+          .order('wdate', ascending: false);
 
       final Map<DateTime, int> counts = {};
       final Map<DateTime, List<Event>> events = {};
+      final Map<DateTime, List<Map<String, dynamic>>> entriesByDate = {};
+      final List<Map<String, dynamic>> allEntries = [];
 
       for (var entry in response) {
         if (entry['wdate'] != null) {
@@ -53,6 +61,14 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             final date = DateTime.parse(entry['wdate'] as String);
             final normalized = DateTime(date.year, date.month, date.day);
             counts[normalized] = (counts[normalized] ?? 0) + 1;
+
+            // Store full entry data
+            allEntries.add(entry as Map<String, dynamic>);
+
+            if (entriesByDate[normalized] == null) {
+              entriesByDate[normalized] = [];
+            }
+            entriesByDate[normalized]!.add(entry as Map<String, dynamic>);
 
             // Add event marker for this date
             if (events[normalized] == null) {
@@ -78,6 +94,8 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
 
       setState(() {
         _workDays = counts;
+        _workEntriesByDate = entriesByDate;
+        _allWorkEntries = allEntries;
         _markedDateMap = EventList<Event>(events: events);
         _isLoading = false;
       });
@@ -85,6 +103,35 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
       setState(() {
         _errorMessage = 'Error loading data: $e';
         _isLoading = false;
+      });
+    }
+  }
+
+  void _onDateSelected(DateTime date, List<Event> events) {
+    final normalized = DateTime(date.year, date.month, date.day);
+    final entries = _workEntriesByDate[normalized] ?? [];
+
+    // If no entries for this date, navigate to work log entry form
+    if (entries.isEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WorkLogEntryFormPage(
+            selectedDate: normalized,
+            staffId: widget.staffId,
+          ),
+        ),
+      ).then((result) {
+        // Reload data if form was submitted successfully
+        if (result == true) {
+          _loadWorkDiaryData();
+        }
+      });
+    } else {
+      // Show entries for dates that have data
+      setState(() {
+        _selectedDate = normalized;
+        _selectedDateEntries = entries;
       });
     }
   }
@@ -157,9 +204,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
 
           // Calendar
           CalendarCarousel<Event>(
-            onDayPressed: (DateTime date, List<Event> events) {
-              // Disable selection - only show today highlight
-            },
+            onDayPressed: _onDateSelected,
             weekendTextStyle: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14.sp,
@@ -285,8 +330,219 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                 ],
               ),
             ),
+
+          // Selected Date Work Entries
+          if (_selectedDate != null) ...[
+            SizedBox(height: 16.h),
+            Divider(color: const Color(0xFFE9F0F8), thickness: 1),
+            SizedBox(height: 16.h),
+            _buildSelectedDateHeader(),
+            SizedBox(height: 12.h),
+            if (_selectedDateEntries.isEmpty)
+              _buildNoEntriesForDate()
+            else
+              ..._selectedDateEntries.map((entry) => _buildWorkEntryCard(entry)),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildSelectedDateHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Work Logs',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF080E29),
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'For ${_formatSelectedDate()}',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF8F8E90),
+              ),
+            ),
+          ],
+        ),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          child: Text(
+            '${_selectedDateEntries.length} ${_selectedDateEntries.length == 1 ? 'entry' : 'entries'}',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNoEntriesForDate() {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FA),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: const Color(0xFFE9F0F8)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 20.sp,
+            color: const Color(0xFF8F8E90),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Text(
+              'No work entries for this date',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF8F8E90),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkEntryCard(Map<String, dynamic> entry) {
+    final description = entry['wdescription'] ?? 'No description';
+    final hours = entry['hours']?.toString() ?? '0';
+    final jobName = entry['job_name'] ?? 'N/A';
+    final jobId = entry['job_id']?.toString() ?? '';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: const Color(0xFFE9F0F8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with hours
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  jobName,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF080E29),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6.r),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 14.sp,
+                      color: const Color(0xFF4CAF50),
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      '${hours}h',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF4CAF50),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          if (jobId.isNotEmpty) ...[
+            SizedBox(height: 6.h),
+            Text(
+              'Job ID: $jobId',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFFA8A8A8),
+              ),
+            ),
+          ],
+
+          SizedBox(height: 8.h),
+
+          // Description
+          Text(
+            description,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF8F8E90),
+              height: 1.5,
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatSelectedDate() {
+    if (_selectedDate == null) return '';
+
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    final day = _selectedDate!.day;
+    final month = months[_selectedDate!.month - 1];
+    final year = _selectedDate!.year;
+
+    return '$day $month $year';
   }
 }

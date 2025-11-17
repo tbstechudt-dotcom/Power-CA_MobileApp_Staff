@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../auth/domain/entities/staff.dart';
+import '../../data/datasources/pinboard_remote_datasource.dart';
+import '../../data/repositories/pinboard_repository_impl.dart';
+import '../../domain/usecases/add_comment_usecase.dart';
+import '../../domain/usecases/get_comments_usecase.dart';
+import '../../domain/usecases/get_pinboard_item_by_id_usecase.dart';
+import '../../domain/usecases/get_pinboard_items_usecase.dart';
+import '../../domain/usecases/toggle_like_usecase.dart';
+import '../bloc/pinboard_bloc.dart';
+import 'pinboard_main_page.dart';
 
 class PinboardPage extends StatelessWidget {
   final Staff currentStaff;
@@ -15,54 +26,54 @@ class PinboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Modern Top App Bar
-            _buildModernAppBar(context),
+    // Get Supabase client
+    final supabaseClient = Supabase.instance.client;
 
-            // Body Content
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.push_pin_outlined,
-                      size: 80.sp,
-                      color: AppTheme.textSecondaryColor,
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Pinboard',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimaryColor,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Announcements and notices coming soon',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14.sp,
-                        color: AppTheme.textSecondaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+    // Create data source
+    final dataSource = PinboardRemoteDataSourceImpl(
+      supabaseClient: supabaseClient,
+    );
+
+    // Create repository
+    final repository = PinboardRepositoryImpl(
+      remoteDataSource: dataSource,
+      supabaseClient: supabaseClient,
+    );
+
+    // Create use cases
+    final getPinboardItems = GetPinboardItemsUseCase(repository);
+    final getPinboardItemById = GetPinboardItemByIdUseCase(repository);
+    final getComments = GetCommentsUseCase(repository);
+    final addComment = AddCommentUseCase(repository);
+    final toggleLike = ToggleLikeUseCase(repository);
+
+    return BlocProvider(
+      create: (context) => PinboardBloc(
+        getPinboardItems: getPinboardItems,
+        getPinboardItemById: getPinboardItemById,
+        getComments: getComments,
+        addComment: addComment,
+        toggleLike: toggleLike,
       ),
-      bottomNavigationBar: ModernBottomNavigation(
-        currentIndex: 3,
-        currentStaff: currentStaff,
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Modern Top App Bar
+              _buildModernAppBar(context),
+
+              // Pinboard Main Content
+              const Expanded(
+                child: PinboardMainPage(),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: ModernBottomNavigation(
+          currentIndex: 3,
+          currentStaff: currentStaff,
+        ),
       ),
     );
   }
