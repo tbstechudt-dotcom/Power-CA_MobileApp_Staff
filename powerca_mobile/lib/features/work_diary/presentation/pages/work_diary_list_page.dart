@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
-import '../../../jobs/domain/entities/job.dart';
+import '../../domain/entities/job.dart';
 import '../bloc/work_diary_bloc.dart';
 import '../bloc/work_diary_event.dart';
 import '../bloc/work_diary_state.dart';
