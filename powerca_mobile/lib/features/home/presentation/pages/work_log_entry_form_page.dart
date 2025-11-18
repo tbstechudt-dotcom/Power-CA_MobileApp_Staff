@@ -31,7 +31,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   int? _selectedTaskId;
 
   List<Map<String, dynamic>> _clients = [];
-  List<Map<String, dynamic>> _jobs = [];
+  Map<int, Map<int, Map<String, dynamic>>> _jobsByClient = {};
   List<Map<String, dynamic>> _tasks = [];
 
   bool _isLoading = false;
@@ -56,21 +56,51 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // STEP 1: Load ALL jobs from jobshead
+      // STEP 1: Load ALL jobs from jobshead (including duplicates)
       // Note: work_desc maps to job_name
+      // IMPORTANT: Supabase has a default limit of 1000 rows, we need to increase it
       final jobsResponse = await supabase
           .from('jobshead')
-          .select('job_id, work_desc, client_id')
-          .order('work_desc');
+          .select('job_id, job_uid, work_desc, client_id')
+          .order('work_desc')
+          .limit(50000); // Increase limit to get all jobs
 
-      // STEP 2: Extract unique client IDs from jobs
-      final uniqueClientIds = jobsResponse
-          .map((job) => job['client_id'])
-          .where((id) => id != null)
-          .toSet()
-          .toList();
+      // DEBUG: Check raw response for client_id 17
+      print('DEBUG: Total jobs from database: ${jobsResponse.length}');
+      final jobsForClient17 = jobsResponse.where((job) => job['client_id'] == 17).toList();
+      print('DEBUG: Jobs for client_id 17 in raw response: ${jobsForClient17.length}');
+      if (jobsForClient17.isNotEmpty) {
+        print('DEBUG: First 5 jobs for client 17:');
+        for (var i = 0; i < jobsForClient17.length && i < 5; i++) {
+          print('  ${i + 1}. job_id: ${jobsForClient17[i]['job_id']}, work_desc: "${jobsForClient17[i]['work_desc']}"');
+        }
+      }
 
-      // STEP 3: Load ONLY clients that have jobs
+      // STEP 2: Group jobs by client_id FIRST, then deduplicate within each client
+      // This ensures we don't lose jobs that appear with different client_ids
+      final Map<int, Map<int, Map<String, dynamic>>> jobsByClient = {};
+
+      for (var job in jobsResponse) {
+        final clientId = job['client_id'];
+        final jobId = job['job_id'] as int;
+
+        if (clientId != null) {
+          // Initialize client map if not exists
+          if (!jobsByClient.containsKey(clientId)) {
+            jobsByClient[clientId] = {};
+          }
+
+          // Add job to this client (deduplicate by job_id within client)
+          if (!jobsByClient[clientId]!.containsKey(jobId)) {
+            jobsByClient[clientId]![jobId] = job;
+          }
+        }
+      }
+
+      // STEP 3: Extract unique client IDs
+      final uniqueClientIds = jobsByClient.keys.toList();
+
+      // STEP 4: Load ONLY clients that have jobs
       // Note: Column is 'clientname' (one word), NOT 'client_name'
       List<Map<String, dynamic>> clientsResponse = [];
       if (uniqueClientIds.isNotEmpty) {
@@ -83,7 +113,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
       setState(() {
         _clients = List<Map<String, dynamic>>.from(clientsResponse);
-        _jobs = List<Map<String, dynamic>>.from(jobsResponse);
+        _jobsByClient = jobsByClient; // Store grouped jobs
         _tasks = []; // Tasks will be loaded when job is selected
         _isLoading = false;
       });
@@ -103,11 +133,12 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       final supabase = Supabase.instance.client;
 
       // Load tasks from jobtasks table for the selected job
+      // Note: Column is 'task_desc' (NOT 'task_name')
       final tasksResponse = await supabase
           .from('jobtasks')
-          .select('jt_id, task_name, job_id')
+          .select('jt_id, task_desc, job_id')
           .eq('job_id', jobId)
-          .order('task_name');
+          .order('task_desc');
 
       setState(() {
         _tasks = List<Map<String, dynamic>>.from(tasksResponse);
@@ -491,9 +522,20 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildJobDropdown() {
-    final filteredJobs = _selectedClientId != null
-        ? _jobs.where((job) => job['client_id'] == _selectedClientId).toList()
-        : _jobs;
+    // Get jobs for the selected client from the pre-grouped structure
+    final filteredJobs = _selectedClientId != null && _jobsByClient.containsKey(_selectedClientId)
+        ? _jobsByClient[_selectedClientId]!.values.toList()
+        : <Map<String, dynamic>>[];
+
+    // Debug logging
+    print('DEBUG: Selected client ID: $_selectedClientId');
+    print('DEBUG: Filtered jobs count: ${filteredJobs.length}');
+    if (filteredJobs.isNotEmpty) {
+      print('DEBUG: All filtered jobs for client $_selectedClientId:');
+      for (var i = 0; i < filteredJobs.length; i++) {
+        print('  ${i + 1}. job_id: ${filteredJobs[i]['job_id']}, work_desc: "${filteredJobs[i]['work_desc']}"');
+      }
+    }
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
@@ -521,7 +563,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             return DropdownMenuItem<int>(
               value: job['job_id'] as int,
               child: Text(
-                job['work_desc'] ?? 'Unknown Job',
+                '${job['job_uid'] ?? 'N/A'} - ${job['work_desc'] ?? 'Unknown Job'}',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14.sp,
@@ -572,7 +614,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             return DropdownMenuItem<int>(
               value: task['jt_id'] as int, // Use jt_id from jobtasks table
               child: Text(
-                task['task_name'] ?? 'Unknown Task',
+                task['task_desc'] ?? 'Unknown Task', // Column is 'task_desc' not 'task_name'
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14.sp,
