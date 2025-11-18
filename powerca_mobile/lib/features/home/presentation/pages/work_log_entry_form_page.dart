@@ -56,29 +56,24 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Load clients
+      // Load ALL clients first (for simplicity)
+      // Note: Column is 'clientname' (one word), NOT 'client_name'
       final clientsResponse = await supabase
           .from('climaster')
-          .select('client_id, client_name')
-          .order('client_name');
+          .select('client_id, clientname')
+          .order('clientname');
 
-      // Load jobs for staff
+      // Load ALL jobs
+      // Note: work_desc maps to job_name
       final jobsResponse = await supabase
           .from('jobshead')
-          .select('job_id, job_name, client_id')
-          .eq('staff_id', widget.staffId)
-          .order('job_name');
-
-      // Load tasks
-      final tasksResponse = await supabase
-          .from('taskmaster')
-          .select('task_id, task_name')
-          .order('task_name');
+          .select('job_id, work_desc, client_id')
+          .order('work_desc');
 
       setState(() {
         _clients = List<Map<String, dynamic>>.from(clientsResponse);
         _jobs = List<Map<String, dynamic>>.from(jobsResponse);
-        _tasks = List<Map<String, dynamic>>.from(tasksResponse);
+        _tasks = []; // Tasks will be loaded when job is selected
         _isLoading = false;
       });
     } catch (e) {
@@ -86,6 +81,31 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading form data: $e')),
+        );
+      }
+    }
+  }
+
+  /// Load tasks for the selected job from jobtasks table
+  Future<void> _loadTasksForJob(int jobId) async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Load tasks from jobtasks table for the selected job
+      final tasksResponse = await supabase
+          .from('jobtasks')
+          .select('jt_id, task_name, job_id')
+          .eq('job_id', jobId)
+          .order('task_name');
+
+      setState(() {
+        _tasks = List<Map<String, dynamic>>.from(tasksResponse);
+        _selectedTaskId = null; // Reset selected task when job changes
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading tasks: $e')),
         );
       }
     }
@@ -186,15 +206,17 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     try {
       final supabase = Supabase.instance.client;
       final hours = _calculateHours();
+      final minutes = (hours * 60).round(); // Convert hours to minutes
 
+      // IMPORTANT: workdiary columns are: date, minutes, tasknotes (NOT wdate, hours, wdescription)
       await supabase.from('workdiary').insert({
         'staff_id': widget.staffId,
         'job_id': _selectedJobId,
         'client_id': _selectedClientId,
         'task_id': _selectedTaskId,
-        'wdate': DateFormat('yyyy-MM-dd').format(_selectedDate!),
-        'wdescription': _descriptionController.text.trim(),
-        'hours': hours,
+        'date': DateFormat('yyyy-MM-dd').format(_selectedDate!), // Column is 'date', not 'wdate'
+        'tasknotes': _descriptionController.text.trim(), // Column is 'tasknotes', not 'wdescription'
+        'minutes': minutes, // Column is 'minutes', not 'hours'
         'source': 'M', // Mobile source
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
@@ -435,7 +457,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             return DropdownMenuItem<int>(
               value: client['client_id'] as int,
               child: Text(
-                client['client_name'] ?? 'Unknown Client',
+                client['clientname'] ?? 'Unknown Client',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14.sp,
@@ -488,7 +510,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             return DropdownMenuItem<int>(
               value: job['job_id'] as int,
               child: Text(
-                job['job_name'] ?? 'Unknown Job',
+                job['work_desc'] ?? 'Unknown Job',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14.sp,
@@ -502,6 +524,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               ? null
               : (value) {
                   setState(() => _selectedJobId = value);
+                  // Load tasks for the selected job
+                  if (value != null) {
+                    _loadTasksForJob(value);
+                  }
                 },
         ),
       ),
@@ -533,7 +559,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           ),
           items: _tasks.map((task) {
             return DropdownMenuItem<int>(
-              value: task['task_id'] as int,
+              value: task['jt_id'] as int, // Use jt_id from jobtasks table
               child: Text(
                 task['task_name'] ?? 'Unknown Task',
                 style: TextStyle(
