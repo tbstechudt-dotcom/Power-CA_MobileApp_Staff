@@ -56,19 +56,30 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Load ALL clients first (for simplicity)
-      // Note: Column is 'clientname' (one word), NOT 'client_name'
-      final clientsResponse = await supabase
-          .from('climaster')
-          .select('client_id, clientname')
-          .order('clientname');
-
-      // Load ALL jobs
+      // STEP 1: Load ALL jobs from jobshead
       // Note: work_desc maps to job_name
       final jobsResponse = await supabase
           .from('jobshead')
           .select('job_id, work_desc, client_id')
           .order('work_desc');
+
+      // STEP 2: Extract unique client IDs from jobs
+      final uniqueClientIds = jobsResponse
+          .map((job) => job['client_id'])
+          .where((id) => id != null)
+          .toSet()
+          .toList();
+
+      // STEP 3: Load ONLY clients that have jobs
+      // Note: Column is 'clientname' (one word), NOT 'client_name'
+      List<Map<String, dynamic>> clientsResponse = [];
+      if (uniqueClientIds.isNotEmpty) {
+        clientsResponse = await supabase
+            .from('climaster')
+            .select('client_id, clientname')
+            .inFilter('client_id', uniqueClientIds)
+            .order('clientname');
+      }
 
       setState(() {
         _clients = List<Map<String, dynamic>>.from(clientsResponse);
