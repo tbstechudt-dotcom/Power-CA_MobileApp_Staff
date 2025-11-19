@@ -25,7 +25,7 @@ class NetworkInfoImpl implements NetworkInfo {
         .map((result) => _isConnected(result));
   }
 
-  bool _isConnected(ConnectivityResult result) {
-    return result != ConnectivityResult.none;
+  bool _isConnected(List<ConnectivityResult> result) {
+    return !result.contains(ConnectivityResult.none) && result.isNotEmpty;
   }
 }

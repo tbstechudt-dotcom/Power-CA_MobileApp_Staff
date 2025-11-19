@@ -118,8 +118,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading form data: $e')),
         );
@@ -250,15 +250,15 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       final hours = _calculateHours();
       final minutes = (hours * 60).round(); // Convert hours to minutes
 
-      // IMPORTANT: workdiary columns are: date, minutes, tasknotes (NOT wdate, hours, wdescription)
+      // IMPORTANT: workdiary columns are: date, minutes, tasknotes (NOT wd_date, actual_hrs, wd_notes)
       await supabase.from('workdiary').insert({
         'staff_id': widget.staffId,
         'job_id': _selectedJobId,
         'client_id': _selectedClientId,
         'task_id': _selectedTaskId,
-        'date': DateFormat('yyyy-MM-dd').format(_selectedDate!), // Column is 'date', not 'wdate'
-        'tasknotes': _descriptionController.text.trim(), // Column is 'tasknotes', not 'wdescription'
-        'minutes': minutes, // Column is 'minutes', not 'hours'
+        'date': DateFormat('yyyy-MM-dd').format(_selectedDate!), // Column is 'date'
+        'tasknotes': _descriptionController.text.trim(), // Column is 'tasknotes'
+        'minutes': minutes, // Column is 'minutes' (integer)
         'source': 'M', // Mobile source
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
@@ -274,8 +274,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         Navigator.pop(context, true); // Return true to indicate success
       }
     } catch (e) {
-      setState(() => _isSubmitting = false);
       if (mounted) {
+        setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating work log: $e'),
@@ -679,7 +679,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         onPressed: _isSubmitting ? null : _submitForm,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
-          disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.5),
+          disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),
