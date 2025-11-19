@@ -55,7 +55,7 @@ class EventDetailsTab extends StatelessWidget {
                 vertical: 6,
               ),
               decoration: BoxDecoration(
-                color: categoryColor.withOpacity(0.1),
+                color: categoryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: categoryColor, width: 1),
               ),
@@ -91,7 +91,7 @@ class EventDetailsTab extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: categoryColor.withOpacity(0.2),
+                  backgroundColor: categoryColor.withValues(alpha: 0.2),
                   child: Icon(
                     Icons.person,
                     color: categoryColor,
@@ -160,7 +160,7 @@ class EventDetailsTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: categoryColor.withOpacity(0.1),
+                    color: categoryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -215,7 +215,7 @@ class EventDetailsTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: categoryColor.withOpacity(0.1),
+                      color: categoryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
