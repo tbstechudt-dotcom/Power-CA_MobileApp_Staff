@@ -107,7 +107,7 @@ const config = {
     // jobshead: Desktop has extra columns that mobile doesn't need
     jobshead: {
       // Columns to skip from desktop (not in mobile schema)
-      skipColumns: ['job_uid', 'sporg_id', 'jctincharge', 'jt_id', 'tc_id'],
+      skipColumns: ['sporg_id', 'jctincharge', 'jt_id', 'tc_id'],  // Removed job_uid - now syncing to mobile
       // Columns to add for mobile (with default values if not in desktop)
       addColumns: {
         source: 'D', // Track data origin
