@@ -107,7 +107,7 @@ const config = {
     // jobshead: Desktop has extra columns that mobile doesn't need
     jobshead: {
       // Columns to skip from desktop (not in mobile schema)
-      skipColumns: ['sporg_id', 'jctincharge', 'jt_id', 'tc_id'],  // Removed job_uid - now syncing to mobile
+      skipColumns: ['jctincharge', 'jt_id', 'tc_id'],  // sporg_id now in Supabase, job_uid also syncing
       // Columns to add for mobile (with default values if not in desktop)
       addColumns: {
         source: 'D', // Track data origin
