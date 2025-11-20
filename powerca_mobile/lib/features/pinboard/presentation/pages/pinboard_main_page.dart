@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../domain/entities/pinboard_item.dart';
-import '../bloc/pinboard_bloc.dart';
-import '../bloc/pinboard_event.dart';
-import '../bloc/pinboard_state.dart';
-import 'pinboard_detail_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../auth/domain/entities/staff.dart';
 
 class PinboardMainPage extends StatefulWidget {
-  const PinboardMainPage({super.key});
+  final Staff currentStaff;
+
+  const PinboardMainPage({
+    super.key,
+    required this.currentStaff,
+  });
 
   @override
   State<PinboardMainPage> createState() => _PinboardMainPageState();
@@ -17,58 +18,156 @@ class PinboardMainPage extends StatefulWidget {
 class _PinboardMainPageState extends State<PinboardMainPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<Map<String, dynamic>> _reminders = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-
-    // Load initial data for first tab
-    context.read<PinboardBloc>().add(
-          const LoadPinboardItems(category: PinboardCategory.dueDate),
-        );
+    _loadReminders();
 
     // Listen to tab changes
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
-        _loadDataForTab(_tabController.index);
+        setState(() {}); // Refresh to show filtered reminders
       }
     });
   }
 
-  void _loadDataForTab(int index) {
-    PinboardCategory category;
-    switch (index) {
-      case 0:
-        category = PinboardCategory.dueDate;
-        break;
-      case 1:
-        category = PinboardCategory.meetings;
-        break;
-      case 2:
-        category = PinboardCategory.greetings;
-        break;
-      default:
-        category = PinboardCategory.dueDate;
+  Future<void> _loadReminders() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Fetch reminders for current staff
+      final remindersResponse = await supabase
+          .from('reminder')
+          .select('rem_id, staff_id, client_id, remtype, remdate, remduedate, remtime, remtitle, remnotes, remstatus')
+          .eq('staff_id', widget.currentStaff.staffId)
+          .order('remdate', ascending: false);
+
+      // Get unique client IDs
+      final clientIds = remindersResponse
+          .map((reminder) => reminder['client_id'])
+          .where((id) => id != null)
+          .toSet()
+          .toList();
+
+      // Fetch client names for all client IDs
+      Map<int, String> clientNames = {};
+      if (clientIds.isNotEmpty) {
+        final clientsResponse = await supabase
+            .from('climaster')
+            .select('client_id, clientname')
+            .inFilter('client_id', clientIds);
+
+        for (var client in clientsResponse) {
+          clientNames[client['client_id'] as int] = client['clientname'] ?? 'Unknown Client';
+        }
+      }
+
+      // Transform database records to UI format
+      final reminders = remindersResponse.map<Map<String, dynamic>>((record) {
+        final clientId = record['client_id'] as int?;
+        final clientName = clientId != null ? (clientNames[clientId] ?? 'Unknown Client') : 'No Client';
+
+        return {
+          'rem_id': record['rem_id'],
+          'staff_id': record['staff_id'],
+          'client_id': clientId,
+          'clientName': clientName,
+          'remtype': record['remtype'] ?? 'General',
+          'remdate': record['remdate'] != null ? DateTime.parse(record['remdate']) : null,
+          'remduedate': record['remduedate'] != null ? DateTime.parse(record['remduedate']) : null,
+          'remtime': record['remtime'] ?? '',
+          'remtitle': record['remtitle'] ?? 'No Title',
+          'remnotes': record['remnotes'] ?? 'No description',
+          'remstatus': record['remstatus'] ?? 0,
+        };
+      }).toList();
+
+      setState(() {
+        _reminders = reminders;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading reminders: $e');
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
     }
-    context.read<PinboardBloc>().add(LoadPinboardItems(category: category));
+  }
+
+  List<Map<String, dynamic>> _getFilteredReminders() {
+    // Filter reminders based on current tab
+    switch (_tabController.index) {
+      case 0: // Due Date - work-related reminders
+        return _reminders.where((r) {
+          final remtype = (r['remtype'] as String).toLowerCase();
+          return remtype.contains('gst') ||
+                 remtype.contains('tds') ||
+                 remtype.contains('income') ||
+                 remtype.contains('tax') ||
+                 remtype.contains('companies') ||
+                 remtype.contains('office') ||
+                 remtype.contains('work') ||
+                 remtype.contains('tcs') ||
+                 remtype.contains('llp') ||
+                 remtype.contains('filing') ||
+                 remtype.contains('renewal');
+        }).toList();
+
+      case 1: // Meetings - meeting related
+        return _reminders.where((r) {
+          final remtype = (r['remtype'] as String).toLowerCase();
+          final remtitle = (r['remtitle'] as String).toLowerCase();
+          final remnotes = (r['remnotes'] as String).toLowerCase();
+          return remtype.contains('meeting') ||
+                 remtitle.contains('meeting') ||
+                 remnotes.contains('meeting') ||
+                 remtype.contains('board') ||
+                 remtype.contains('discussion');
+        }).toList();
+
+      case 2: // Greetings - birthdays, celebrations
+        return _reminders.where((r) {
+          final remtype = (r['remtype'] as String).toLowerCase();
+          return remtype.contains('birthday') ||
+                 remtype.contains('greeting') ||
+                 remtype.contains('celebration') ||
+                 remtype.contains('anniversary') ||
+                 remtype.contains('festival');
+        }).toList();
+
+      default:
+        return _reminders;
+    }
+  }
+
+  Color _getCategoryColor(int tabIndex) {
+    switch (tabIndex) {
+      case 0:
+        return Colors.orange;
+      case 1:
+        return Colors.blue;
+      case 2:
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Color _getCategoryColor(PinboardCategory category) {
-    switch (category) {
-      case PinboardCategory.dueDate:
-        return Colors.orange;
-      case PinboardCategory.meetings:
-        return Colors.blue;
-      case PinboardCategory.greetings:
-        return Colors.green;
-    }
   }
 
   @override
@@ -83,7 +182,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
             labelColor: Colors.black,
             unselectedLabelColor: Colors.grey,
             indicatorWeight: 3,
-            tabs: [
+            tabs: const [
               Tab(
                 icon: Icon(Icons.calendar_today, size: 20),
                 text: 'Due Date',
@@ -102,148 +201,91 @@ class _PinboardMainPageState extends State<PinboardMainPage>
 
         // Tab Views
         Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _PinboardListView(category: PinboardCategory.dueDate),
-              _PinboardListView(category: PinboardCategory.meetings),
-              _PinboardListView(category: PinboardCategory.greetings),
-            ],
-          ),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _errorMessage != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            _errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _loadReminders,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildReminderList(0), // Due Date
+                        _buildReminderList(1), // Meetings
+                        _buildReminderList(2), // Greetings
+                      ],
+                    ),
         ),
       ],
     );
   }
-}
 
-class _PinboardListView extends StatelessWidget {
-  final PinboardCategory category;
+  Widget _buildReminderList(int tabIndex) {
+    final filteredReminders = _getFilteredReminders();
 
-  const _PinboardListView({required this.category});
-
-  Color _getCategoryColor() {
-    switch (category) {
-      case PinboardCategory.dueDate:
-        return Colors.orange;
-      case PinboardCategory.meetings:
-        return Colors.blue;
-      case PinboardCategory.greetings:
-        return Colors.green;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<PinboardBloc, PinboardState>(
-      builder: (context, state) {
-        if (state is PinboardLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (state is PinboardError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  state.message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    context.read<PinboardBloc>().add(
-                          LoadPinboardItems(category: category),
-                        );
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
-              ],
+    if (filteredReminders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 64,
+              color: Colors.grey[400],
             ),
-          );
-        }
-
-        if (state is PinboardLoaded) {
-          if (state.items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No items yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 16),
+            Text(
+              'No items yet',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              context.read<PinboardBloc>().add(
-                    RefreshPinboardItems(category: category),
-                  );
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.items.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = state.items[index];
-                return _PinboardCard(
-                  item: item,
-                  categoryColor: _getCategoryColor(),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BlocProvider.value(
-                          value: context.read<PinboardBloc>(),
-                          child: PinboardDetailPage(itemId: item.id),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
             ),
-          );
-        }
+          ],
+        ),
+      );
+    }
 
-        return const SizedBox.shrink();
-      },
+    return RefreshIndicator(
+      onRefresh: _loadReminders,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: filteredReminders.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final reminder = filteredReminders[index];
+          return _buildReminderCard(reminder, tabIndex);
+        },
+      ),
     );
   }
-}
 
-class _PinboardCard extends StatelessWidget {
-  final PinboardItem item;
-  final Color categoryColor;
-  final VoidCallback onTap;
-
-  const _PinboardCard({
-    required this.item,
-    required this.categoryColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildReminderCard(Map<String, dynamic> reminder, int tabIndex) {
     final dateFormat = DateFormat('MMM dd, yyyy');
     final timeFormat = DateFormat('hh:mm a');
+    final categoryColor = _getCategoryColor(tabIndex);
+
+    // Parse the date
+    final remdate = reminder['remdate'] as DateTime?;
+    final remduedate = reminder['remduedate'] as DateTime?;
+    final displayDate = remduedate ?? remdate ?? DateTime.now();
 
     return Card(
       elevation: 2,
@@ -251,186 +293,132 @@ class _PinboardCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          // You can add navigation to detail page here if needed
+        },
         borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image (if available)
-            if (item.imageUrl != null)
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                child: Image.network(
-                  item.imageUrl!,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 180,
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title and Type Badge
+              Row(
                 children: [
-                  // Title
-                  Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      reminder['remtitle'] as String,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Description
-                  Text(
-                    item.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: categoryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Event Date and Location
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 16,
+                    child: Text(
+                      reminder['remtype'] as String,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                         color: categoryColor,
                       ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          '${dateFormat.format(item.eventDate)} at ${timeFormat.format(item.eventDate)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  if (item.location != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: categoryColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            item.location!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
                     ),
-                  ],
-
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-
-                  // Author and Stats
-                  Row(
-                    children: [
-                      // Author
-                      Expanded(
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 12,
-                              backgroundColor: categoryColor.withOpacity(0.2),
-                              child: Icon(
-                                Icons.person,
-                                size: 14,
-                                color: categoryColor,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                item.authorName,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Stats
-                      Row(
-                        children: [
-                          Icon(
-                            item.isLikedByCurrentUser
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            size: 16,
-                            color: item.isLikedByCurrentUser
-                                ? Colors.red
-                                : Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${item.likesCount}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          const SizedBox(width: 12),
-                          const Icon(
-                            Icons.comment_outlined,
-                            size: 16,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${item.commentsCount}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
                 ],
               ),
-            ),
-          ],
+
+              const SizedBox(height: 8),
+
+              // Description
+              Text(
+                reminder['remnotes'] as String,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 12),
+
+              // Client Name
+              Row(
+                children: [
+                  Icon(
+                    Icons.business,
+                    size: 16,
+                    color: categoryColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      reminder['clientName'] as String,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Date and Time
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 16,
+                    color: categoryColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${dateFormat.format(displayDate)}${reminder['remtime'] != '' ? ' at ${reminder['remtime']}' : ''}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+
+              // Status
+              Row(
+                children: [
+                  Icon(
+                    reminder['remstatus'] == 1 ? Icons.check_circle : Icons.pending,
+                    size: 16,
+                    color: reminder['remstatus'] == 1 ? Colors.green : Colors.orange,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    reminder['remstatus'] == 1 ? 'Completed' : 'Pending',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: reminder['remstatus'] == 1 ? Colors.green : Colors.orange,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

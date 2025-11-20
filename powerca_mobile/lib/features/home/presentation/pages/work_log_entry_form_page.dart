@@ -31,7 +31,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   int? _selectedTaskId;
 
   List<Map<String, dynamic>> _clients = [];
-  List<Map<String, dynamic>> _jobs = [];
+  Map<int, Map<int, Map<String, dynamic>>> _jobsByClient = {};
   List<Map<String, dynamic>> _tasks = [];
 
   bool _isLoading = false;
@@ -56,36 +56,98 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Load clients
-      final clientsResponse = await supabase
-          .from('climaster')
-          .select('client_id, client_name')
-          .order('client_name');
-
-      // Load jobs for staff
+      // STEP 1: Load ALL jobs from jobshead (including duplicates)
+      // Note: work_desc maps to job_name
+      // IMPORTANT: Supabase has a default limit of 1000 rows, we need to increase it
       final jobsResponse = await supabase
           .from('jobshead')
-          .select('job_id, job_name, client_id')
-          .eq('staff_id', widget.staffId)
-          .order('job_name');
+          .select('job_id, job_uid, work_desc, client_id')
+          .order('work_desc')
+          .limit(50000); // Increase limit to get all jobs
 
-      // Load tasks
-      final tasksResponse = await supabase
-          .from('taskmaster')
-          .select('task_id, task_name')
-          .order('task_name');
+      // DEBUG: Check raw response for client_id 17
+      print('DEBUG: Total jobs from database: ${jobsResponse.length}');
+      final jobsForClient17 = jobsResponse.where((job) => job['client_id'] == 17).toList();
+      print('DEBUG: Jobs for client_id 17 in raw response: ${jobsForClient17.length}');
+      if (jobsForClient17.isNotEmpty) {
+        print('DEBUG: First 5 jobs for client 17:');
+        for (var i = 0; i < jobsForClient17.length && i < 5; i++) {
+          print('  ${i + 1}. job_id: ${jobsForClient17[i]['job_id']}, work_desc: "${jobsForClient17[i]['work_desc']}"');
+        }
+      }
+
+      // STEP 2: Group jobs by client_id FIRST, then deduplicate within each client
+      // This ensures we don't lose jobs that appear with different client_ids
+      final Map<int, Map<int, Map<String, dynamic>>> jobsByClient = {};
+
+      for (var job in jobsResponse) {
+        final clientId = job['client_id'];
+        final jobId = job['job_id'] as int;
+
+        if (clientId != null) {
+          // Initialize client map if not exists
+          if (!jobsByClient.containsKey(clientId)) {
+            jobsByClient[clientId] = {};
+          }
+
+          // Add job to this client (deduplicate by job_id within client)
+          if (!jobsByClient[clientId]!.containsKey(jobId)) {
+            jobsByClient[clientId]![jobId] = job;
+          }
+        }
+      }
+
+      // STEP 3: Extract unique client IDs
+      final uniqueClientIds = jobsByClient.keys.toList();
+
+      // STEP 4: Load ONLY clients that have jobs
+      // Note: Column is 'clientname' (one word), NOT 'client_name'
+      List<Map<String, dynamic>> clientsResponse = [];
+      if (uniqueClientIds.isNotEmpty) {
+        clientsResponse = await supabase
+            .from('climaster')
+            .select('client_id, clientname')
+            .inFilter('client_id', uniqueClientIds)
+            .order('clientname');
+      }
 
       setState(() {
         _clients = List<Map<String, dynamic>>.from(clientsResponse);
-        _jobs = List<Map<String, dynamic>>.from(jobsResponse);
-        _tasks = List<Map<String, dynamic>>.from(tasksResponse);
+        _jobsByClient = jobsByClient; // Store grouped jobs
+        _tasks = []; // Tasks will be loaded when job is selected
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading form data: $e')),
+        );
+      }
+    }
+  }
+
+  /// Load tasks for the selected job from jobtasks table
+  Future<void> _loadTasksForJob(int jobId) async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Load tasks from jobtasks table for the selected job
+      // Note: Column is 'task_desc' (NOT 'task_name')
+      final tasksResponse = await supabase
+          .from('jobtasks')
+          .select('jt_id, task_desc, job_id')
+          .eq('job_id', jobId)
+          .order('task_desc');
+
+      setState(() {
+        _tasks = List<Map<String, dynamic>>.from(tasksResponse);
+        _selectedTaskId = null; // Reset selected task when job changes
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading tasks: $e')),
         );
       }
     }
@@ -186,15 +248,17 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     try {
       final supabase = Supabase.instance.client;
       final hours = _calculateHours();
+      final minutes = (hours * 60).round(); // Convert hours to minutes
 
+      // IMPORTANT: workdiary columns are: date, minutes, tasknotes (NOT wd_date, actual_hrs, wd_notes)
       await supabase.from('workdiary').insert({
         'staff_id': widget.staffId,
         'job_id': _selectedJobId,
         'client_id': _selectedClientId,
         'task_id': _selectedTaskId,
-        'wdate': DateFormat('yyyy-MM-dd').format(_selectedDate!),
-        'wdescription': _descriptionController.text.trim(),
-        'hours': hours,
+        'date': DateFormat('yyyy-MM-dd').format(_selectedDate!), // Column is 'date'
+        'tasknotes': _descriptionController.text.trim(), // Column is 'tasknotes'
+        'minutes': minutes, // Column is 'minutes' (integer)
         'source': 'M', // Mobile source
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
@@ -210,8 +274,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         Navigator.pop(context, true); // Return true to indicate success
       }
     } catch (e) {
-      setState(() => _isSubmitting = false);
       if (mounted) {
+        setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating work log: $e'),
@@ -435,7 +499,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             return DropdownMenuItem<int>(
               value: client['client_id'] as int,
               child: Text(
-                client['client_name'] ?? 'Unknown Client',
+                client['clientname'] ?? 'Unknown Client',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14.sp,
@@ -458,9 +522,20 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildJobDropdown() {
-    final filteredJobs = _selectedClientId != null
-        ? _jobs.where((job) => job['client_id'] == _selectedClientId).toList()
-        : _jobs;
+    // Get jobs for the selected client from the pre-grouped structure
+    final filteredJobs = _selectedClientId != null && _jobsByClient.containsKey(_selectedClientId)
+        ? _jobsByClient[_selectedClientId]!.values.toList()
+        : <Map<String, dynamic>>[];
+
+    // Debug logging
+    print('DEBUG: Selected client ID: $_selectedClientId');
+    print('DEBUG: Filtered jobs count: ${filteredJobs.length}');
+    if (filteredJobs.isNotEmpty) {
+      print('DEBUG: All filtered jobs for client $_selectedClientId:');
+      for (var i = 0; i < filteredJobs.length; i++) {
+        print('  ${i + 1}. job_id: ${filteredJobs[i]['job_id']}, work_desc: "${filteredJobs[i]['work_desc']}"');
+      }
+    }
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
@@ -488,7 +563,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             return DropdownMenuItem<int>(
               value: job['job_id'] as int,
               child: Text(
-                job['job_name'] ?? 'Unknown Job',
+                '${job['job_uid'] ?? 'N/A'} - ${job['work_desc'] ?? 'Unknown Job'}',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14.sp,
@@ -502,6 +577,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               ? null
               : (value) {
                   setState(() => _selectedJobId = value);
+                  // Load tasks for the selected job
+                  if (value != null) {
+                    _loadTasksForJob(value);
+                  }
                 },
         ),
       ),
@@ -533,9 +612,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           ),
           items: _tasks.map((task) {
             return DropdownMenuItem<int>(
-              value: task['task_id'] as int,
+              value: task['jt_id'] as int, // Use jt_id from jobtasks table
               child: Text(
-                task['task_name'] ?? 'Unknown Task',
+                task['task_desc'] ?? 'Unknown Task', // Column is 'task_desc' not 'task_name'
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14.sp,
@@ -600,7 +679,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         onPressed: _isSubmitting ? null : _submitForm,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
-          disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.5),
+          disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),

@@ -306,7 +306,7 @@ class _PinboardItemCard extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 12,
-                              backgroundColor: categoryColor.withOpacity(0.2),
+                              backgroundColor: categoryColor.withValues(alpha: 0.2),
                               child: Icon(
                                 Icons.person,
                                 size: 14,

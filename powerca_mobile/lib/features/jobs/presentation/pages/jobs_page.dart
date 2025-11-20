@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
@@ -21,95 +23,99 @@ class _JobsPageState extends State<JobsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Mock job data - replace with real data from API
-  final List<Map<String, dynamic>> _allJobs = [
-    {
-      'jobNo': 'REG53677',
-      'status': 'Waiting',
-      'company': 'Umbrella Corporation Private Limited',
-      'job': 'Audit Planning',
-      'statusColor': const Color(0xFFFFA726),
-      'startDate': '2025-01-15',
-      'deadline': '2025-02-28',
-    },
-    {
-      'jobNo': 'REG23659',
-      'status': 'Planning',
-      'company': 'Tech Solutions Inc.',
-      'job': 'Financial Review',
-      'statusColor': const Color(0xFF42A5F5),
-      'startDate': '2025-01-10',
-      'deadline': '2025-03-15',
-    },
-    {
-      'jobNo': 'REG45654',
-      'status': 'Planning',
-      'company': 'Global Industries Ltd.',
-      'job': 'Tax Compliance',
-      'statusColor': const Color(0xFF42A5F5),
-      'startDate': '2025-01-20',
-      'deadline': '2025-04-01',
-    },
-    {
-      'jobNo': 'REG82574',
-      'status': 'Progress',
-      'company': 'Innovative Systems Corp.',
-      'job': 'Annual Audit',
-      'statusColor': const Color(0xFF66BB6A),
-      'startDate': '2025-01-05',
-      'deadline': '2025-02-20',
-    },
-    {
-      'jobNo': 'REG23947',
-      'status': 'Work Done',
-      'company': 'Digital Enterprises LLC',
-      'job': 'Quarterly Review',
-      'statusColor': const Color(0xFF26A69A),
-      'startDate': '2024-12-01',
-      'deadline': '2025-01-15',
-    },
-    {
-      'jobNo': 'REG23660',
-      'status': 'Delivery',
-      'company': 'Prime Corporation',
-      'job': 'Compliance Audit',
-      'statusColor': const Color(0xFF9C27B0),
-      'startDate': '2024-11-15',
-      'deadline': '2025-01-10',
-    },
-    {
-      'jobNo': 'REG34165',
-      'status': 'Delivery',
-      'company': 'Strategic Partners Inc.',
-      'job': 'Risk Assessment',
-      'statusColor': const Color(0xFF9C27B0),
-      'startDate': '2024-12-20',
-      'deadline': '2025-01-25',
-    },
-    {
-      'jobNo': 'REG98765',
-      'status': 'Closer',
-      'company': 'Fortune Enterprises',
-      'job': 'Year-End Audit',
-      'statusColor': const Color(0xFF78909C),
-      'startDate': '2024-10-01',
-      'deadline': '2024-12-31',
-    },
-    {
-      'jobNo': 'REG11223',
-      'status': 'Closer',
-      'company': 'Mega Solutions Group',
-      'job': 'Financial Statement Review',
-      'statusColor': const Color(0xFF78909C),
-      'startDate': '2024-11-01',
-      'deadline': '2024-12-15',
-    },
-  ];
+  // Jobs from database
+  List<Map<String, dynamic>> _allJobs = [];
+  bool _isLoadingJobs = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 7, vsync: this);
+    _loadJobs();
+  }
+
+  Future<void> _loadJobs() async {
+    setState(() {
+      _isLoadingJobs = true;
+    });
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Fetch jobs for current staff (filtered by sporg_id)
+      final jobsResponse = await supabase
+          .from('jobshead')
+          .select('job_id, job_uid, job_status, jobdate, targetdate, work_desc, client_id')
+          .eq('sporg_id', widget.currentStaff.staffId)
+          .order('job_id', ascending: false);
+
+      print('DEBUG: Fetched ${jobsResponse.length} jobs for staff_id ${widget.currentStaff.staffId}');
+
+      // Get unique client IDs
+      final clientIds = jobsResponse
+          .map((job) => job['client_id'])
+          .where((id) => id != null)
+          .toSet()
+          .toList();
+
+      // Fetch client names for all client IDs
+      Map<int, String> clientNames = {};
+      if (clientIds.isNotEmpty) {
+        final clientsResponse = await supabase
+            .from('climaster')
+            .select('client_id, clientname')
+            .inFilter('client_id', clientIds);
+
+        for (var client in clientsResponse) {
+          clientNames[client['client_id'] as int] = client['clientname'] ?? 'Unknown Client';
+        }
+      }
+
+      // Map job status codes to display names
+      final statusMap = {
+        'W': 'Waiting',
+        'P': 'Progress',
+        'D': 'Delivery',
+        'C': 'Closer',
+        'A': 'Planning',  // Assuming A is Planning
+        'G': 'Work Done',  // Assuming G is Work Done
+        'L': 'Planning',   // Assuming L is also Planning
+      };
+
+      // Transform database records to UI format
+      final jobs = jobsResponse.map<Map<String, dynamic>>((record) {
+        final statusCode = record['job_status']?.toString().trim() ?? 'W';
+        final status = statusMap[statusCode] ?? 'Waiting';
+        final clientId = record['client_id'] as int?;
+        final clientName = clientId != null ? (clientNames[clientId] ?? 'Unknown Client') : 'Unknown Client';
+
+        return {
+          'jobNo': record['job_uid'] ?? 'N/A',
+          'status': status,
+          'company': clientName,
+          'job': record['work_desc'] ?? 'No description',
+          'statusColor': _getStatusColor(status),
+          'startDate': record['jobdate'] != null
+              ? DateFormat('yyyy-MM-dd').format(DateTime.parse(record['jobdate']))
+              : '',
+          'deadline': record['targetdate'] != null
+              ? DateFormat('yyyy-MM-dd').format(DateTime.parse(record['targetdate']))
+              : '',
+        };
+      }).toList();
+
+      print('DEBUG: Transformed ${jobs.length} jobs with client names');
+
+      setState(() {
+        _allJobs = jobs;
+        _isLoadingJobs = false;
+      });
+    } catch (e) {
+      print('Error loading jobs: $e');
+      setState(() {
+        _isLoadingJobs = false;
+      });
+    }
   }
 
   @override
@@ -207,18 +213,20 @@ class _JobsPageState extends State<JobsPage>
 
             // Tab Views
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _JobListView(jobs: _getJobsByStatus('All')),
-                  _JobListView(jobs: _getJobsByStatus('Waiting')),
-                  _JobListView(jobs: _getJobsByStatus('Planning')),
-                  _JobListView(jobs: _getJobsByStatus('Progress')),
-                  _JobListView(jobs: _getJobsByStatus('Work Done')),
-                  _JobListView(jobs: _getJobsByStatus('Delivery')),
-                  _JobListView(jobs: _getJobsByStatus('Closer')),
-                ],
-              ),
+              child: _isLoadingJobs
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _JobListView(jobs: _getJobsByStatus('All')),
+                        _JobListView(jobs: _getJobsByStatus('Waiting')),
+                        _JobListView(jobs: _getJobsByStatus('Planning')),
+                        _JobListView(jobs: _getJobsByStatus('Progress')),
+                        _JobListView(jobs: _getJobsByStatus('Work Done')),
+                        _JobListView(jobs: _getJobsByStatus('Delivery')),
+                        _JobListView(jobs: _getJobsByStatus('Closer')),
+                      ],
+                    ),
             ),
           ],
         ),

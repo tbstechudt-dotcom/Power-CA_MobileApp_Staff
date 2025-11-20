@@ -48,7 +48,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
           .from('workdiary')
           .select('*')
           .eq('staff_id', widget.staffId)
-          .order('wdate', ascending: false);
+          .order('date', ascending: false);
 
       final Map<DateTime, int> counts = {};
       final Map<DateTime, List<Event>> events = {};
@@ -56,9 +56,9 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
       final List<Map<String, dynamic>> allEntries = [];
 
       for (var entry in response) {
-        if (entry['wdate'] != null) {
+        if (entry['date'] != null) {
           try {
-            final date = DateTime.parse(entry['wdate'] as String);
+            final date = DateTime.parse(entry['date'] as String);
             final normalized = DateTime(date.year, date.month, date.day);
             counts[normalized] = (counts[normalized] ?? 0) + 1;
 

@@ -64,8 +64,8 @@ class PinboardPage extends StatelessWidget {
               _buildModernAppBar(context),
 
               // Pinboard Main Content
-              const Expanded(
-                child: PinboardMainPage(),
+              Expanded(
+                child: PinboardMainPage(currentStaff: currentStaff),
               ),
             ],
           ),
