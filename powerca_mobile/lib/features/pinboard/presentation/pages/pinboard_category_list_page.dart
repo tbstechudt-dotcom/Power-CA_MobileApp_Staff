@@ -5,7 +5,6 @@ import '../../domain/entities/pinboard_item.dart';
 import '../bloc/pinboard_bloc.dart';
 import '../bloc/pinboard_event.dart';
 import '../bloc/pinboard_state.dart';
-import 'pinboard_detail_page.dart';
 
 class PinboardCategoryListPage extends StatefulWidget {
   final PinboardCategory category;
@@ -117,15 +116,13 @@ class _PinboardCategoryListPageState extends State<PinboardCategoryListPage> {
                   return _PinboardItemCard(
                     item: item,
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BlocProvider.value(
-                            value: context.read<PinboardBloc>(),
-                            child: PinboardDetailPage(
-                              itemId: item.id,
-                            ),
-                          ),
+                      // TODO: This BLoC-based page is not currently used.
+                      // The app uses pinboard_main_page.dart with direct Supabase integration.
+                      // To re-enable navigation, update PinboardDetailPage to support BLoC pattern
+                      // or convert this page to use direct Supabase queries.
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Detail view not available in this mode'),
                         ),
                       );
                     },
@@ -159,17 +156,6 @@ class _PinboardItemCard extends StatelessWidget {
         return Colors.blue;
       case PinboardCategory.greetings:
         return Colors.green;
-    }
-  }
-
-  IconData _getCategoryIcon() {
-    switch (item.category) {
-      case PinboardCategory.dueDate:
-        return Icons.calendar_today;
-      case PinboardCategory.meetings:
-        return Icons.people;
-      case PinboardCategory.greetings:
-        return Icons.celebration;
     }
   }
 

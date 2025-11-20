@@ -192,11 +192,15 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           SizedBox(height: 12.h),
           InkWell(
             onTap: () async {
+              // Get current date at midnight (00:00:00) for firstDate
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+
               final pickedDate = await showDatePicker(
                 context: context,
-                initialDate: _selectedDate,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
+                initialDate: _selectedDate.isBefore(today) ? today : _selectedDate,
+                firstDate: today, // Only allow current date and future dates
+                lastDate: DateTime(2030),
               );
               if (pickedDate != null) {
                 setState(() {
