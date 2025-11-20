@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
+import '../../../../shared/widgets/app_header.dart';
+import '../../../../shared/widgets/app_drawer.dart';
 import '../../../auth/domain/entities/staff.dart';
 
 class LeavePage extends StatefulWidget {
@@ -113,11 +115,18 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      drawer: AppDrawer(currentStaff: widget.currentStaff),
       body: SafeArea(
-        child: Column(
+        child: Builder(
+          builder: (scaffoldContext) => Column(
           children: [
             // Modern Top App Bar
-            _buildModernAppBar(context),
+            AppHeader(
+              currentStaff: widget.currentStaff,
+              onMenuTap: () {
+                Scaffold.of(scaffoldContext).openDrawer();
+              },
+            ),
 
             // Leave Balance Cards
             _buildLeaveBalanceCards(),
@@ -137,6 +146,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
             ),
           ],
         ),
+        ),
       ),
       bottomNavigationBar: ModernBottomNavigation(
         currentIndex: 2,
@@ -145,123 +155,11 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildModernAppBar(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Profile Avatar
-          Container(
-            width: 44.w,
-            height: 44.h,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0846B1), Color(0xFF2255FC)],
-              ),
-              border: Border.all(
-                color: Colors.white,
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0846B1).withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                widget.currentStaff.name.substring(0, 1).toUpperCase(),
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 12.w),
-          // Name and role
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Leave Requests',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF080E29),
-                  ),
-                ),
-                Text(
-                  widget.currentStaff.name,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF8F8E90),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Notifications
-          Container(
-            width: 40.w,
-            height: 40.h,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF5F7FA),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Icon(
-                    Icons.notifications_outlined,
-                    size: 20.sp,
-                    color: const Color(0xFF080E29),
-                  ),
-                ),
-                Positioned(
-                  right: 10.w,
-                  top: 10.h,
-                  child: Container(
-                    width: 8.w,
-                    height: 8.h,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFEF1E05),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildLeaveBalanceCards() {
     final availableLeaves = _totalLeaves - _usedLeaves;
 
     return Container(
-      margin: EdgeInsets.all(16.w),
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       child: Row(
         children: [
           // Available Leaves
@@ -304,20 +202,18 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
     required IconData icon,
     required List<Color> gradientColors,
   }) {
+    final baseColor = gradientColors[0];
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors,
-        ),
-        borderRadius: BorderRadius.circular(16.r),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: const Color(0xFFE8E8E8)),
         boxShadow: [
           BoxShadow(
-            color: gradientColors[0].withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -325,26 +221,26 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
         children: [
           Icon(
             icon,
-            color: Colors.white,
-            size: 24.sp,
+            color: baseColor,
+            size: 22.sp,
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 6.h),
           Text(
             count.toString(),
             style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 24.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: const Color(0xFF1A1A1A),
             ),
           ),
           Text(
             title,
             style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 11.sp,
+              fontSize: 10.sp,
               fontWeight: FontWeight.w500,
-              color: Colors.white.withValues(alpha: 0.9),
+              color: const Color(0xFF6B7280),
             ),
           ),
         ],
@@ -354,16 +250,16 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
 
   Widget _buildTabBar() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      margin: EdgeInsets.symmetric(horizontal: 12.w),
       decoration: BoxDecoration(
         color: const Color(0xFFF5F7FA),
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(10.r),
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
           color: AppTheme.primaryColor,
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: BorderRadius.circular(10.r),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
@@ -389,7 +285,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
 
   Widget _buildLeaveHistoryTab() {
     return ListView.builder(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       itemCount: _leaveRequests.length,
       itemBuilder: (context, index) {
         final leave = _leaveRequests[index];
@@ -404,11 +300,11 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
     final days = leave['days'] as int;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(16.w),
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -427,7 +323,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(6.r),
                 ),
                 child: Row(
                   children: [
@@ -454,7 +350,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
                   color: (leave['statusColor'] as Color).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(6.r),
                 ),
                 child: Text(
                   leave['status'],
@@ -494,7 +390,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F7FA),
-                  borderRadius: BorderRadius.circular(6.r),
+                  borderRadius: BorderRadius.circular(4.r),
                 ),
                 child: Text(
                   '$days ${days == 1 ? 'day' : 'days'}',
@@ -564,16 +460,16 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
 
   Widget _buildApplyLeaveTab() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Instructions Card
           Container(
-            padding: EdgeInsets.all(16.w),
+            padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12.r),
+              borderRadius: BorderRadius.circular(10.r),
               border: Border.all(
                 color: AppTheme.primaryColor.withValues(alpha: 0.2),
               ),
@@ -641,7 +537,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(10.r),
                 border: Border.all(color: const Color(0xFFE9F0F8)),
               ),
               child: DropdownButtonFormField<String>(
@@ -721,7 +617,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(10.r),
                   border: Border.all(color: const Color(0xFFE9F0F8)),
                 ),
                 child: Row(
@@ -794,7 +690,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                   color: fromDate == null
                       ? const Color(0xFFF5F7FA)
                       : Colors.white,
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(10.r),
                   border: Border.all(color: const Color(0xFFE9F0F8)),
                 ),
                 child: Row(
@@ -831,7 +727,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
                   color: AppTheme.successColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(6.r),
                 ),
                 child: Row(
                   children: [
@@ -871,7 +767,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(10.r),
                 border: Border.all(color: const Color(0xFFE9F0F8)),
               ),
               child: TextField(
@@ -1043,7 +939,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
                   elevation: 0,
                 ),

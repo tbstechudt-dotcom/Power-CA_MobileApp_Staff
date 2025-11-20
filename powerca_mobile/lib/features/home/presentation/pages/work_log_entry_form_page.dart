@@ -154,10 +154,14 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Future<void> _selectDate() async {
+    // Get current date at midnight (00:00:00) for firstDate
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2020),
+      initialDate: _selectedDate ?? today,
+      firstDate: today, // Only allow current date and future dates
       lastDate: DateTime(2030),
       builder: (context, child) {
         return Theme(
@@ -324,7 +328,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                     if (_fromTime != null && _toTime != null) ...[
                       SizedBox(height: 8.h),
                       Text(
-                        'Total Hours: ${_calculateHours().toStringAsFixed(2)}',
+                        'Total Hours: ${_formatMinutesToHours((_calculateHours() * 60).round())}',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 12.sp,
@@ -705,5 +709,20 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               ),
       ),
     );
+  }
+
+  String _formatMinutesToHours(int minutes) {
+    if (minutes == 0) return '0m';
+
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+
+    if (hours == 0) {
+      return '${remainingMinutes}m';
+    } else if (remainingMinutes == 0) {
+      return '${hours}h';
+    } else {
+      return '${hours}h ${remainingMinutes}m';
+    }
   }
 }

@@ -173,17 +173,17 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                   return Transform.scale(
                     scale: 1.0 + (animation.value * 0.08),
                     child: Container(
-                      width: 32.w,
-                      height: 32.h,
+                      width: 24.w,
+                      height: 24.h,
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.primaryColor.withValues(alpha: 0.12)
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8.r),
+                        borderRadius: BorderRadius.circular(6.r),
                       ),
                       child: Icon(
                         isSelected ? selectedIcon : icon,
-                        size: 20.sp,
+                        size: 16.sp,
                         color: isSelected
                             ? AppTheme.primaryColor
                             : const Color(0xFF9E9E9E),
@@ -215,7 +215,6 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                   );
                 },
               ),
-              SizedBox(height: 0.5.h),
               // Active indicator
               AnimatedBuilder(
                 animation: animation,

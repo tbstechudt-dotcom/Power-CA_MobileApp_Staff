@@ -1,182 +1,225 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../bloc/pinboard_bloc.dart';
-import '../bloc/pinboard_event.dart';
-import '../bloc/pinboard_state.dart';
-import '../widgets/event_details_tab.dart';
-import '../widgets/comments_tab.dart';
+import '../../../auth/domain/entities/staff.dart';
 
-class PinboardDetailPage extends StatefulWidget {
-  final String itemId;
+class PinboardDetailPage extends StatelessWidget {
+  final Staff currentStaff;
+  final Map<String, dynamic> reminder;
 
   const PinboardDetailPage({
     super.key,
-    required this.itemId,
+    required this.currentStaff,
+    required this.reminder,
   });
 
   @override
-  State<PinboardDetailPage> createState() => _PinboardDetailPageState();
-}
-
-class _PinboardDetailPageState extends State<PinboardDetailPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    context.read<PinboardBloc>().add(
-          LoadPinboardItemDetails(widget.itemId),
-        );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final dateFormat = DateFormat('dd MMM yyyy');
+    final remdate = reminder['remdate'] as DateTime?;
+    final remduedate = reminder['remduedate'] as DateTime?;
+
     return Scaffold(
-      body: BlocConsumer<PinboardBloc, PinboardState>(
-        listener: (context, state) {
-          if (state is LikeToggled) {
-            // Optionally show a snackbar
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Like toggled'),
-                duration: Duration(seconds: 1),
-              ),
-            );
-          }
-
-          if (state is CommentAdded) {
-            // Optionally show a snackbar
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Comment added'),
-                duration: Duration(seconds: 1),
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is PinboardLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          if (state is PinboardError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      context.read<PinboardBloc>().add(
-                            LoadPinboardItemDetails(widget.itemId),
-                          );
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (state is PinboardItemDetailsLoaded) {
-            final item = state.item;
-
-            return NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                return [
-                  SliverAppBar(
-                    expandedHeight: item.imageUrl != null ? 250 : 0,
-                    floating: false,
-                    pinned: true,
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: item.imageUrl != null
-                          ? Image.network(
-                              item.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[300],
-                                  child: const Icon(
-                                    Icons.image_not_supported,
-                                    size: 64,
-                                    color: Colors.grey,
-                                  ),
-                                );
-                              },
-                            )
-                          : null,
-                    ),
-                  ),
-                ];
-              },
-              body: Column(
-                children: [
-                  // Tabs
-                  Container(
-                    color: Colors.white,
-                    child: TabBar(
-                      controller: _tabController,
-                      labelColor: Theme.of(context).primaryColor,
-                      unselectedLabelColor: Colors.grey,
-                      indicatorColor: Theme.of(context).primaryColor,
-                      tabs: const [
-                        Tab(
-                          icon: Icon(Icons.event),
-                          text: 'Event',
-                        ),
-                        Tab(
-                          icon: Icon(Icons.comment),
-                          text: 'Comments',
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Tab Views
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        EventDetailsTab(item: item),
-                        CommentsTab(
-                          pinboardItemId: item.id,
-                          comments: state.comments,
-                          isLoading: state.isLoadingComments,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return const SizedBox.shrink();
-        },
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E3A5F)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Reminder Details',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E3A5F),
+          ),
+        ),
       ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Main Details Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  _buildDetailRow(
+                    icon: Icons.title,
+                    label: 'Title',
+                    value: reminder['remtitle'] as String,
+                    isTitle: true,
+                  ),
+                  const Divider(height: 24),
+
+                  // Type
+                  _buildDetailRow(
+                    icon: Icons.category_outlined,
+                    label: 'Type',
+                    value: reminder['remtype'] as String,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Client
+                  _buildDetailRow(
+                    icon: Icons.business_outlined,
+                    label: 'Client',
+                    value: reminder['clientName'] as String,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Created Date
+                  if (remdate != null) ...[
+                    _buildDetailRow(
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Created Date',
+                      value: dateFormat.format(remdate),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Due Date
+                  if (remduedate != null) ...[
+                    _buildDetailRow(
+                      icon: Icons.event_outlined,
+                      label: 'Due Date',
+                      value: dateFormat.format(remduedate),
+                      valueColor: const Color(0xFFDC2626),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Time
+                  if ((reminder['remtime'] as String).isNotEmpty) ...[
+                    _buildDetailRow(
+                      icon: Icons.access_time_outlined,
+                      label: 'Time',
+                      value: reminder['remtime'] as String,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Notes Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.notes_outlined,
+                        size: 18,
+                        color: Color(0xFF6B7280),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Notes',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    reminder['remnotes'] as String,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF1F2937),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool isTitle = false,
+    Color? valueColor,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: const Color(0xFF6B7280),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF9CA3AF),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: isTitle ? 16 : 13,
+                  fontWeight: isTitle ? FontWeight.w600 : FontWeight.w500,
+                  color: valueColor ?? const Color(0xFF1F2937),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

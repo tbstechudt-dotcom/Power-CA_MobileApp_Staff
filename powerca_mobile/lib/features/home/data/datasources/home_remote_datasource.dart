@@ -160,15 +160,15 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
       for (final entry in recentWorkDiary) {
         final minutes = entry['minutes'];
-        final hours = minutes != null
-            ? ((minutes is int ? minutes.toDouble() : minutes as double) / 60.0).toStringAsFixed(1)
-            : '0.0';
+        final hoursFormatted = minutes != null
+            ? _formatMinutesToHours(minutes is int ? minutes : (minutes as double).round())
+            : '0m';
 
         activities.add(
           RecentActivityModel(
             id: entry['wd_id'].toString(),
             type: 'work_diary',
-            title: '$hours hours logged',
+            title: '$hoursFormatted logged',
             subtitle: entry['tasknotes'] ?? 'Job #${entry['job_id']}',
             timestamp: entry['date'] != null
                 ? DateTime.parse(entry['date'])
@@ -183,6 +183,21 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       return activities.take(limit).toList();
     } catch (e) {
       throw ServerException(e.toString());
+    }
+  }
+
+  String _formatMinutesToHours(int minutes) {
+    if (minutes == 0) return '0m';
+
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+
+    if (hours == 0) {
+      return '${remainingMinutes}m';
+    } else if (remainingMinutes == 0) {
+      return '${hours}h';
+    } else {
+      return '${hours}h ${remainingMinutes}m';
     }
   }
 }

@@ -2,27 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// PowerCA App Theme
-/// Design tokens extracted from Figma design
+/// Professional color scheme with 2-3 unique colors
 class AppTheme {
-  // Brand Colors (from Figma)
-  static const Color primaryColor = Color(0xFF2255FC);  // Secondary Color (Figma)
-  static const Color primaryLight = Color(0xFF4A7BFC);
-  static const Color primaryDark = Color(0xFF1744D8);
+  // Professional Brand Colors
+  static const Color primaryColor = Color(0xFF1E3A5F);  // Navy Blue - Primary
+  static const Color primaryLight = Color(0xFF2E4A6F);
+  static const Color primaryDark = Color(0xFF0E2A4F);
 
-  static const Color surfaceColor = Color(0xFFFFFFFF);  // Primary Color 1 (Figma)
-  static const Color backgroundColor = Color(0xFFF8F9FC);  // Primary Color 2 (Figma)
-  static const Color accentColor = Color(0xFF263238);  // Accent color 2 (Figma)
+  static const Color surfaceColor = Color(0xFFFFFFFF);  // White
+  static const Color backgroundColor = Color(0xFFF3F4F6);  // Light Gray
+  static const Color accentColor = Color(0xFF0D9488);  // Teal - Accent
 
   // Semantic Colors
-  static const Color successColor = Color(0xFF4CAF50);
-  static const Color warningColor = Color(0xFFFF9800);
-  static const Color errorColor = Color(0xFFF44336);
-  static const Color infoColor = Color(0xFF2196F3);
+  static const Color successColor = Color(0xFF0D9488);  // Teal
+  static const Color warningColor = Color(0xFFF59E0B);  // Amber
+  static const Color errorColor = Color(0xFFDC2626);  // Red
+  static const Color infoColor = Color(0xFF1E3A5F);  // Navy
 
   // Text Colors
-  static const Color textPrimaryColor = Color(0xFF263238);
-  static const Color textSecondaryColor = Color(0xFF757575);
-  static const Color textDisabledColor = Color(0xFFBDBDBD);
+  static const Color textPrimaryColor = Color(0xFF1E3A5F);  // Navy Blue
+  static const Color textSecondaryColor = Color(0xFF6B7280);  // Gray
+  static const Color textDisabledColor = Color(0xFF9CA3AF);  // Light Gray
 
   // Border & Divider
   static const Color borderColor = Color(0xFFE0E0E0);
