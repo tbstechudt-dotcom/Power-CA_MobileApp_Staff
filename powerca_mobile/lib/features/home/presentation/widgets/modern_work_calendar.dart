@@ -6,6 +6,7 @@ import 'package:flutter_calendar_carousel/classes/event.dart';
 
 import '../../../../app/theme.dart';
 import '../pages/work_log_entry_form_page.dart';
+import '../pages/work_log_list_page.dart';
 
 /// Modern calendar widget with proper weekend coloring using flutter_calendar_carousel
 class ModernWorkCalendar extends StatefulWidget {
@@ -27,8 +28,6 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
   bool _isLoading = true;
   String? _errorMessage;
   EventList<Event> _markedDateMap = EventList<Event>(events: {});
-  DateTime? _selectedDate;
-  List<Map<String, dynamic>> _selectedDateEntries = [];
 
   @override
   void initState() {
@@ -51,7 +50,6 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
           .order('date', ascending: false);
 
       final Map<DateTime, int> counts = {};
-      final Map<DateTime, List<Event>> events = {};
       final Map<DateTime, List<Map<String, dynamic>>> entriesByDate = {};
       final List<Map<String, dynamic>> allEntries = [];
 
@@ -69,23 +67,6 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               entriesByDate[normalized] = [];
             }
             entriesByDate[normalized]!.add(entry as Map<String, dynamic>);
-
-            // Add event marker for this date
-            if (events[normalized] == null) {
-              events[normalized] = [];
-            }
-            events[normalized]!.add(Event(
-              date: normalized,
-              title: 'Work Entry',
-              icon: Container(
-                decoration: const BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  shape: BoxShape.circle,
-                ),
-                width: 6.w,
-                height: 6.h,
-              ),
-            ),);
           } catch (e) {
             // Skip invalid dates
           }
@@ -96,7 +77,8 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
         _workDays = counts;
         _workEntriesByDate = entriesByDate;
         _allWorkEntries = allEntries;
-        _markedDateMap = EventList<Event>(events: events);
+        // Use empty markedDateMap since we're using customDayBuilder for rendering
+        _markedDateMap = EventList<Event>(events: {});
         _isLoading = false;
       });
     } catch (e) {
@@ -128,10 +110,21 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
         }
       });
     } else {
-      // Show entries for dates that have data
-      setState(() {
-        _selectedDate = normalized;
-        _selectedDateEntries = entries;
+      // Navigate to Work Log List Page to view entries
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WorkLogListPage(
+            selectedDate: normalized,
+            entries: entries,
+            staffId: widget.staffId,
+          ),
+        ),
+      ).then((result) {
+        // Reload data if any changes were made
+        if (result == true) {
+          _loadWorkDiaryData();
+        }
       });
     }
   }
@@ -141,40 +134,61 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: const Color(0xFFE9F0F8), width: 1),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: const Color(0xFFE8E8E8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title with loading indicator
+          // Compact Header
           Row(
             children: [
+              Icon(
+                Icons.calendar_month_rounded,
+                color: const Color(0xFF1E3A5F),
+                size: 18.sp,
+              ),
+              SizedBox(width: 8.w),
               Text(
-                'Work Log Calendar',
+                'Work Log',
                 style: TextStyle(
                   fontFamily: 'Poppins',
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF080E29),
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1A1A1A),
                 ),
               ),
-              if (_isLoading) ...{
-                SizedBox(width: 12.w),
+              const Spacer(),
+              if (_isLoading)
                 SizedBox(
-                  width: 16.w,
-                  height: 16.h,
-                  child: const CircularProgressIndicator(
+                  width: 14.w,
+                  height: 14.h,
+                  child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
+                  ),
+                )
+              else
+                Text(
+                  '${_workDays.length} days logged',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF6B7280),
                   ),
                 ),
-              },
             ],
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: 12.h),
 
           // Error message (if any)
           if (_errorMessage != null)
@@ -212,31 +226,179 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               color: const Color(0xFFEF1E05),  // RED for weekends
             ),
             thisMonthDayBorderColor: Colors.transparent,
+            // Custom day builder to show green dates with dots
+            customDayBuilder: (
+              bool isSelectable,
+              int index,
+              bool isSelectedDay,
+              bool isToday,
+              bool isPrevMonthDay,
+              TextStyle textStyle,
+              bool isNextMonthDay,
+              bool isThisMonthDay,
+              DateTime day,
+            ) {
+              final normalized = DateTime(day.year, day.month, day.day);
+              final entryCount = _workDays[normalized] ?? 0;
+              final hasEntries = entryCount > 0;
+
+              // Custom rendering for dates with work log entries
+              if (hasEntries && isThisMonthDay) {
+                // Use white text and dots for today, green for other dates
+                final isCurrentDate = isToday;
+                final textColor = isCurrentDate
+                    ? Colors.white  // White text for today
+                    : const Color(0xFF2E7D32);  // Dark green for others
+                final dotColor = isCurrentDate
+                    ? Colors.white  // White dots for today
+                    : const Color(0xFF4CAF50);  // Green dots for others
+
+                return Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Enhanced container with gradient and shadow
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: isCurrentDate
+                              ? LinearGradient(
+                                  colors: [
+                                    AppTheme.primaryColor,
+                                    AppTheme.primaryColor.withOpacity(0.8),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : LinearGradient(
+                                  colors: [
+                                    const Color(0xFF4CAF50).withOpacity(0.2),
+                                    const Color(0xFF4CAF50).withOpacity(0.12),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                          shape: BoxShape.circle,
+                          boxShadow: isCurrentDate
+                              ? [
+                                  BoxShadow(
+                                    color: AppTheme.primaryColor.withOpacity(0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : [
+                                  BoxShadow(
+                                    color: const Color(0xFF4CAF50).withOpacity(0.15),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                        ),
+                        width: 32.w,
+                        height: 32.h,
+                        child: Center(
+                          child: Text(
+                            '${day.day}',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Position dots at the bottom with improved styling
+                      Positioned(
+                        bottom: 3.h,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            entryCount > 3 ? 3 : entryCount,
+                            (index) {
+                              return Container(
+                                margin: EdgeInsets.symmetric(horizontal: 1.5.w),
+                                width: 5.w,
+                                height: 5.h,
+                                decoration: BoxDecoration(
+                                  color: dotColor,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: dotColor.withOpacity(0.5),
+                                      blurRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      // Entry count badge for 3+ entries
+                      if (entryCount > 3)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(3.w),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF6B35),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 14.w,
+                              minHeight: 14.h,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${entryCount}',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 8.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }
+
+              // Return null for default rendering
+              return null;
+            },
             weekdayTextStyle: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF080E29),
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF1E3A5F),
             ),
             weekFormat: false,
             markedDatesMap: _markedDateMap,
-            height: 350.h,
+            height: 320.h,
             selectedDateTime: null,  // No selection
             daysHaveCircularBorder: false,
             showOnlyCurrentMonthDate: false,
             customGridViewPhysics: const NeverScrollableScrollPhysics(),
-            markedDateShowIcon: true,
-            markedDateIconMaxShown: 1,
-            markedDateIconMargin: 4,
+            markedDateShowIcon: false, // Disabled - using custom dots in customDayBuilder
+            markedDateIconMaxShown: 0,
             markedDateMoreShowTotal: null,
             showHeader: true,
             todayTextStyle: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 14.sp,
+              fontSize: 13.sp,
               fontWeight: FontWeight.w500,
               color: Colors.white,
             ),
-            todayButtonColor: AppTheme.primaryColor,
+            todayButtonColor: const Color(0xFF1E3A5F),
             selectedDayTextStyle: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 14.sp,
@@ -268,281 +430,16 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             ),
             headerTextStyle: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF080E29),
-            ),
-            headerMargin: EdgeInsets.only(bottom: 16.h),
-            childAspectRatio: 1.2,
-            iconColor: const Color(0xFF080E29),
-          ),
-
-          SizedBox(height: 12.h),
-
-          // Data summary
-          if (!_isLoading && _workDays.isNotEmpty)
-            Container(
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
-                  SizedBox(width: 8.w),
-                  Text(
-                    'Loaded ${_workDays.length} days with work entries',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF8F8E90),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // No data message
-          if (!_isLoading && _workDays.isEmpty && _errorMessage == null)
-            Container(
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF9E6),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                  SizedBox(width: 8.w),
-                  Expanded(
-                    child: Text(
-                      'No work diary entries found for staff ID ${widget.staffId}',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w400,
-                        color: const Color(0xFF8F8E90),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Selected Date Work Entries
-          if (_selectedDate != null) ...[
-            SizedBox(height: 16.h),
-            Divider(color: const Color(0xFFE9F0F8), thickness: 1),
-            SizedBox(height: 16.h),
-            _buildSelectedDateHeader(),
-            SizedBox(height: 12.h),
-            if (_selectedDateEntries.isEmpty)
-              _buildNoEntriesForDate()
-            else
-              ..._selectedDateEntries.map((entry) => _buildWorkEntryCard(entry)),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectedDateHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Work Logs',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF080E29),
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              'For ${_formatSelectedDate()}',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF8F8E90),
-              ),
-            ),
-          ],
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          child: Text(
-            '${_selectedDateEntries.length} ${_selectedDateEntries.length == 1 ? 'entry' : 'entries'}',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 12.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: AppTheme.primaryColor,
+              color: const Color(0xFF1A1A1A),
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNoEntriesForDate() {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F7FA),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE9F0F8)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline,
-            size: 20.sp,
-            color: const Color(0xFF8F8E90),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Text(
-              'No work entries for this date',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF8F8E90),
-              ),
-            ),
+            headerMargin: EdgeInsets.only(bottom: 12.h),
+            childAspectRatio: 1.15,
+            iconColor: const Color(0xFF1E3A5F),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildWorkEntryCard(Map<String, dynamic> entry) {
-    final description = entry['wdescription'] ?? 'No description';
-    final hours = entry['hours']?.toString() ?? '0';
-    final jobName = entry['job_name'] ?? 'N/A';
-    final jobId = entry['job_id']?.toString() ?? '';
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE9F0F8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with hours
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  jobName,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF080E29),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6.r),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 14.sp,
-                      color: const Color(0xFF4CAF50),
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      '${hours}h',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF4CAF50),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          if (jobId.isNotEmpty) ...[
-            SizedBox(height: 6.h),
-            Text(
-              'Job ID: $jobId',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFFA8A8A8),
-              ),
-            ),
-          ],
-
-          SizedBox(height: 8.h),
-
-          // Description
-          Text(
-            description,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF8F8E90),
-              height: 1.5,
-            ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatSelectedDate() {
-    if (_selectedDate == null) return '';
-
-    final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-
-    final day = _selectedDate!.day;
-    final month = months[_selectedDate!.month - 1];
-    final year = _selectedDate!.year;
-
-    return '$day $month $year';
   }
 }
