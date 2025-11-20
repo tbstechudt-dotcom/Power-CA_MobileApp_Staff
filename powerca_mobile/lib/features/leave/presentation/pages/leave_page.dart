@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
@@ -26,47 +27,80 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
   final int _usedLeaves = 8;
   final int _pendingLeaves = 3;
 
-  // Mock leave requests (replace with API data)
-  final List<Map<String, dynamic>> _leaveRequests = [
-    {
-      'id': 1,
-      'fromDate': DateTime(2025, 11, 20),
-      'toDate': DateTime(2025, 11, 22),
-      'days': 3,
-      'type': 'Sick Leave',
-      'reason': 'Medical checkup',
-      'status': 'Approved',
-      'statusColor': AppTheme.successColor,
-      'appliedDate': DateTime(2025, 11, 10),
-    },
-    {
-      'id': 2,
-      'fromDate': DateTime(2025, 11, 5),
-      'toDate': DateTime(2025, 11, 7),
-      'days': 3,
-      'type': 'Casual Leave',
-      'reason': 'Personal work',
-      'status': 'Pending',
-      'statusColor': AppTheme.warningColor,
-      'appliedDate': DateTime(2025, 11, 1),
-    },
-    {
-      'id': 3,
-      'fromDate': DateTime(2025, 10, 15),
-      'toDate': DateTime(2025, 10, 15),
-      'days': 1,
-      'type': 'Casual Leave',
-      'reason': 'Family function',
-      'status': 'Rejected',
-      'statusColor': AppTheme.errorColor,
-      'appliedDate': DateTime(2025, 10, 10),
-    },
-  ];
+  // Leave requests from database
+  List<Map<String, dynamic>> _leaveRequests = [];
+  bool _isLoadingLeaveRequests = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadLeaveRequests();
+  }
+
+  Future<void> _loadLeaveRequests() async {
+    setState(() {
+      _isLoadingLeaveRequests = true;
+    });
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Fetch leave requests for current staff
+      final response = await supabase
+          .from('learequest')
+          .select()
+          .eq('staff_id', widget.currentStaff.staffId)
+          .order('requestdate', ascending: false);
+
+      // Map leave type codes to display names
+      final leaveTypeNames = {
+        'SL': 'Sick Leave',
+        'CL': 'Casual Leave',
+        'EL': 'Earned Leave',
+        'EM': 'Emergency Leave',
+      };
+
+      // Map approval status to display names and colors
+      final statusMap = {
+        'P': {'name': 'Pending', 'color': AppTheme.warningColor},
+        'A': {'name': 'Approved', 'color': AppTheme.successColor},
+        'R': {'name': 'Rejected', 'color': AppTheme.errorColor},
+      };
+
+      // Transform database records to UI format
+      final leaveRequests = response.map<Map<String, dynamic>>((record) {
+        final fromDate = DateTime.parse(record['fromdate']);
+        final toDate = DateTime.parse(record['todate']);
+        final days = toDate.difference(fromDate).inDays + 1;
+        final status = statusMap[record['approval_status']] ??
+            {'name': 'Unknown', 'color': AppTheme.warningColor};
+
+        return {
+          'id': record['learequest_id'],
+          'fromDate': fromDate,
+          'toDate': toDate,
+          'days': days,
+          'type': leaveTypeNames[record['leavetype']] ?? 'Unknown',
+          'reason': record['leaveremarks'] ?? '',
+          'status': status['name'],
+          'statusColor': status['color'],
+          'appliedDate': record['requestdate'] != null
+              ? DateTime.parse(record['requestdate'])
+              : DateTime.now(),
+        };
+      }).toList();
+
+      setState(() {
+        _leaveRequests = leaveRequests;
+        _isLoadingLeaveRequests = false;
+      });
+    } catch (e) {
+      print('Error loading leave requests: $e');
+      setState(() {
+        _isLoadingLeaveRequests = false;
+      });
+    }
   }
 
   @override
@@ -868,7 +902,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
               width: double.infinity,
               height: 52.h,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   // Validate form
                   if (leaveType == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -901,24 +935,109 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                     return;
                   }
 
-                  // TODO: Submit to API
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Leave request submitted!\n'
-                        'Type: $leaveType\n'
-                        'From: ${DateFormat('dd MMM yyyy').format(fromDate!)}\n'
-                        'To: ${DateFormat('dd MMM yyyy').format(toDate!)}\n'
-                        'Days: $numberOfDays',
-                      ),
-                      backgroundColor: AppTheme.successColor,
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 4),
+                  // Show loading indicator
+                  if (!context.mounted) return;
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(
+                      child: CircularProgressIndicator(),
                     ),
                   );
 
-                  // Switch to history tab
-                  _tabController.animateTo(0);
+                  try {
+                    final supabase = Supabase.instance.client;
+
+                    // Map leave type to code
+                    final leaveTypeCode = {
+                      'Sick Leave': 'SL',
+                      'Casual Leave': 'CL',
+                      'Earned Leave': 'EL',
+                      'Emergency Leave': 'EM',
+                    }[leaveType] ?? 'CL';
+
+                    // Generate unique learequest_id (max 99999 due to numeric(5,0) precision)
+                    // Use timestamp modulo to get a 5-digit number
+                    final requestId = DateTime.now().millisecondsSinceEpoch % 100000;
+
+                    final leaveData = {
+                      'org_id': widget.currentStaff.orgId,
+                      'con_id': widget.currentStaff.conId,
+                      'loc_id': widget.currentStaff.locId,
+                      'learequest_id': requestId,
+                      'staff_id': widget.currentStaff.staffId,
+                      'requestdate': DateTime.now().toIso8601String(),
+                      'fromdate': fromDate!.toIso8601String(),
+                      'todate': toDate!.toIso8601String(),
+                      'leavetype': leaveTypeCode,
+                      'leaveremarks': reasonController.text.trim(),
+                      'createdby': widget.currentStaff.username,
+                      'createddate': DateTime.now().toIso8601String(),
+                      'approval_status': 'P', // P = Pending
+                      'source': 'M', // M = Mobile
+                    };
+
+                    print('DEBUG: About to insert leave request');
+                    print('DEBUG: Leave data = $leaveData');
+
+                    // Insert leave request
+                    final response = await supabase.from('learequest').insert(leaveData);
+
+                    print('DEBUG: Insert completed');
+                    print('DEBUG: Response = $response');
+
+                    // Close loading dialog
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop();
+
+                    // Show success message
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Leave request submitted successfully!\n'
+                          'Type: $leaveType\n'
+                          'From: ${DateFormat('dd MMM yyyy').format(fromDate!)}\n'
+                          'To: ${DateFormat('dd MMM yyyy').format(toDate!)}\n'
+                          'Days: $numberOfDays',
+                        ),
+                        backgroundColor: AppTheme.successColor,
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+
+                    // Clear form
+                    setFormState(() {
+                      leaveType = null;
+                      fromDate = null;
+                      toDate = null;
+                      reasonController.clear();
+                    });
+
+                    // Reload leave requests to show the newly created one
+                    await _loadLeaveRequests();
+
+                    // Switch to history tab
+                    _tabController.animateTo(0);
+                  } catch (e) {
+                    // Log full error to console
+                    print('ERROR inserting leave request: $e');
+                    print('ERROR details: ${e.runtimeType}');
+
+                    // Close loading dialog
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop();
+
+                    // Show error message
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error creating leave request: ${e.toString()}'),
+                        backgroundColor: AppTheme.errorColor,
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
