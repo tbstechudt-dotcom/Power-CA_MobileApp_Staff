@@ -51,67 +51,25 @@ class _JobDetailPageState extends State<JobDetailPage>
       // Fetch tasks for this job
       final tasksResponse = await supabase
           .from('jobtasks')
-          .select('jt_id, job_id, staff_id, task_id, jtaskdate, jenddate, jtstatus, totalhrs')
+          .select('jt_id, job_id, task_id, task_desc, createddate, task_status, jobdet_man_hrs')
           .eq('job_id', jobId)
-          .order('jtaskdate', ascending: true);
-
-      // Get staff names for tasks
-      final staffIds = tasksResponse
-          .map((task) => task['staff_id'])
-          .where((id) => id != null)
-          .toSet()
-          .toList();
-
-      Map<int, String> staffNames = {};
-      if (staffIds.isNotEmpty) {
-        final staffResponse = await supabase
-            .from('mbstaff')
-            .select('staff_id, staffname')
-            .inFilter('staff_id', staffIds);
-
-        for (var staff in staffResponse) {
-          staffNames[staff['staff_id'] as int] = staff['staffname'] ?? 'Unknown';
-        }
-      }
-
-      // Get task names from taskmaster
-      final taskIds = tasksResponse
-          .map((task) => task['task_id'])
-          .where((id) => id != null)
-          .toSet()
-          .toList();
-
-      Map<int, String> taskNames = {};
-      if (taskIds.isNotEmpty) {
-        final taskResponse = await supabase
-            .from('taskmaster')
-            .select('task_id, taskname')
-            .inFilter('task_id', taskIds);
-
-        for (var task in taskResponse) {
-          taskNames[task['task_id'] as int] = task['taskname'] ?? 'Unknown Task';
-        }
-      }
+          .order('createddate', ascending: true);
 
       // Transform to UI format
       final tasks = tasksResponse.map<Map<String, dynamic>>((record) {
-        final staffId = record['staff_id'] as int?;
-        final taskId = record['task_id'] as int?;
-        final staffName = staffId != null ? (staffNames[staffId] ?? 'Unknown') : 'Unassigned';
-        final taskName = taskId != null ? (taskNames[taskId] ?? 'Task #$taskId') : 'No Task';
+        final taskStatus = record['task_status'];
+        final statusText = taskStatus == 1 || taskStatus == '1' ? 'Completed' : 'Pending';
 
         return {
           'jt_id': record['jt_id'],
-          'taskName': taskName,
-          'staffName': staffName,
-          'startDate': record['jtaskdate'] != null
-              ? DateTime.parse(record['jtaskdate'])
+          'taskName': record['task_desc'] ?? 'Unnamed Task',
+          'staffName': '-', // No staff_id in jobtasks table
+          'startDate': record['createddate'] != null
+              ? DateTime.parse(record['createddate'])
               : null,
-          'endDate': record['jenddate'] != null
-              ? DateTime.parse(record['jenddate'])
-              : null,
-          'status': record['jtstatus'] ?? 'P',
-          'totalHours': record['totalhrs'] ?? 0,
+          'endDate': null, // No end date in jobtasks table
+          'status': statusText,
+          'totalHours': record['jobdet_man_hrs'] ?? 0,
         };
       }).toList();
 

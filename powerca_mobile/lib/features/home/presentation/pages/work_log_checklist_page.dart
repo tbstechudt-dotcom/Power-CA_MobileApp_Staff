@@ -44,46 +44,57 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Fetch tasks for the staff member and job
-      List<dynamic> tasksResponse;
-
-      if (widget.jobId > 0) {
-        // If job ID is specified, get tasks for that job
-        tasksResponse = await supabase
-            .from('jobtasks')
-            .select('jt_id, job_id, staff_id, task_id, taskname, tstartdate, tenddate, status, totalhours')
-            .eq('staff_id', widget.staffId)
-            .eq('job_id', widget.jobId)
-            .order('tstartdate', ascending: true);
-      } else {
-        // Get all tasks for the staff member
-        tasksResponse = await supabase
-            .from('jobtasks')
-            .select('jt_id, job_id, staff_id, task_id, taskname, tstartdate, tenddate, status, totalhours')
-            .eq('staff_id', widget.staffId)
-            .order('tstartdate', ascending: true)
-            .limit(50);
+      if (widget.jobId <= 0) {
+        setState(() {
+          _tasks = [];
+          _isLoading = false;
+        });
+        return;
       }
 
-      // Transform tasks
-      final tasks = tasksResponse.map<Map<String, dynamic>>((task) {
-        final jtId = task['jt_id'] as int;
-        // Initialize checked state based on status
-        final status = (task['status'] as String?)?.toLowerCase() ?? '';
-        _checkedTasks[jtId] = status == 'completed' || status == 'done';
+      debugPrint('Loading taskchecklist for job_id: ${widget.jobId}');
 
-        return {
-          'jt_id': jtId,
-          'job_id': task['job_id'],
-          'staff_id': task['staff_id'],
-          'task_id': task['task_id'],
-          'taskname': task['taskname'] ?? 'Unnamed Task',
-          'tstartdate': task['tstartdate'] != null ? DateTime.parse(task['tstartdate']) : null,
-          'tenddate': task['tenddate'] != null ? DateTime.parse(task['tenddate']) : null,
-          'status': task['status'] ?? 'Pending',
-          'totalhours': task['totalhours'] ?? 0,
-        };
-      }).toList();
+      // Query taskchecklist directly by job_id (new column added to table)
+      final checklistResponse = await supabase
+          .from('taskchecklist')
+          .select('tc_id, task_id, job_id, checklistdesc, checkliststatus, completedby, completeddate, comments')
+          .eq('job_id', widget.jobId)
+          .order('task_id', ascending: true);
+
+      debugPrint('Found ${checklistResponse.length} taskchecklist items for job_id: ${widget.jobId}');
+
+      // Transform checklist items and remove duplicates by checklistdesc only
+      final seenDescriptions = <String>{};
+      final tasks = <Map<String, dynamic>>[];
+
+      for (final item in checklistResponse) {
+        final tcId = item['tc_id'] as int;
+        final checklistDesc = item['checklistdesc']?.toString().trim() ?? '';
+
+        // Skip if we've already seen this description (remove duplicates)
+        if (seenDescriptions.contains(checklistDesc)) {
+          continue;
+        }
+        seenDescriptions.add(checklistDesc);
+
+        // Initialize checked state based on checkliststatus (numeric: 0=pending, 1=completed)
+        final checklistStatus = item['checkliststatus'];
+        _checkedTasks[tcId] = checklistStatus == 1 || checklistStatus == '1';
+
+        tasks.add({
+          'jt_id': tcId, // Using tc_id as the identifier
+          'job_id': widget.jobId,
+          'task_id': item['task_id'],
+          'taskname': item['checklistdesc'] ?? 'Unnamed Checklist Item',
+          'createddate': item['completeddate'] != null ? DateTime.parse(item['completeddate']) : null,
+          'status': checklistStatus == 1 || checklistStatus == '1' ? 'Completed' : 'Pending',
+          'totalhours': 0,
+          'completedby': item['completedby'] ?? '',
+          'comments': item['comments'] ?? '',
+        });
+      }
+
+      debugPrint('After removing duplicates: ${tasks.length} unique checklist items');
 
       setState(() {
         _tasks = tasks;
@@ -138,16 +149,16 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Update task statuses in database
+      // Update checklist statuses in database (checkliststatus: 0=pending, 1=completed)
       for (final task in _tasks) {
-        final jtId = task['jt_id'] as int;
-        final isChecked = _checkedTasks[jtId] ?? false;
-        final newStatus = isChecked ? 'Completed' : 'Pending';
+        final tcId = task['jt_id'] as int; // tc_id stored in jt_id field
+        final isChecked = _checkedTasks[tcId] ?? false;
+        final newStatus = isChecked ? 1 : 0;
 
         await supabase
-            .from('jobtasks')
-            .update({'status': newStatus})
-            .eq('jt_id', jtId);
+            .from('taskchecklist')
+            .update({'checkliststatus': newStatus})
+            .eq('tc_id', tcId);
       }
 
       // Close loading dialog
@@ -384,7 +395,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     final taskname = task['taskname'] as String;
     final status = task['status'] as String;
     final totalhours = task['totalhours'] ?? 0;
-    final jobId = task['job_id']?.toString() ?? '';
+    final taskId = task['task_id']?.toString() ?? '';
 
     return GestureDetector(
       onTap: () => _toggleTask(jtId),
@@ -451,16 +462,16 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                   SizedBox(height: 6.h),
                   Row(
                     children: [
-                      // Job ID
-                      if (jobId.isNotEmpty) ...[
+                      // Task ID
+                      if (taskId.isNotEmpty) ...[
                         Icon(
-                          Icons.work_outline,
+                          Icons.task_outlined,
                           size: 12.sp,
                           color: const Color(0xFF9CA3AF),
                         ),
                         SizedBox(width: 4.w),
                         Text(
-                          'Job #$jobId',
+                          'Task #$taskId',
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 11.sp,
