@@ -238,13 +238,13 @@ class _DashboardPageState extends State<DashboardPage> {
             height: 48.w,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF1E3A5F),
+              color: Color(0xFF2563EB),
             ),
             child: Center(
               child: Text(
                 initials,
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -262,7 +262,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Text(
                   widget.currentStaff.name,
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF1A1A1A),
@@ -274,7 +274,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Text(
                   staffRole,
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFF6B7280),
@@ -293,7 +293,7 @@ class _DashboardPageState extends State<DashboardPage> {
             child: Text(
               '#${widget.currentStaff.staffId}',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF4B5563),
@@ -398,7 +398,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: Text(
                   trend,
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 10.sp,
                     fontWeight: FontWeight.w600,
                     color: color,
@@ -413,7 +413,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Text(
                 value,
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 24.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF080E29),
@@ -423,7 +423,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Text(
                 title,
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w400,
                   color: const Color(0xFF8F8E90),

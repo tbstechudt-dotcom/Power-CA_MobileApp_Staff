@@ -330,7 +330,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       Text(
                         'Total Hours: ${_formatMinutesToHours((_calculateHours() * 60).round())}',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.primaryColor,
@@ -376,7 +376,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     return Text(
       title,
       style: TextStyle(
-        fontFamily: 'Poppins',
+        fontFamily: 'Inter',
         fontSize: 14.sp,
         fontWeight: FontWeight.w600,
         color: const Color(0xFF080E29),
@@ -408,7 +408,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                     ? DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate!)
                     : 'Select a date',
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
                   color: _selectedDate != null
@@ -451,7 +451,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   Text(
                     label,
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w400,
                       color: const Color(0xFF8F8E90),
@@ -461,7 +461,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   Text(
                     time != null ? time.format(context) : 'Select time',
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
                       color: time != null
@@ -493,7 +493,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           hint: Text(
             'Select a client',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFF8F8E90),
@@ -505,7 +505,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               child: Text(
                 client['clientname'] ?? 'Unknown Client',
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
                   color: const Color(0xFF080E29),
@@ -557,7 +557,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                 ? 'No jobs available'
                 : 'Select a job',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFF8F8E90),
@@ -569,7 +569,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               child: Text(
                 '${job['job_uid'] ?? 'N/A'} - ${job['work_desc'] ?? 'Unknown Job'}',
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
                   color: const Color(0xFF080E29),
@@ -608,7 +608,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                 ? 'No tasks available'
                 : 'Select a task (optional)',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFF8F8E90),
@@ -620,7 +620,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               child: Text(
                 task['task_desc'] ?? 'Unknown Task', // Column is 'task_desc' not 'task_name'
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
                   color: const Color(0xFF080E29),
@@ -651,7 +651,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         decoration: InputDecoration(
           hintText: 'Describe the work performed...',
           hintStyle: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 14.sp,
             fontWeight: FontWeight.w400,
             color: const Color(0xFF8F8E90),
@@ -660,7 +660,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           contentPadding: EdgeInsets.all(16.w),
         ),
         style: TextStyle(
-          fontFamily: 'Poppins',
+          fontFamily: 'Inter',
           fontSize: 14.sp,
           fontWeight: FontWeight.w400,
           color: const Color(0xFF080E29),
@@ -701,7 +701,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             : Text(
                 'Create Work Log Entry',
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,

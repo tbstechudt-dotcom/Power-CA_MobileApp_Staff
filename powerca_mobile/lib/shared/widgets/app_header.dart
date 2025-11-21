@@ -144,10 +144,10 @@ class _AppHeaderState extends State<AppHeader> {
                 Text(
                   _isLoading ? 'Loading...' : _companyName,
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E3A5F),
+                    color: const Color(0xFF2563EB),
                   ),
                 ),
                 if (_locationName.isNotEmpty || _isLoading)
@@ -162,7 +162,7 @@ class _AppHeaderState extends State<AppHeader> {
                       Text(
                         _isLoading ? 'Loading...' : _locationName,
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF6B7280),
