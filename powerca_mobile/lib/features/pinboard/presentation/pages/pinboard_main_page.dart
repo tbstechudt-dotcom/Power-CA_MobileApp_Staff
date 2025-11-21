@@ -197,7 +197,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
             decoration: InputDecoration(
               hintText: 'Search reminders...',
               hintStyle: const TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 13,
                 color: Color(0xFF9CA3AF),
               ),
@@ -226,7 +226,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
               ),
             ),
             style: const TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 13,
               color: Color(0xFF1F2937),
             ),
@@ -239,18 +239,18 @@ class _PinboardMainPageState extends State<PinboardMainPage>
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: TabBar(
             controller: _tabController,
-            labelColor: const Color(0xFF1E3A5F),
+            labelColor: const Color(0xFF2563EB),
             unselectedLabelColor: const Color(0xFF6B7280),
-            indicatorColor: const Color(0xFF1E3A5F),
+            indicatorColor: const Color(0xFF2563EB),
             indicatorWeight: 2,
             dividerColor: Colors.transparent,
             labelStyle: const TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
             unselectedLabelStyle: const TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 12,
               fontWeight: FontWeight.w400,
             ),
@@ -344,7 +344,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
 
     return RefreshIndicator(
       onRefresh: _loadReminders,
-      color: const Color(0xFF1E3A5F),
+      color: const Color(0xFF2563EB),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: filteredReminders.length,
@@ -428,7 +428,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                       Text(
                         'Type',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF6B7280),
@@ -437,7 +437,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                       Text(
                         reminder['remtype'] as String,
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: categoryColor,
@@ -462,7 +462,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                 Text(
                   reminder['remtitle'] as String,
                   style: const TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF1F2937),
@@ -486,7 +486,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                       child: Text(
                         reminder['remnotes'] as String,
                         style: const TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
                           color: Color(0xFF6B7280),
@@ -521,7 +521,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                             child: Text(
                               reminder['clientName'] as String,
                               style: const TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'Inter',
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xFF374151),
@@ -547,7 +547,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                             child: Text(
                               dateFormat.format(displayDate),
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'Inter',
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: categoryColor,

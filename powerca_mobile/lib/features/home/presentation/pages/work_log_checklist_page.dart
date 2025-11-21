@@ -135,7 +135,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
               Text(
                 'Saving...',
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
                 ),
@@ -206,16 +206,16 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E3A5F)),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Task Checklist',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 16.sp,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF1E3A5F),
+            color: const Color(0xFF2563EB),
           ),
         ),
         actions: [
@@ -230,7 +230,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
             label: Text(
               'Save',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.primaryColor,
@@ -256,7 +256,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 14.sp,
                           color: const Color(0xFF6B7280),
                         ),
@@ -290,7 +290,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
           Text(
             'No tasks found',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF6B7280),
@@ -300,7 +300,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
           Text(
             'No tasks assigned to you for this job',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 13.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFF9CA3AF),
@@ -333,7 +333,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                   Text(
                     'Progress',
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF1F2937),
@@ -342,7 +342,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                   Text(
                     '$completedCount / $totalCount completed',
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF6B7280),
@@ -450,7 +450,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                   Text(
                     taskname,
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
                       color: isChecked
@@ -473,7 +473,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                         Text(
                           'Task #$taskId',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 11.sp,
                             fontWeight: FontWeight.w400,
                             color: const Color(0xFF9CA3AF),
@@ -491,7 +491,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                       Text(
                         '${totalhours}h',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF9CA3AF),
@@ -508,7 +508,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                         child: Text(
                           isChecked ? 'Completed' : status,
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w500,
                             color: isChecked ? const Color(0xFF4CAF50) : _getStatusColor(status),

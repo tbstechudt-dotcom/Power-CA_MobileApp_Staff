@@ -184,7 +184,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             'Task Entries List',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimaryColor,
@@ -193,7 +193,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             job.jobName,
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w400,
               color: AppTheme.textSecondaryColor,
@@ -230,7 +230,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             'Total Hours Logged',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -239,7 +239,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             formattedHours,
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
               color: AppTheme.primaryColor,
@@ -264,7 +264,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             'No entries yet',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 16.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -274,7 +274,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             'Tap + to add your first entry',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               color: AppTheme.textSecondaryColor,
             ),

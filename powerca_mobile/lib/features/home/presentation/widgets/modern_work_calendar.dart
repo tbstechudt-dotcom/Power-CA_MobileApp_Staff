@@ -153,14 +153,14 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             children: [
               Icon(
                 Icons.calendar_month_rounded,
-                color: const Color(0xFF1E3A5F),
+                color: const Color(0xFF2563EB),
                 size: 18.sp,
               ),
               SizedBox(width: 8.w),
               Text(
                 'Work Log',
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF1A1A1A),
@@ -173,14 +173,14 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                   height: 14.h,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
                   ),
                 )
               else
                 Text(
                   '${_workDays.length} days logged',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF6B7280),
@@ -206,7 +206,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                     child: Text(
                       _errorMessage!,
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 12.sp,
                         color: Colors.red,
                       ),
@@ -300,7 +300,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                           child: Text(
                             '${day.day}',
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'Inter',
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w700,
                               color: textColor,
@@ -358,7 +358,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                               child: Text(
                                 '${entryCount}',
                                 style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'Inter',
                                   fontSize: 8.sp,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
@@ -376,10 +376,10 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               return null;
             },
             weekdayTextStyle: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E3A5F),
+              color: const Color(0xFF2563EB),
             ),
             weekFormat: false,
             markedDatesMap: _markedDateMap,
@@ -393,14 +393,14 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             markedDateMoreShowTotal: null,
             showHeader: true,
             todayTextStyle: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 13.sp,
               fontWeight: FontWeight.w500,
               color: Colors.white,
             ),
-            todayButtonColor: const Color(0xFF1E3A5F),
+            todayButtonColor: const Color(0xFF2563EB),
             selectedDayTextStyle: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: Colors.white,
@@ -429,14 +429,14 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               color: const Color(0xFF080E29),  // Black for regular days
             ),
             headerTextStyle: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF1A1A1A),
             ),
             headerMargin: EdgeInsets.only(bottom: 12.h),
             childAspectRatio: 1.15,
-            iconColor: const Color(0xFF1E3A5F),
+            iconColor: const Color(0xFF2563EB),
           ),
         ],
       ),

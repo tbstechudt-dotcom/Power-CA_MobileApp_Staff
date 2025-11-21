@@ -61,7 +61,7 @@ class _SplashPageState extends State<SplashPage> {
                       // App Name "POWER CA"
                       Text(
                         'POWER CA',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 28,
                           fontWeight: FontWeight.w600, // SemiBold
                           color: Colors.white,
@@ -75,7 +75,7 @@ class _SplashPageState extends State<SplashPage> {
                       // Subtitle "Auditor WorkLog"
                       Text(
                         'Auditor WorkLog',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w500, // Medium
                           color: Colors.white,
@@ -111,7 +111,7 @@ class _SplashPageState extends State<SplashPage> {
                         child: Text(
                           'The Auditor WorkLog application is specially designed for Auditor Offices that have adopted the PowerCA system.',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
                             color: Colors.white,
@@ -148,7 +148,7 @@ class _SplashPageState extends State<SplashPage> {
                           ),
                           child: Text(
                             'Sign in',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),

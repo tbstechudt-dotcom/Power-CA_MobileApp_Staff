@@ -75,7 +75,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Text(
               'Update Profile Photo',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF1F2937),
@@ -144,7 +144,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
                 color: isDestructive ? const Color(0xFFDC2626) : const Color(0xFF1F2937),
@@ -266,16 +266,16 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E3A5F)),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
           onPressed: () => Navigator.pop(context, _profileImagePath),
         ),
         title: Text(
           'Profile',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 16.sp,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF1E3A5F),
+            color: const Color(0xFF2563EB),
           ),
         ),
       ),
@@ -359,14 +359,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   shape: BoxShape.circle,
                   gradient: _profileImagePath == null
                       ? const LinearGradient(
-                          colors: [Color(0xFF1E3A5F), Color(0xFF3B5998)],
+                          colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
                       : null,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1E3A5F).withValues(alpha: 0.3),
+                      color: const Color(0xFF2563EB).withValues(alpha: 0.3),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -388,7 +388,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: LinearGradient(
-                                      colors: [Color(0xFF1E3A5F), Color(0xFF3B5998)],
+                                      colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
@@ -397,7 +397,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     child: Text(
                                       _getInitials(widget.currentStaff.name),
                                       style: TextStyle(
-                                        fontFamily: 'Poppins',
+                                        fontFamily: 'Inter',
                                         fontSize: 40.sp,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white,
@@ -412,7 +412,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: Text(
                               _getInitials(widget.currentStaff.name),
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'Inter',
                                 fontSize: 40.sp,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
@@ -452,7 +452,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Text(
             widget.currentStaff.name,
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 20.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF1F2937),
@@ -464,7 +464,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Text(
             _getStaffRole(widget.currentStaff.staffType),
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFF6B7280),
@@ -481,7 +481,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Text(
               'Staff ID: ${widget.currentStaff.staffId}',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.primaryColor,
@@ -534,7 +534,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Text(
                 title,
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF1F2937),
@@ -561,7 +561,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Text(
               label,
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF9CA3AF),
@@ -572,7 +572,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Text(
               value,
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w500,
                 color: valueColor ?? const Color(0xFF1F2937),

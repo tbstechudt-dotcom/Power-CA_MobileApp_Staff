@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 /// Professional color scheme with 2-3 unique colors
 class AppTheme {
   // Professional Brand Colors
-  static const Color primaryColor = Color(0xFF1E3A5F);  // Navy Blue - Primary
+  static const Color primaryColor = Color(0xFF2563EB);  // Navy Blue - Primary
   static const Color primaryLight = Color(0xFF2E4A6F);
   static const Color primaryDark = Color(0xFF0E2A4F);
 
@@ -17,10 +17,10 @@ class AppTheme {
   static const Color successColor = Color(0xFF0D9488);  // Teal
   static const Color warningColor = Color(0xFFF59E0B);  // Amber
   static const Color errorColor = Color(0xFFDC2626);  // Red
-  static const Color infoColor = Color(0xFF1E3A5F);  // Navy
+  static const Color infoColor = Color(0xFF2563EB);  // Navy
 
   // Text Colors
-  static const Color textPrimaryColor = Color(0xFF1E3A5F);  // Navy Blue
+  static const Color textPrimaryColor = Color(0xFF2563EB);  // Navy Blue
   static const Color textSecondaryColor = Color(0xFF6B7280);  // Gray
   static const Color textDisabledColor = Color(0xFF9CA3AF);  // Light Gray
 
@@ -57,7 +57,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         iconTheme: const IconThemeData(color: textPrimaryColor),
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: textPrimaryColor,
@@ -65,71 +65,71 @@ class AppTheme {
         toolbarHeight: 64,
       ),
 
-      // Text Theme (Poppins font family from Figma)
+      // Text Theme (Inter font family from Figma)
       textTheme: TextTheme(
         // Display styles
-        displayLarge: GoogleFonts.poppins(
+        displayLarge: GoogleFonts.inter(
           fontSize: 32,
           fontWeight: FontWeight.w700,
           color: textPrimaryColor,
         ),
-        displayMedium: GoogleFonts.poppins(
+        displayMedium: GoogleFonts.inter(
           fontSize: 28,
           fontWeight: FontWeight.w600,
           color: textPrimaryColor,
         ),
-        displaySmall: GoogleFonts.poppins(
+        displaySmall: GoogleFonts.inter(
           fontSize: 24,
           fontWeight: FontWeight.w600,
           color: textPrimaryColor,
         ),
 
         // Headline styles
-        headlineLarge: GoogleFonts.poppins(
+        headlineLarge: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: textPrimaryColor,
         ),
-        headlineMedium: GoogleFonts.poppins(
+        headlineMedium: GoogleFonts.inter(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: textPrimaryColor,
         ),
-        headlineSmall: GoogleFonts.poppins(
+        headlineSmall: GoogleFonts.inter(
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: textPrimaryColor,
         ),
 
         // Body styles
-        bodyLarge: GoogleFonts.poppins(
+        bodyLarge: GoogleFonts.inter(
           fontSize: 16,
           fontWeight: FontWeight.w400,
           color: textPrimaryColor,
         ),
-        bodyMedium: GoogleFonts.poppins(
+        bodyMedium: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: textPrimaryColor,
         ),
-        bodySmall: GoogleFonts.poppins(
+        bodySmall: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w400,  // Tag - 12Px from Figma
           color: textSecondaryColor,
         ),
 
         // Label styles
-        labelLarge: GoogleFonts.poppins(
+        labelLarge: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: textPrimaryColor,
         ),
-        labelMedium: GoogleFonts.poppins(
+        labelMedium: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w500,
           color: textPrimaryColor,
         ),
-        labelSmall: GoogleFonts.poppins(
+        labelSmall: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w500,
           color: textSecondaryColor,
@@ -157,7 +157,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -173,7 +173,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -185,7 +185,7 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -225,22 +225,22 @@ class AppTheme {
         ),
 
         // Label & Hint styles
-        labelStyle: GoogleFonts.poppins(
+        labelStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: textSecondaryColor,
         ),
-        floatingLabelStyle: GoogleFonts.poppins(
+        floatingLabelStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: primaryColor,
         ),
-        hintStyle: GoogleFonts.poppins(
+        hintStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: textDisabledColor,
         ),
-        errorStyle: GoogleFonts.poppins(
+        errorStyle: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w400,
           color: errorColor,
@@ -262,12 +262,12 @@ class AppTheme {
         backgroundColor: backgroundColor,
         selectedColor: primaryLight,
         disabledColor: borderColor,
-        labelStyle: GoogleFonts.poppins(
+        labelStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: textPrimaryColor,
         ),
-        secondaryLabelStyle: GoogleFonts.poppins(
+        secondaryLabelStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: surfaceColor,

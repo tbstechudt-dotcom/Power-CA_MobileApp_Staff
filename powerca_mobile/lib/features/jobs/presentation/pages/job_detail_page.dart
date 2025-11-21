@@ -195,7 +195,7 @@ class _JobDetailPageState extends State<JobDetailPage>
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E3A5F)),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -204,16 +204,16 @@ class _JobDetailPageState extends State<JobDetailPage>
             Text(
               widget.job['jobNo'] ?? 'Job Details',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF1E3A5F),
+                color: const Color(0xFF2563EB),
               ),
             ),
             Text(
               widget.job['company'] ?? '',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 11.sp,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF6B7280),
@@ -235,12 +235,12 @@ class _JobDetailPageState extends State<JobDetailPage>
               indicatorWeight: 3,
               dividerColor: Colors.transparent,
               labelStyle: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
               ),
               unselectedLabelStyle: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w400,
               ),
@@ -301,7 +301,7 @@ class _JobDetailPageState extends State<JobDetailPage>
             Text(
               'Error loading tasks',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF6B7280),
@@ -340,7 +340,7 @@ class _JobDetailPageState extends State<JobDetailPage>
             Text(
               'No tasks found',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF6B7280),
@@ -350,7 +350,7 @@ class _JobDetailPageState extends State<JobDetailPage>
             Text(
               'Tasks will appear here when added',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF9CA3AF),
@@ -417,7 +417,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                         child: Text(
                           task['taskName'] as String,
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF1F2937),
@@ -438,7 +438,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                         child: Text(
                           statusText,
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -465,7 +465,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           Text(
                             task['staffName'] as String,
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'Inter',
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF374151),
@@ -495,7 +495,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                                         ? dateFormat.format(task['startDate'])
                                         : '-',
                                     style: TextStyle(
-                                      fontFamily: 'Poppins',
+                                      fontFamily: 'Inter',
                                       fontSize: 10.sp,
                                       fontWeight: FontWeight.w500,
                                       color: const Color(0xFF374151),
@@ -517,7 +517,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               Text(
                                 '${task['totalHours']}h',
                                 style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'Inter',
                                   fontSize: 10.sp,
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF8B5CF6),
@@ -553,7 +553,7 @@ class _JobDetailPageState extends State<JobDetailPage>
             Text(
               'Error loading diary entries',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF6B7280),
@@ -592,7 +592,7 @@ class _JobDetailPageState extends State<JobDetailPage>
             Text(
               'No diary entries found',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF6B7280),
@@ -602,7 +602,7 @@ class _JobDetailPageState extends State<JobDetailPage>
             Text(
               'Work diary entries will appear here',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF9CA3AF),
@@ -669,7 +669,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               ? dateFormat.format(entry['date'])
                               : 'No Date',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF1F2937),
@@ -689,7 +689,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                         child: Text(
                           '${entry['hours']}h',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -722,7 +722,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                                   child: Text(
                                     entry['staffName'] as String,
                                     style: TextStyle(
-                                      fontFamily: 'Poppins',
+                                      fontFamily: 'Inter',
                                       fontSize: 11.sp,
                                       fontWeight: FontWeight.w500,
                                       color: const Color(0xFF374151),
@@ -745,7 +745,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               Text(
                                 '${entry['startTime']} - ${entry['endTime']}',
                                 style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'Inter',
                                   fontSize: 10.sp,
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF6B7280),
@@ -773,7 +773,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               child: Text(
                                 entry['notes'] as String,
                                 style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'Inter',
                                   fontSize: 11.sp,
                                   fontWeight: FontWeight.w400,
                                   color: const Color(0xFF6B7280),
