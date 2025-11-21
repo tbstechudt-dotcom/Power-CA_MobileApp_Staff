@@ -136,7 +136,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       // Note: Column is 'task_desc' (NOT 'task_name')
       final tasksResponse = await supabase
           .from('jobtasks')
-          .select('jt_id, task_desc, job_id')
+          .select('jt_id, task_id, task_desc, job_id')
           .eq('job_id', jobId)
           .order('task_desc');
 
@@ -616,7 +616,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           ),
           items: _tasks.map((task) {
             return DropdownMenuItem<int>(
-              value: task['jt_id'] as int, // Use jt_id from jobtasks table
+              value: task['task_id'] as int, // Use task_id from jobtasks table (references taskmaster)
               child: Text(
                 task['task_desc'] ?? 'Unknown Task', // Column is 'task_desc' not 'task_name'
                 style: TextStyle(

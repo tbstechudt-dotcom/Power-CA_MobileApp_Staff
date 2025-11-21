@@ -1,8 +1,10 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import 'work_log_checklist_page.dart';
@@ -43,6 +45,43 @@ class WorkLogDetailPage extends StatefulWidget {
 
 class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
   final List<AttachedFile> _attachedFiles = [];
+  bool _isUploading = false;
+  final _supabase = Supabase.instance.client;
+  String _actualTaskId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadActualTaskId();
+  }
+
+  /// Load the actual task_id from jobtasks table using job_id
+  /// The workdiary.task_id might contain incorrect values (jt_id instead of task_id)
+  Future<void> _loadActualTaskId() async {
+    final jobId = widget.entry['job_id'];
+    if (jobId == null) return;
+
+    try {
+      // Get task_id from jobtasks using the job_id from this workdiary entry
+      final response = await _supabase
+          .from('jobtasks')
+          .select('task_id')
+          .eq('job_id', jobId)
+          .limit(1)
+          .maybeSingle();
+
+      if (response != null && response['task_id'] != null) {
+        setState(() {
+          _actualTaskId = response['task_id'].toString();
+        });
+        debugPrint('Loaded actual task_id: ${response['task_id']} for job_id: $jobId');
+      } else {
+        debugPrint('No jobtask found for job_id: $jobId');
+      }
+    } catch (e) {
+      debugPrint('Error loading actual task_id: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +90,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
     final hours = _formatMinutesToHours(minutes);
     final jobId = widget.entry['job_id']?.toString() ?? '';
     final clientId = widget.entry['client_id']?.toString() ?? '';
+    final taskId = _actualTaskId.isNotEmpty ? _actualTaskId : (widget.entry['task_id']?.toString() ?? '');
     final timeFrom = widget.entry['timefrom'] ?? '';
     final timeTo = widget.entry['timeto'] ?? '';
 
@@ -87,9 +127,11 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Entry Header Card
@@ -186,6 +228,16 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                       icon: Icons.business_outlined,
                       label: 'Client ID',
                       value: clientId,
+                    ),
+                    SizedBox(height: 12.h),
+                  ],
+
+                  // Task ID
+                  if (taskId.isNotEmpty) ...[
+                    _buildDetailRow(
+                      icon: Icons.task_outlined,
+                      label: 'Task ID',
+                      value: taskId,
                     ),
                   ],
                 ],
@@ -449,6 +501,16 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             ),
           ],
         ),
+          ),
+          // Loading indicator while uploading
+          if (_isUploading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.3),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -584,7 +646,11 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             type: 'image',
           ));
         });
-        _showFileSelectedSnackBar(context, image.name);
+        // Upload to Supabase and update workdiary doc_ref
+        if (context.mounted) {
+          final bytes = await image.readAsBytes();
+          await _uploadFileToSupabase(bytes, image.name, context);
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -618,7 +684,11 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             type: 'image',
           ));
         });
-        _showFileSelectedSnackBar(context, image.name);
+        // Upload to Supabase and update workdiary doc_ref
+        if (context.mounted) {
+          final bytes = await image.readAsBytes();
+          await _uploadFileToSupabase(bytes, image.name, context);
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -642,6 +712,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'png', 'jpg', 'jpeg'],
         allowMultiple: false,
+        withData: true, // Load file bytes for web compatibility
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -655,7 +726,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             size: file.size,
           ));
         });
-        _showFileSelectedSnackBar(context, file.name);
+        // Upload to Supabase and update workdiary doc_ref
+        if (context.mounted && file.bytes != null) {
+          await _uploadFileToSupabase(file.bytes!, file.name, context);
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -670,38 +744,6 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
           ),
         );
       }
-    }
-  }
-
-  void _showFileSelectedSnackBar(BuildContext context, String fileName) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white, size: 20),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Text(
-                  'Selected: $fileName',
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF4CAF50),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
     }
   }
 
@@ -755,6 +797,100 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
       return '${hours}h';
     } else {
       return '${hours}h ${remainingMinutes}m';
+    }
+  }
+
+  /// Upload file to Supabase Storage and update workdiary doc_ref
+  Future<void> _uploadFileToSupabase(Uint8List bytes, String fileName, BuildContext context) async {
+    final wdId = widget.entry['wd_id'];
+    if (wdId == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Error: Work diary entry ID not found'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+
+      // Generate unique file name with timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = fileName.split('.').last;
+      final uniqueFileName = '${wdId}_${timestamp}.$extension';
+      final storagePath = 'workdiary/$uniqueFileName';
+
+      // Upload to Supabase Storage
+      await _supabase.storage
+          .from('attachments')
+          .uploadBinary(storagePath, bytes);
+
+      // Get public URL
+      final publicUrl = _supabase.storage
+          .from('attachments')
+          .getPublicUrl(storagePath);
+
+      // Update workdiary doc_ref column
+      await _supabase
+          .from('workdiary')
+          .update({'doc_ref': publicUrl})
+          .eq('wd_id', wdId);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.cloud_done, color: Colors.white, size: 20),
+                SizedBox(width: 8.w),
+                const Expanded(
+                  child: Text(
+                    'File uploaded successfully!',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF4CAF50),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading file: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
     }
   }
 }
