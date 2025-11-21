@@ -198,7 +198,7 @@ class _JobsPageState extends State<JobsPage>
                 decoration: InputDecoration(
                   hintText: 'Search jobs...',
                   hintStyle: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 13.sp,
                     color: const Color(0xFF9CA3AF),
                   ),
@@ -227,7 +227,7 @@ class _JobsPageState extends State<JobsPage>
                   ),
                 ),
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 13.sp,
                   color: const Color(0xFF1F2937),
                 ),
@@ -246,12 +246,12 @@ class _JobsPageState extends State<JobsPage>
                 indicatorWeight: 3,
                 dividerColor: Colors.transparent,
                 labelStyle: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
                 ),
                 unselectedLabelStyle: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w400,
                 ),
@@ -364,7 +364,7 @@ class _JobListView extends StatelessWidget {
             Text(
               'No jobs found',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF6B7280),
@@ -374,7 +374,7 @@ class _JobListView extends StatelessWidget {
             Text(
               'Jobs will appear here when available',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF9CA3AF),
@@ -458,7 +458,7 @@ class _JobListView extends StatelessWidget {
                             Text(
                               'Job No.',
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'Inter',
                                 fontSize: 11.sp,
                                 fontWeight: FontWeight.w400,
                                 color: const Color(0xFF6B7280),
@@ -467,7 +467,7 @@ class _JobListView extends StatelessWidget {
                             Text(
                               job['jobNo'] as String,
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'Inter',
                                 fontSize: 15.sp,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.primaryColor,
@@ -490,7 +490,7 @@ class _JobListView extends StatelessWidget {
                         child: Text(
                           job['status'] as String,
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -520,7 +520,7 @@ class _JobListView extends StatelessWidget {
                             child: Text(
                               job['company'] as String,
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'Inter',
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF1F2937),
@@ -547,7 +547,7 @@ class _JobListView extends StatelessWidget {
                             child: Text(
                               job['job'] as String,
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'Inter',
                                 fontSize: 11.sp,
                                 fontWeight: FontWeight.w400,
                                 color: const Color(0xFF6B7280),
@@ -582,7 +582,7 @@ class _JobListView extends StatelessWidget {
                                   child: Text(
                                     job['startDate'] as String,
                                     style: TextStyle(
-                                      fontFamily: 'Poppins',
+                                      fontFamily: 'Inter',
                                       fontSize: 10.sp,
                                       fontWeight: FontWeight.w500,
                                       color: const Color(0xFF374151),
@@ -606,7 +606,7 @@ class _JobListView extends StatelessWidget {
                                   child: Text(
                                     job['deadline'] as String,
                                     style: TextStyle(
-                                      fontFamily: 'Poppins',
+                                      fontFamily: 'Inter',
                                       fontSize: 10.sp,
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xFFEF4444),

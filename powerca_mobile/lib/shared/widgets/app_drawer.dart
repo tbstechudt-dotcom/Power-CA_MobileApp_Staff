@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 
 import '../../features/auth/domain/entities/staff.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -21,24 +19,6 @@ class AppDrawer extends StatefulWidget {
 }
 
 class _AppDrawerState extends State<AppDrawer> {
-  String? _profileImagePath;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfileImage();
-  }
-
-  Future<void> _loadProfileImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final imagePath = prefs.getString('profile_image_${widget.currentStaff.staffId}');
-    if (mounted && imagePath != null) {
-      setState(() {
-        _profileImagePath = imagePath;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -115,73 +95,37 @@ class _AppDrawerState extends State<AppDrawer> {
       padding: EdgeInsets.all(20.w),
       child: Row(
         children: [
-          // Circular Profile Avatar
           Container(
             width: 60.w,
             height: 60.w,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: _profileImagePath == null
-                  ? const LinearGradient(
-                      colors: [Color(0xFF1E3A5F), Color(0xFF3B5998)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF1E3A5F).withValues(alpha: 0.3),
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: _profileImagePath != null
-                ? ClipOval(
-                    child: Image.file(
-                      File(_profileImagePath!),
-                      fit: BoxFit.cover,
-                      width: 60.w,
-                      height: 60.w,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF1E3A5F), Color(0xFF3B5998)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              _getInitials(widget.currentStaff.name),
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                : Center(
-                    child: Text(
-                      _getInitials(widget.currentStaff.name),
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+            child: Center(
+              child: Text(
+                _getInitials(widget.currentStaff.name),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
           SizedBox(width: 16.w),
-          // Name and Role
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +133,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 Text(
                   widget.currentStaff.name,
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimaryColor,
@@ -201,7 +145,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 Text(
                   'Staff ID: ${widget.currentStaff.staffId}',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFF6B7280),
@@ -309,12 +253,7 @@ class _AppDrawerState extends State<AppDrawer> {
             currentStaff: widget.currentStaff,
           ),
         ),
-      ).then((result) {
-        // Refresh profile image if changed
-        if (result != null) {
-          _loadProfileImage();
-        }
-      });
+      );
     } else {
       // Show a snackbar for other menu items
       ScaffoldMessenger.of(context).showSnackBar(

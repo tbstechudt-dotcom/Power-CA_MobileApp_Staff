@@ -111,7 +111,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                       // Welcome text
                       Text(
                         'Welcome Back!',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 24,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF263238),
@@ -124,7 +124,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                       Text(
                         'Enter your details to log in and continue\nwhere you left off.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF8F8E90),
@@ -139,7 +139,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Username',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF080E29),
@@ -154,7 +154,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         controller: _usernameController,
                         decoration: InputDecoration(
                           hintText: 'Enter Your Username',
-                          hintStyle: GoogleFonts.poppins(
+                          hintStyle: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF8F8E90),
@@ -205,7 +205,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Password',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF080E29),
@@ -221,7 +221,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
                           hintText: 'Enter Your Password',
-                          hintStyle: GoogleFonts.poppins(
+                          hintStyle: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF8F8E90),
@@ -309,7 +309,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                                   children: [
                                     Text(
                                       'Sign in',
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.inter(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w500,
                                       ),

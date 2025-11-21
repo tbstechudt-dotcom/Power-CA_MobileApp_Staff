@@ -70,7 +70,7 @@ class ProfileHeader extends StatelessWidget {
                 Text(
                   name,
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 20.sp,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF080E29), // Accent from Figma
@@ -80,7 +80,7 @@ class ProfileHeader extends StatelessWidget {
                 Text(
                   role,
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.textSecondaryColor,
@@ -109,7 +109,7 @@ class ProfileHeader extends StatelessWidget {
                 Text(
                   'Edit',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
                   ),

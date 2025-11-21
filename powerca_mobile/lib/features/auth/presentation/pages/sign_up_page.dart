@@ -102,7 +102,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Title
                 Text(
                   'Create Account',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimaryColor,
@@ -114,7 +114,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 // Subtitle
                 Text(
                   'Sign up to get started with PowerCA',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                     color: AppTheme.textSecondaryColor,
@@ -263,7 +263,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         padding: const EdgeInsets.only(top: 12),
                         child: RichText(
                           text: TextSpan(
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               color: AppTheme.textSecondaryColor,
                             ),
@@ -271,7 +271,7 @@ class _SignUpPageState extends State<SignUpPage> {
                               const TextSpan(text: 'I agree to the '),
                               TextSpan(
                                 text: 'Terms and Conditions',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.inter(
                                   color: AppTheme.primaryColor,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -308,7 +308,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           )
                         : Text(
                             'Sign Up',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -326,7 +326,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'or',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           color: AppTheme.textSecondaryColor,
                         ),
@@ -344,7 +344,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   children: [
                     Text(
                       'Already have an account? ',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppTheme.textSecondaryColor,
                       ),
@@ -355,7 +355,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       },
                       child: Text(
                         'Sign In',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.primaryColor,

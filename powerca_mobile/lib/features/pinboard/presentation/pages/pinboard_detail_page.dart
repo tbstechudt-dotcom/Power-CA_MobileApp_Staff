@@ -24,16 +24,16 @@ class PinboardDetailPage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E3A5F)),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Reminder Details',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E3A5F),
+            color: Color(0xFF2563EB),
           ),
         ),
       ),
@@ -149,7 +149,7 @@ class PinboardDetailPage extends StatelessWidget {
                       Text(
                         'Notes',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF6B7280),
@@ -161,7 +161,7 @@ class PinboardDetailPage extends StatelessWidget {
                   Text(
                     reminder['remnotes'] as String,
                     style: const TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                       color: Color(0xFF1F2937),
@@ -200,7 +200,7 @@ class PinboardDetailPage extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 11,
                   fontWeight: FontWeight.w400,
                   color: Color(0xFF9CA3AF),
@@ -210,7 +210,7 @@ class PinboardDetailPage extends StatelessWidget {
               Text(
                 value,
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: isTitle ? 16 : 13,
                   fontWeight: isTitle ? FontWeight.w600 : FontWeight.w500,
                   color: valueColor ?? const Color(0xFF1F2937),

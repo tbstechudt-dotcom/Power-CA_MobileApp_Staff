@@ -202,7 +202,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                     child: Text(
                       label,
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 8.sp,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w500,

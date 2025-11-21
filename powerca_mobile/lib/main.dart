@@ -221,7 +221,7 @@ class PlaceholderHomePage extends StatelessWidget {
                   const SizedBox(height: 8),
                   _buildNextStep(
                     context,
-                    '2. Add Poppins fonts',
+                    '2. Add Inter fonts',
                     'assets/fonts/',
                   ),
                   const SizedBox(height: 8),

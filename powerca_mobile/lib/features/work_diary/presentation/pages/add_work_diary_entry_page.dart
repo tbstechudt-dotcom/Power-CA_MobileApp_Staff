@@ -75,7 +75,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
         title: Text(
           isEditing ? 'Edit Entry' : 'Add Entry',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
             color: AppTheme.textPrimaryColor,
@@ -135,7 +135,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             'Job',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w400,
               color: AppTheme.textSecondaryColor,
@@ -145,7 +145,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             widget.job.jobName,
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimaryColor,
@@ -155,7 +155,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             widget.job.clientName ?? 'No Client',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 13.sp,
               fontWeight: FontWeight.w400,
               color: AppTheme.textPrimaryColor,
@@ -183,7 +183,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             'Date',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -223,7 +223,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
                   Text(
                     _formatDate(_selectedDate),
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w400,
                       color: AppTheme.textPrimaryColor,
@@ -260,7 +260,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             'Actual Hours',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -340,7 +340,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             'Notes',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -381,7 +381,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
       child: Text(
         isEditing ? 'Update Entry' : 'Save Entry',
         style: TextStyle(
-          fontFamily: 'Poppins',
+          fontFamily: 'Inter',
           fontSize: 16.sp,
           fontWeight: FontWeight.w600,
           color: Colors.white,

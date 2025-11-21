@@ -60,7 +60,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E3A5F)),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -69,16 +69,16 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             Text(
               'Work Log Details',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF1E3A5F),
+                color: const Color(0xFF2563EB),
               ),
             ),
             Text(
               DateFormat('EEEE, MMMM d, yyyy').format(widget.selectedDate),
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 11.sp,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF6B7280),
@@ -123,7 +123,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                         child: Text(
                           'Entry #${widget.entryIndex}',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -147,7 +147,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                             Text(
                               hours,
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: 'Inter',
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
@@ -222,7 +222,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                       Text(
                         'Description',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF6B7280),
@@ -234,7 +234,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                   Text(
                     tasknotes,
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w400,
                       color: const Color(0xFF1F2937),
@@ -276,7 +276,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                         Text(
                           'Attached Files (${_attachedFiles.length})',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF6B7280),
@@ -318,7 +318,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                               child: Text(
                                 file.name,
                                 style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'Inter',
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF1F2937),
@@ -382,7 +382,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                           Text(
                             'Attach File',
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'Inter',
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF6366F1),
@@ -434,7 +434,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                           Text(
                             'Checklist',
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'Inter',
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
@@ -474,7 +474,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 11.sp,
                   fontWeight: FontWeight.w400,
                   color: const Color(0xFF9CA3AF),
@@ -484,7 +484,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
               Text(
                 value,
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF1F2937),
@@ -525,7 +525,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             Text(
               'Attach File',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF1F2937),
@@ -685,7 +685,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                 child: Text(
                   'Selected: $fileName',
                   style: const TextStyle(
-                    fontFamily: 'Poppins',
+                    fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
@@ -731,7 +731,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF1F2937),

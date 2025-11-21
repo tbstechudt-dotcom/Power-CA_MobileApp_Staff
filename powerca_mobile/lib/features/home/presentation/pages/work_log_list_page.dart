@@ -103,7 +103,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
             Text(
               'Work Log',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF1F2937),
@@ -112,7 +112,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
             Text(
               DateFormat('EEE, MMM d, yyyy').format(widget.selectedDate),
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF6B7280),
@@ -193,7 +193,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
         label: Text(
           'Add Entry',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 14.sp,
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -215,7 +215,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
         Text(
           value,
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 22.sp,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -224,7 +224,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
         Text(
           label,
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 11.sp,
             fontWeight: FontWeight.w400,
             color: Colors.white.withValues(alpha: 0.8),
@@ -257,7 +257,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
             Text(
               'No entries for this day',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF374151),
@@ -267,7 +267,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
             Text(
               'Tap the + button to log your work',
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: 'Inter',
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF9CA3AF),
@@ -348,7 +348,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                           ? 'Loading...'
                           : (jobName ?? 'Job #$jobId'),
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -367,7 +367,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                     child: Text(
                       hours,
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primaryColor,
@@ -396,7 +396,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                       Text(
                         hasTimeRange ? '$timeFrom - $timeTo' : 'Duration: $hours',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF000000),
@@ -411,7 +411,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                     Text(
                       'Task Notes:',
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF6B7280),
@@ -421,7 +421,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                     Text(
                       tasknotes,
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFF000000),
@@ -446,7 +446,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                         Text(
                           'Client: ',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: 'Inter',
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF6B7280),
@@ -458,7 +458,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                                 ? 'Loading...'
                                 : (clientName ?? 'Client #$clientId'),
                             style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: 'Inter',
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF000000),
@@ -495,7 +495,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                     child: Text(
                       'Entry #$index',
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -506,7 +506,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                   Text(
                     'View Details',
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF374151),
