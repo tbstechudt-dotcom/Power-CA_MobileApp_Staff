@@ -7,8 +7,9 @@ import '../../../../app/theme.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
+import '../../../../core/services/priority_service.dart';
 import '../../../auth/domain/entities/staff.dart';
-import 'job_detail_page.dart';
+import 'jobs_filtered_page.dart';
 
 class JobsPage extends StatefulWidget {
   final Staff currentStaff;
@@ -22,25 +23,76 @@ class JobsPage extends StatefulWidget {
   State<JobsPage> createState() => _JobsPageState();
 }
 
-class _JobsPageState extends State<JobsPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _JobsPageState extends State<JobsPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final TextEditingController _searchController = TextEditingController();
 
   // Jobs from database
   List<Map<String, dynamic>> _allJobs = [];
   bool _isLoadingJobs = false;
-  String _searchQuery = '';
+
+  // Priority jobs
+  Set<int> _priorityJobIds = {};
+  int _priorityCount = 0;
+
+  // Status configurations
+  final List<Map<String, dynamic>> _statusConfigs = [
+    {
+      'status': 'Waiting',
+      'icon': Icons.hourglass_empty_rounded,
+      'color': const Color(0xFFF59E0B),
+      'gradient': [const Color(0xFFFBBF24), const Color(0xFFF59E0B)],
+    },
+    {
+      'status': 'Planning',
+      'icon': Icons.architecture_rounded,
+      'color': const Color(0xFF3B82F6),
+      'gradient': [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
+    },
+    {
+      'status': 'Progress',
+      'icon': Icons.rocket_launch_rounded,
+      'color': const Color(0xFF10B981),
+      'gradient': [const Color(0xFF34D399), const Color(0xFF10B981)],
+    },
+    {
+      'status': 'Work Done',
+      'icon': Icons.task_alt_rounded,
+      'color': const Color(0xFF0D9488),
+      'gradient': [const Color(0xFF2DD4BF), const Color(0xFF0D9488)],
+    },
+    {
+      'status': 'Delivery',
+      'icon': Icons.local_shipping_rounded,
+      'color': const Color(0xFF8B5CF6),
+      'gradient': [const Color(0xFFA78BFA), const Color(0xFF8B5CF6)],
+    },
+    // Removed 'Closer' status - not displayed on jobs page
+  ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
     _loadJobs();
+    _loadPriorityJobs();
+  }
+
+  Future<void> _loadPriorityJobs() async {
+    final jobIds = await PriorityService.getPriorityJobIds();
+    if (mounted) {
+      setState(() {
+        _priorityJobIds = jobIds;
+        _priorityCount = jobIds.length;
+      });
+    }
+  }
+
+  // Get priority jobs from all jobs
+  List<Map<String, dynamic>> _getPriorityJobs() {
+    return _allJobs.where((job) => _priorityJobIds.contains(job['job_id'] as int)).toList();
   }
 
   Future<void> _loadJobs() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingJobs = true;
     });
@@ -109,45 +161,18 @@ class _JobsPageState extends State<JobsPage>
         };
       }).toList();
 
+      if (!mounted) return;
       setState(() {
         _allJobs = jobs;
         _isLoadingJobs = false;
       });
     } catch (e) {
       debugPrint('Error loading jobs: $e');
+      if (!mounted) return;
       setState(() {
         _isLoadingJobs = false;
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  List<Map<String, dynamic>> _getJobsByStatus(String status) {
-    List<Map<String, dynamic>> filtered;
-    if (status == 'All') {
-      filtered = _allJobs;
-    } else {
-      filtered = _allJobs.where((job) => job['status'] == status).toList();
-    }
-
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((job) {
-        final jobNo = (job['jobNo'] as String).toLowerCase();
-        final company = (job['company'] as String).toLowerCase();
-        final jobDesc = (job['job'] as String).toLowerCase();
-        final query = _searchQuery.toLowerCase();
-        return jobNo.contains(query) || company.contains(query) || jobDesc.contains(query);
-      }).toList();
-    }
-
-    return filtered;
   }
 
   Color _getStatusColor(String status) {
@@ -169,11 +194,58 @@ class _JobsPageState extends State<JobsPage>
     }
   }
 
+  // Get jobs excluding 'Closer' status
+  List<Map<String, dynamic>> get _activeJobs {
+    return _allJobs.where((job) => job['status'] != 'Closer').toList();
+  }
+
+  int _getJobCountByStatus(String status) {
+    return _allJobs.where((job) => job['status'] == status).length;
+  }
+
+  List<Map<String, dynamic>> _getJobsByStatus(String status) {
+    return _allJobs.where((job) => job['status'] == status).toList();
+  }
+
+  void _navigateToFilteredJobs(String status) {
+    final jobs = _getJobsByStatus(status);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => JobsFilteredPage(
+          currentStaff: widget.currentStaff,
+          statusFilter: status,
+          jobs: jobs,
+        ),
+      ),
+    ).then((_) {
+      // Reload priority jobs when returning from filtered page
+      _loadPriorityJobs();
+    });
+  }
+
+  void _navigateToPriorityJobs() {
+    final jobs = _getPriorityJobs();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => JobsFilteredPage(
+          currentStaff: widget.currentStaff,
+          statusFilter: 'Priority',
+          jobs: jobs,
+        ),
+      ),
+    ).then((_) {
+      // Reload priority jobs when returning
+      _loadPriorityJobs();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       drawer: AppDrawer(currentStaff: widget.currentStaff),
       body: SafeArea(
         child: Column(
@@ -184,104 +256,110 @@ class _JobsPageState extends State<JobsPage>
               onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
 
-            // Search/Filter Bar
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-              color: Colors.white,
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: 'Search jobs...',
-                  hintStyle: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13.sp,
-                    color: const Color(0xFF9CA3AF),
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    size: 20.sp,
-                    color: const Color(0xFF9CA3AF),
-                  ),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = '';
-                            });
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: const Color(0xFFF3F4F6),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.sp,
-                  color: const Color(0xFF1F2937),
-                ),
-              ),
-            ),
-
-            // Tab Bar
-            Container(
-              color: Colors.white,
-              child: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                labelColor: AppTheme.primaryColor,
-                unselectedLabelColor: const Color(0xFF6B7280),
-                indicatorColor: AppTheme.primaryColor,
-                indicatorWeight: 3,
-                dividerColor: Colors.transparent,
-                labelStyle: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-                unselectedLabelStyle: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w400,
-                ),
-                tabs: const [
-                  Tab(text: 'All'),
-                  Tab(text: 'Waiting'),
-                  Tab(text: 'Planning'),
-                  Tab(text: 'Progress'),
-                  Tab(text: 'Work Done'),
-                  Tab(text: 'Delivery'),
-                  Tab(text: 'Closer'),
-                ],
-              ),
-            ),
-
-            // Tab Views
+            // Content
             Expanded(
               child: _isLoadingJobs
                   ? const Center(child: CircularProgressIndicator())
-                  : TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _JobListView(jobs: _getJobsByStatus('All'), onRefresh: _loadJobs, currentStaff: widget.currentStaff),
-                        _JobListView(jobs: _getJobsByStatus('Waiting'), onRefresh: _loadJobs, currentStaff: widget.currentStaff),
-                        _JobListView(jobs: _getJobsByStatus('Planning'), onRefresh: _loadJobs, currentStaff: widget.currentStaff),
-                        _JobListView(jobs: _getJobsByStatus('Progress'), onRefresh: _loadJobs, currentStaff: widget.currentStaff),
-                        _JobListView(jobs: _getJobsByStatus('Work Done'), onRefresh: _loadJobs, currentStaff: widget.currentStaff),
-                        _JobListView(jobs: _getJobsByStatus('Delivery'), onRefresh: _loadJobs, currentStaff: widget.currentStaff),
-                        _JobListView(jobs: _getJobsByStatus('Closer'), onRefresh: _loadJobs, currentStaff: widget.currentStaff),
-                      ],
+                  : RefreshIndicator(
+                      onRefresh: _loadJobs,
+                      color: AppTheme.primaryColor,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.all(16.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Page Title
+                            Text(
+                              'My Jobs',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              'Track and manage your work',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                            SizedBox(height: 20.h),
+
+                            // Summary Cards Row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildSummaryCard(
+                                    title: 'Total',
+                                    count: _activeJobs.length,
+                                    icon: Icons.work_rounded,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  child: _buildSummaryCard(
+                                    title: 'Active',
+                                    count: _getJobCountByStatus('Progress') + _getJobCountByStatus('Planning'),
+                                    icon: Icons.pending_actions_rounded,
+                                    color: const Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 24.h),
+
+                            // Section Title
+                            Text(
+                              'By Status',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+
+                            // Priority Status Item (at top)
+                            _buildStatusListItem(
+                              status: 'Priority',
+                              icon: Icons.star_rounded,
+                              gradient: [const Color(0xFFEF4444), const Color(0xFFDC2626)],
+                              count: _priorityCount,
+                              onTap: () => _navigateToPriorityJobs(),
+                            ),
+
+                            // Status List
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _statusConfigs.length,
+                              itemBuilder: (context, index) {
+                                final config = _statusConfigs[index];
+                                final status = config['status'] as String;
+                                final icon = config['icon'] as IconData;
+                                final gradient = config['gradient'] as List<Color>;
+                                final count = _getJobCountByStatus(status);
+
+                                return _buildStatusListItem(
+                                  status: status,
+                                  icon: icon,
+                                  gradient: gradient,
+                                  count: count,
+                                  onTap: () => _navigateToFilteredJobs(status),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
             ),
           ],
@@ -293,339 +371,190 @@ class _JobsPageState extends State<JobsPage>
       ),
     );
   }
-}
 
-class _JobListView extends StatelessWidget {
-  final List<Map<String, dynamic>> jobs;
-  final Future<void> Function() onRefresh;
-  final Staff currentStaff;
-
-  const _JobListView({required this.jobs, required this.onRefresh, required this.currentStaff});
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Waiting':
-        return const Color(0xFFF59E0B);
-      case 'Planning':
-        return const Color(0xFF3B82F6);
-      case 'Progress':
-        return const Color(0xFF10B981);
-      case 'Work Done':
-        return const Color(0xFF0D9488);
-      case 'Delivery':
-        return const Color(0xFF8B5CF6);
-      case 'Closer':
-        return const Color(0xFF6B7280);
-      default:
-        return const Color(0xFF6B7FFF);
-    }
+  Widget _buildSummaryCard({
+    required String title,
+    required int count,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20.sp,
+                  color: color,
+                ),
+              ),
+              Icon(
+                Icons.trending_up_rounded,
+                size: 16.sp,
+                color: const Color(0xFF10B981),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            count.toString(),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 28.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Text(
+            '$title Jobs',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'Waiting':
-        return Icons.schedule;
-      case 'Planning':
-        return Icons.edit_calendar;
-      case 'Progress':
-        return Icons.trending_up;
-      case 'Work Done':
-        return Icons.check_circle_outline;
-      case 'Delivery':
-        return Icons.local_shipping_outlined;
-      case 'Closer':
-        return Icons.done_all;
-      default:
-        return Icons.work_outline;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (jobs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80.w,
-              height: 80.h,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Icon(
-                Icons.work_outline,
-                size: 40.sp,
-                color: const Color(0xFF9CA3AF),
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              'No jobs found',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF6B7280),
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Jobs will appear here when available',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF9CA3AF),
-              ),
+  Widget _buildStatusListItem({
+    required String status,
+    required IconData icon,
+    required List<Color> gradient,
+    required int count,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 10.h),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(14.r),
+          boxShadow: [
+            BoxShadow(
+              color: gradient[1].withValues(alpha: 0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      color: AppTheme.primaryColor,
-      child: ListView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-        itemCount: jobs.length,
-        itemBuilder: (context, index) {
-          final job = jobs[index];
-          final statusColor = _getStatusColor(job['status'] as String);
-          final statusIcon = _getStatusIcon(job['status'] as String);
-
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => JobDetailPage(
-                    currentStaff: currentStaff,
-                    job: job,
-                  ),
-                ),
-              );
-            },
-            child: Container(
-              margin: EdgeInsets.only(bottom: 8.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+        child: Stack(
+          children: [
+            // Background pattern icon
+            Positioned(
+              right: -15.w,
+              top: -15.h,
+              child: Icon(
+                icon,
+                size: 70.sp,
+                color: Colors.white.withValues(alpha: 0.12),
               ),
-              child: Column(
-              children: [
-                // Header with Job Number and Status
-                Container(
-                  padding: EdgeInsets.all(10.w),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(12.r),
-                      topRight: Radius.circular(12.r),
+            ),
+            // Content
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+              child: Row(
+                children: [
+                  // Icon container
+                  Container(
+                    width: 44.w,
+                    height: 44.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 22.sp,
+                      color: Colors.white,
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      // Status Icon
-                      Container(
-                        width: 36.w,
-                        height: 36.h,
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Icon(
-                          statusIcon,
-                          size: 18.sp,
-                          color: statusColor,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      // Job Number
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Job No.',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFF6B7280),
-                              ),
-                            ),
-                            Text(
-                              job['jobNo'] as String,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 15.sp,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.primaryColor,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Status Badge
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.w,
-                          vertical: 4.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        child: Text(
-                          job['status'] as String,
+                  SizedBox(width: 14.w),
+                  // Status name
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          status,
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 10.sp,
+                            fontSize: 15.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 2.h),
+                        Text(
+                          'Tap to view jobs',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-
-                // Content Section
-                Padding(
-                  padding: EdgeInsets.all(10.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Company Name
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.business_outlined,
-                            size: 14.sp,
-                            color: const Color(0xFF6B7280),
-                          ),
-                          SizedBox(width: 6.w),
-                          Expanded(
-                            child: Text(
-                              job['company'] as String,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF1F2937),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                  // Count badge
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Text(
+                      count.toString(),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
                       ),
-                      SizedBox(height: 4.h),
-
-                      // Job Description
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.description_outlined,
-                            size: 14.sp,
-                            color: const Color(0xFF9CA3AF),
-                          ),
-                          SizedBox(width: 6.w),
-                          Expanded(
-                            child: Text(
-                              job['job'] as String,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFF6B7280),
-                                height: 1.3,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-
-                      // Divider
-                      const Divider(height: 1, color: Color(0xFFE5E7EB)),
-                      SizedBox(height: 6.h),
-
-                      // Dates Row
-                      Row(
-                        children: [
-                          // Start Date
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: 14.sp,
-                                  color: const Color(0xFF10B981),
-                                ),
-                                SizedBox(width: 4.w),
-                                Expanded(
-                                  child: Text(
-                                    job['startDate'] as String,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 10.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF374151),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Deadline
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.flag_rounded,
-                                  size: 14.sp,
-                                  color: const Color(0xFFEF4444),
-                                ),
-                                SizedBox(width: 4.w),
-                                Expanded(
-                                  child: Text(
-                                    job['deadline'] as String,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 10.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFFEF4444),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(width: 8.w),
+                  // Arrow
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16.sp,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ],
+              ),
             ),
-            ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }

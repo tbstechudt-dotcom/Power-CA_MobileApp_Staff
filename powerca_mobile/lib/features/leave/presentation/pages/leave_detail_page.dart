@@ -292,35 +292,48 @@ class LeaveDetailPage extends StatelessWidget {
                         ),
                         SizedBox(height: 16.h),
 
-                        // From Date
-                        _buildDateRow(
-                          label: 'From',
-                          date: fromDate,
-                          dayType: fromDayType,
-                          color: const Color(0xFF10B981),
-                        ),
-
-                        Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12.h),
-                          child: Row(
-                            children: [
-                              SizedBox(width: 20.w),
-                              Container(
-                                width: 2,
-                                height: 30.h,
-                                color: const Color(0xFFE5E7EB),
-                              ),
-                            ],
+                        // Check if single day leave (same from and to date)
+                        if (fromDate.year == toDate.year &&
+                            fromDate.month == toDate.month &&
+                            fromDate.day == toDate.day) ...[
+                          // Single Date
+                          _buildDateRow(
+                            label: 'Date',
+                            date: fromDate,
+                            dayType: fromDayType,
+                            color: AppTheme.primaryColor,
                           ),
-                        ),
+                        ] else ...[
+                          // From Date
+                          _buildDateRow(
+                            label: 'From',
+                            date: fromDate,
+                            dayType: fromDayType,
+                            color: const Color(0xFF10B981),
+                          ),
 
-                        // To Date
-                        _buildDateRow(
-                          label: 'To',
-                          date: toDate,
-                          dayType: toDayType,
-                          color: const Color(0xFFEF4444),
-                        ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12.h),
+                            child: Row(
+                              children: [
+                                SizedBox(width: 20.w),
+                                Container(
+                                  width: 2,
+                                  height: 30.h,
+                                  color: const Color(0xFFE5E7EB),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // To Date
+                          _buildDateRow(
+                            label: 'To',
+                            date: toDate,
+                            dayType: toDayType,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ],
                       ],
                     ),
                   ),
