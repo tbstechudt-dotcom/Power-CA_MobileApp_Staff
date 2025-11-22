@@ -164,9 +164,9 @@ class _PinboardMainPageState extends State<PinboardMainPage>
   Color _getCategoryColor(int tabIndex) {
     switch (tabIndex) {
       case 0:
-        return Colors.orange;
+        return const Color(0xFF2563EB); // Primary blue for Due Date
       case 1:
-        return Colors.blue;
+        return const Color(0xFF0D9488); // Teal accent for Meetings
       default:
         return Colors.grey;
     }

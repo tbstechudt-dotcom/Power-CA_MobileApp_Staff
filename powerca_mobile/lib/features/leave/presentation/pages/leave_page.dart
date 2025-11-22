@@ -214,7 +214,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
               title: 'Available',
               count: formatDays(availableLeaves),
               icon: Icons.beach_access,
-              gradientColors: const [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+              gradientColors: const [Color(0xFF0D9488), Color(0xFF14B8A6)],
             ),
           ),
           SizedBox(width: 12.w),
