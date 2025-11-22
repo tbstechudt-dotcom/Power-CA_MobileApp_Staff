@@ -47,29 +47,73 @@ class _JobDetailPageState extends State<JobDetailPage>
     try {
       final supabase = Supabase.instance.client;
       final jobId = widget.job['job_id'];
+      final currentStaffId = widget.currentStaff.staffId;
 
-      // Fetch tasks for this job
+      // Fetch tasks for this job with available hour columns
       final tasksResponse = await supabase
           .from('jobtasks')
-          .select('jt_id, job_id, task_id, task_desc, createddate, task_status, jobdet_man_hrs')
+          .select('jt_id, job_id, task_id, task_desc, createddate, task_status, jobdet_man_hrs, actual_man_hrs')
           .eq('job_id', jobId)
-          .order('createddate', ascending: true);
+          .order('task_desc', ascending: true);
 
-      // Transform to UI format
+      // Fetch workdiary entries for this job to calculate login/other staff hours
+      final workdiaryResponse = await supabase
+          .from('workdiary')
+          .select('wd_id, job_id, staff_id, task_id, minutes')
+          .eq('job_id', jobId);
+
+      // Group workdiary by task_id
+      final Map<int, Map<String, double>> taskHours = {};
+      for (final entry in workdiaryResponse) {
+        final taskId = entry['task_id'] as int?;
+        if (taskId == null) continue;
+
+        final staffId = entry['staff_id'] as int?;
+        final minutes = (entry['minutes'] ?? 0) as num;
+        final hours = minutes / 60;
+
+        if (!taskHours.containsKey(taskId)) {
+          taskHours[taskId] = {'loginStaff': 0.0, 'otherStaff': 0.0};
+        }
+
+        if (staffId == currentStaffId) {
+          taskHours[taskId]!['loginStaff'] = taskHours[taskId]!['loginStaff']! + hours;
+        } else {
+          taskHours[taskId]!['otherStaff'] = taskHours[taskId]!['otherStaff']! + hours;
+        }
+      }
+
+      // Transform to UI format using values from jobtasks table
       final tasks = tasksResponse.map<Map<String, dynamic>>((record) {
-        final taskStatus = record['task_status'];
-        final statusText = taskStatus == 1 || taskStatus == '1' ? 'Completed' : 'Pending';
+        final taskId = record['task_id'] as int?;
+
+        // Get hours from jobtasks table
+        final estHours = (record['jobdet_man_hrs'] ?? 0) as num;
+
+        // Parse actual_man_hrs (time format like "02:30:00")
+        double actHours = 0.0;
+        final actualHrsValue = record['actual_man_hrs'];
+        if (actualHrsValue != null && actualHrsValue is String) {
+          final parts = actualHrsValue.split(':');
+          if (parts.length >= 2) {
+            final hours = int.tryParse(parts[0]) ?? 0;
+            final minutes = int.tryParse(parts[1]) ?? 0;
+            actHours = hours + (minutes / 60);
+          }
+        }
+
+        // Get login/other staff hours from workdiary
+        final loginStaffHours = taskId != null ? (taskHours[taskId]?['loginStaff'] ?? 0.0) : 0.0;
+        final otherStaffHours = taskId != null ? (taskHours[taskId]?['otherStaff'] ?? 0.0) : 0.0;
 
         return {
           'jt_id': record['jt_id'],
+          'task_id': taskId,
           'taskName': record['task_desc'] ?? 'Unnamed Task',
-          'staffName': '-', // No staff_id in jobtasks table
-          'startDate': record['createddate'] != null
-              ? DateTime.parse(record['createddate'])
-              : null,
-          'endDate': null, // No end date in jobtasks table
-          'status': statusText,
-          'totalHours': record['jobdet_man_hrs'] ?? 0,
+          'estHours': estHours,
+          'loginStaffHours': loginStaffHours,
+          'otherStaffHours': otherStaffHours,
+          'actHours': actHours,
         };
       }).toList();
 
@@ -99,44 +143,46 @@ class _JobDetailPageState extends State<JobDetailPage>
       // Fetch work diary entries for this job
       final diaryResponse = await supabase
           .from('workdiary')
-          .select('wd_id, job_id, staff_id, wddate, wdstarttime, wdendtime, wdhours, wdnotes')
+          .select('wd_id, job_id, staff_id, task_id, date, timefrom, timeto, minutes, tasknotes')
           .eq('job_id', jobId)
-          .order('wddate', ascending: false);
+          .order('date', ascending: false);
 
-      // Get staff names
-      final staffIds = diaryResponse
-          .map((entry) => entry['staff_id'])
+      // Get task descriptions
+      final taskIds = diaryResponse
+          .map((entry) => entry['task_id'])
           .where((id) => id != null)
           .toSet()
           .toList();
 
-      Map<int, String> staffNames = {};
-      if (staffIds.isNotEmpty) {
-        final staffResponse = await supabase
-            .from('mbstaff')
-            .select('staff_id, staffname')
-            .inFilter('staff_id', staffIds);
+      Map<int, String> taskDescriptions = {};
+      if (taskIds.isNotEmpty) {
+        final taskResponse = await supabase
+            .from('jobtasks')
+            .select('task_id, task_desc')
+            .eq('job_id', jobId);
 
-        for (var staff in staffResponse) {
-          staffNames[staff['staff_id'] as int] = staff['staffname'] ?? 'Unknown';
+        for (var task in taskResponse) {
+          taskDescriptions[task['task_id'] as int] = task['task_desc'] ?? 'Unknown Task';
         }
       }
 
       // Transform to UI format
       final entries = diaryResponse.map<Map<String, dynamic>>((record) {
-        final staffId = record['staff_id'] as int?;
-        final staffName = staffId != null ? (staffNames[staffId] ?? 'Unknown') : 'Unknown';
+        final taskId = record['task_id'] as int?;
+        final taskDesc = taskId != null ? (taskDescriptions[taskId] ?? 'Unknown Task') : 'Unknown Task';
+        final minutes = record['minutes'] as int? ?? 0;
+        final hours = minutes ~/ 60;
+        final mins = minutes % 60;
 
         return {
           'wd_id': record['wd_id'],
-          'date': record['wddate'] != null
-              ? DateTime.parse(record['wddate'])
+          'date': record['date'] != null
+              ? DateTime.parse(record['date'])
               : null,
-          'staffName': staffName,
-          'startTime': record['wdstarttime'] ?? '',
-          'endTime': record['wdendtime'] ?? '',
-          'hours': record['wdhours'] ?? 0,
-          'notes': record['wdnotes'] ?? '',
+          'taskDesc': taskDesc,
+          'minutes': minutes,
+          'hoursFormatted': '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}',
+          'notes': record['tasknotes'] ?? '',
         };
       }).toList();
 
@@ -286,6 +332,12 @@ class _JobDetailPageState extends State<JobDetailPage>
     );
   }
 
+  String _formatHours(num hours) {
+    final h = hours.toInt();
+    final m = ((hours - h) * 60).round();
+    return '$h:${m.toString().padLeft(2, '0')}';
+  }
+
   Widget _buildTaskSummaryTab(DateFormat dateFormat) {
     if (_isLoadingTasks) {
       return const Center(child: CircularProgressIndicator());
@@ -364,176 +416,195 @@ class _JobDetailPageState extends State<JobDetailPage>
     return RefreshIndicator(
       onRefresh: _loadTasks,
       color: AppTheme.primaryColor,
-      child: ListView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-        itemCount: _tasks.length,
-        itemBuilder: (context, index) {
-          final task = _tasks[index];
-          final statusColor = _getTaskStatusColor(task['status'] as String);
-          final statusText = _getTaskStatusText(task['status'] as String);
-
-          return Container(
-            margin: EdgeInsets.only(bottom: 8.h),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(12.w),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Table Header
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(12.r),
+                    topRight: Radius.circular(12.r),
+                  ),
                 ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Header
-                Container(
-                  padding: EdgeInsets.all(10.w),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(12.r),
-                      topRight: Radius.circular(12.r),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        'Tasks',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36.w,
-                        height: 36.h,
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Icon(
-                          Icons.task_alt,
-                          size: 18.sp,
-                          color: statusColor,
+                    SizedBox(
+                      width: 45.w,
+                      child: Text(
+                        'Est.\nHrs',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
                         ),
                       ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: Text(
-                          task['taskName'] as String,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1F2937),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(
+                      width: 45.w,
+                      child: Text(
+                        'Login\nStaff',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
                         ),
                       ),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.w,
-                          vertical: 4.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        child: Text(
-                          statusText,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                    ),
+                    SizedBox(
+                      width: 45.w,
+                      child: Text(
+                        'Other\nStaff',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(
+                      width: 45.w,
+                      child: Text(
+                        'Act.\nHrs',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                // Content
-                Padding(
-                  padding: EdgeInsets.all(10.w),
-                  child: Column(
-                    children: [
-                      // Staff
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 14.sp,
-                            color: const Color(0xFF6B7280),
-                          ),
-                          SizedBox(width: 6.w),
-                          Text(
-                            task['staffName'] as String,
+              ),
+              // Table Rows
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _tasks.length,
+                separatorBuilder: (context, index) => const Divider(
+                  height: 1,
+                  color: Color(0xFFE5E7EB),
+                ),
+                itemBuilder: (context, index) {
+                  final task = _tasks[index];
+                  final estHours = task['estHours'] as num;
+                  final loginStaffHours = task['loginStaffHours'] as double;
+                  final otherStaffHours = task['otherStaffHours'] as double;
+                  final actHours = task['actHours'] as double;
+
+                  return Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            task['taskName'] as String,
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 12.sp,
+                              fontSize: 11.sp,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF374151),
+                              color: const Color(0xFF1F2937),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 45.w,
+                          child: Text(
+                            _formatHours(estHours),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF6B7280),
                             ),
                           ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      const Divider(height: 1, color: Color(0xFFE5E7EB)),
-                      SizedBox(height: 6.h),
-                      // Dates and Hours
-                      Row(
-                        children: [
-                          // Start Date
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: 14.sp,
-                                  color: const Color(0xFF10B981),
-                                ),
-                                SizedBox(width: 4.w),
-                                Expanded(
-                                  child: Text(
-                                    task['startDate'] != null
-                                        ? dateFormat.format(task['startDate'])
-                                        : '-',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 10.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF374151),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                        ),
+                        SizedBox(
+                          width: 45.w,
+                          child: Text(
+                            _formatHours(loginStaffHours),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF2563EB),
                             ),
                           ),
-                          // Hours
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                size: 14.sp,
-                                color: const Color(0xFF8B5CF6),
-                              ),
-                              SizedBox(width: 4.w),
-                              Text(
-                                '${task['totalHours']}h',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF8B5CF6),
-                                ),
-                              ),
-                            ],
+                        ),
+                        SizedBox(
+                          width: 45.w,
+                          child: Text(
+                            _formatHours(otherStaffHours),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF6B7280),
+                            ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                        ),
+                        SizedBox(
+                          width: 45.w,
+                          child: Text(
+                            _formatHours(actHours),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                              color: actHours > 0 ? const Color(0xFF10B981) : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -613,186 +684,214 @@ class _JobDetailPageState extends State<JobDetailPage>
       );
     }
 
+    // Calculate total hours
+    int totalMinutes = 0;
+    for (final entry in _workDiaryEntries) {
+      totalMinutes += entry['minutes'] as int;
+    }
+    final totalHours = totalMinutes ~/ 60;
+    final totalMins = totalMinutes % 60;
+    final totalFormatted = '${totalHours.toString().padLeft(2, '0')}:${totalMins.toString().padLeft(2, '0')}';
+
     return RefreshIndicator(
       onRefresh: _loadWorkDiary,
       color: AppTheme.primaryColor,
-      child: ListView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-        itemCount: _workDiaryEntries.length,
-        itemBuilder: (context, index) {
-          final entry = _workDiaryEntries[index];
-
-          return Container(
-            margin: EdgeInsets.only(bottom: 8.h),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+      child: Column(
+        children: [
+          // Table Header
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+            decoration: const BoxDecoration(
+              color: Color(0xFF3B82F6),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 80.w,
+                  child: Text(
+                    'Work Date',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Task',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Work Details',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 50.w,
+                  child: Text(
+                    'hh:mm',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                // Header with Date
-                Container(
-                  padding: EdgeInsets.all(10.w),
+          ),
+          // Table Body
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              itemCount: _workDiaryEntries.length,
+              itemBuilder: (context, index) {
+                final entry = _workDiaryEntries[index];
+
+                return Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(12.r),
-                      topRight: Radius.circular(12.r),
+                    color: index % 2 == 0 ? Colors.white : const Color(0xFFF9FAFB),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: const Color(0xFFE5E7EB),
+                        width: 0.5,
+                      ),
                     ),
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 36.w,
-                        height: 36.h,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Icon(
-                          Icons.calendar_today,
-                          size: 18.sp,
-                          color: const Color(0xFF3B82F6),
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
+                      // Work Date
+                      SizedBox(
+                        width: 80.w,
                         child: Text(
                           entry['date'] != null
-                              ? dateFormat.format(entry['date'])
-                              : 'No Date',
+                              ? DateFormat('dd/MM/yyyy').format(entry['date'])
+                              : '-',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1F2937),
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF374151),
                           ),
                         ),
                       ),
-                      // Hours Badge
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.w,
-                          vertical: 4.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
+                      // Task
+                      Expanded(
+                        flex: 2,
                         child: Text(
-                          '${entry['hours']}h',
+                          entry['taskDesc'] as String,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF374151),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Work Details
+                      Expanded(
+                        flex: 3,
+                        child: Padding(
+                          padding: EdgeInsets.only(left: 4.w),
+                          child: Text(
+                            entry['notes'] as String,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF6B7280),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      // Hours
+                      SizedBox(
+                        width: 50.w,
+                        child: Text(
+                          entry['hoursFormatted'] as String,
+                          textAlign: TextAlign.right,
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: const Color(0xFF3B82F6),
                           ),
                         ),
                       ),
                     ],
                   ),
+                );
+              },
+            ),
+          ),
+          // Total Row
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF3F4F6),
+              border: Border(
+                top: BorderSide(
+                  color: Color(0xFFD1D5DB),
+                  width: 1,
                 ),
-                // Content
-                Padding(
-                  padding: EdgeInsets.all(10.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Staff and Time Row
-                      Row(
-                        children: [
-                          // Staff
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.person_outline,
-                                  size: 14.sp,
-                                  color: const Color(0xFF6B7280),
-                                ),
-                                SizedBox(width: 4.w),
-                                Expanded(
-                                  child: Text(
-                                    entry['staffName'] as String,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 11.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF374151),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Time
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                size: 14.sp,
-                                color: const Color(0xFF9CA3AF),
-                              ),
-                              SizedBox(width: 4.w),
-                              Text(
-                                '${entry['startTime']} - ${entry['endTime']}',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      // Notes (if any)
-                      if ((entry['notes'] as String).isNotEmpty) ...[
-                        SizedBox(height: 6.h),
-                        const Divider(height: 1, color: Color(0xFFE5E7EB)),
-                        SizedBox(height: 6.h),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.notes_outlined,
-                              size: 14.sp,
-                              color: const Color(0xFF9CA3AF),
-                            ),
-                            SizedBox(width: 6.w),
-                            Expanded(
-                              child: Text(
-                                entry['notes'] as String,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.w400,
-                                  color: const Color(0xFF6B7280),
-                                  height: 1.3,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Total hours :',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF374151),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                SizedBox(
+                  width: 50.w,
+                  child: Text(
+                    totalFormatted,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF3B82F6),
+                    ),
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
