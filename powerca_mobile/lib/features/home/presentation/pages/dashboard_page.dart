@@ -317,119 +317,143 @@ class _DashboardPageState extends State<DashboardPage> {
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10.h,
-      crossAxisSpacing: 10.w,
-      childAspectRatio: 1.3,
+      mainAxisSpacing: 12.h,
+      crossAxisSpacing: 12.w,
+      childAspectRatio: 1.4,
       children: [
-        _buildStatCard(
-          icon: Icons.schedule,
+        _buildStatTile(
+          icon: Icons.timer_rounded,
           title: 'Hours Logged',
           value: _isLoading ? '...' : _formatHours(_hoursLoggedThisWeek),
-          color: const Color(0xFF2196F3),
+          gradient: [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
           trend: 'This Week',
         ),
-        _buildStatCard(
-          icon: Icons.edit_calendar,
+        _buildStatTile(
+          icon: Icons.edit_note_rounded,
           title: 'Diary Entries',
           value: _isLoading ? '...' : '$_entriesThisMonth',
-          color: const Color(0xFF4CAF50),
+          gradient: [const Color(0xFF34D399), const Color(0xFF10B981)],
           trend: 'This Month',
         ),
-        _buildStatCard(
-          icon: Icons.trending_up,
+        _buildStatTile(
+          icon: Icons.speed_rounded,
           title: 'Avg Hours/Day',
           value: _isLoading ? '...' : _formatHours(_avgHoursPerDay),
-          color: const Color(0xFFFF9800),
+          gradient: [const Color(0xFFFBBF24), const Color(0xFFF59E0B)],
           trend: 'This Month',
         ),
-        _buildStatCard(
-          icon: Icons.calendar_month,
+        _buildStatTile(
+          icon: Icons.event_available_rounded,
           title: 'Days Active',
           value: _isLoading ? '...' : '$_daysActive',
-          color: const Color(0xFF9C27B0),
+          gradient: [const Color(0xFFA78BFA), const Color(0xFF8B5CF6)],
           trend: 'This Month',
         ),
       ],
     );
   }
 
-  Widget _buildStatCard({
+  Widget _buildStatTile({
     required IconData icon,
     required String title,
     required String value,
-    required Color color,
+    required List<Color> gradient,
     required String trend,
   }) {
     return Container(
-      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
+        gradient: LinearGradient(
+          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: gradient[1].withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Icon(icon, size: 20.sp, color: color),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6.r),
-                ),
-                child: Text(
-                  trend,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
+          // Background pattern icon
+          Positioned(
+            right: -20.w,
+            bottom: -20.h,
+            child: Icon(
+              icon,
+              size: 80.sp,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 24.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF080E29),
+          // Content
+          Padding(
+            padding: EdgeInsets.all(14.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                      child: Icon(
+                        icon,
+                        size: 18.sp,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Text(
+                        trend,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              SizedBox(height: 2.h),
-              Text(
-                title,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFF8F8E90),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 22.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

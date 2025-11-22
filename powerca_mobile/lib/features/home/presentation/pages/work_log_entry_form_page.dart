@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/services/priority_service.dart';
 
 class WorkLogEntryFormPage extends StatefulWidget {
   final DateTime selectedDate;
@@ -37,6 +38,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   bool _isLoading = false;
   bool _isSubmitting = false;
 
+  // Priority filtering
+  Set<int> _priorityJobIds = {};
+  bool _hasPriorities = false;
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +61,11 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     try {
       final supabase = Supabase.instance.client;
 
+      // STEP 0: Load priority job IDs first
+      final priorityJobIds = await PriorityService.getPriorityJobIds();
+      _priorityJobIds = priorityJobIds;
+      _hasPriorities = priorityJobIds.isNotEmpty;
+
       // STEP 1: Load ALL jobs from jobshead (including duplicates)
       // Note: work_desc maps to job_name
       // IMPORTANT: Supabase has a default limit of 1000 rows, we need to increase it
@@ -65,22 +75,24 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           .order('work_desc')
           .limit(50000); // Increase limit to get all jobs
 
-      // DEBUG: Check raw response for client_id 17
-      print('DEBUG: Total jobs from database: ${jobsResponse.length}');
-      final jobsForClient17 = jobsResponse.where((job) => job['client_id'] == 17).toList();
-      print('DEBUG: Jobs for client_id 17 in raw response: ${jobsForClient17.length}');
-      if (jobsForClient17.isNotEmpty) {
-        print('DEBUG: First 5 jobs for client 17:');
-        for (var i = 0; i < jobsForClient17.length && i < 5; i++) {
-          print('  ${i + 1}. job_id: ${jobsForClient17[i]['job_id']}, work_desc: "${jobsForClient17[i]['work_desc']}"');
-        }
+      // STEP 1.5: Filter jobs to priority jobs only if priorities are set
+      List<dynamic> filteredJobsResponse;
+      if (_hasPriorities) {
+        filteredJobsResponse = jobsResponse.where((job) {
+          final jobId = job['job_id'] as int;
+          return _priorityJobIds.contains(jobId);
+        }).toList();
+        print('DEBUG: Filtered to ${filteredJobsResponse.length} priority jobs out of ${jobsResponse.length} total jobs');
+      } else {
+        filteredJobsResponse = jobsResponse;
+        print('DEBUG: No priorities set, showing all ${jobsResponse.length} jobs');
       }
 
       // STEP 2: Group jobs by client_id FIRST, then deduplicate within each client
       // This ensures we don't lose jobs that appear with different client_ids
       final Map<int, Map<int, Map<String, dynamic>>> jobsByClient = {};
 
-      for (var job in jobsResponse) {
+      for (var job in filteredJobsResponse) {
         final clientId = job['client_id'];
         final jobId = job['job_id'] as int;
 
@@ -100,7 +112,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       // STEP 3: Extract unique client IDs
       final uniqueClientIds = jobsByClient.keys.toList();
 
-      // STEP 4: Load ONLY clients that have jobs
+      // STEP 4: Load ONLY clients that have jobs (filtered by priority)
       // Note: Column is 'clientname' (one word), NOT 'client_name'
       List<Map<String, dynamic>> clientsResponse = [];
       if (uniqueClientIds.isNotEmpty) {
@@ -295,7 +307,22 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Create Work Log Entry'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Create Work Log Entry'),
+            if (_hasPriorities)
+              Text(
+                'Showing ${_priorityJobIds.length} priority jobs',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFFEF4444),
+                ),
+              ),
+          ],
+        ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF080E29),
         elevation: 0,
