@@ -47,39 +47,91 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
   final List<AttachedFile> _attachedFiles = [];
   bool _isUploading = false;
   final _supabase = Supabase.instance.client;
-  String _actualTaskId = '';
+
+  // Actual names from database
+  String _jobName = '';
+  String _clientName = '';
+  String _taskName = '';
+  bool _isLoadingNames = true;
 
   @override
   void initState() {
     super.initState();
-    _loadActualTaskId();
+    _loadAllNames();
   }
 
-  /// Load the actual task_id from jobtasks table using job_id
-  /// The workdiary.task_id might contain incorrect values (jt_id instead of task_id)
-  Future<void> _loadActualTaskId() async {
+  /// Load job name, client name, and task name from database
+  Future<void> _loadAllNames() async {
     final jobId = widget.entry['job_id'];
-    if (jobId == null) return;
+    final clientId = widget.entry['client_id'];
+
+    debugPrint('Loading names for job_id: $jobId, client_id: $clientId');
 
     try {
-      // Get task_id from jobtasks using the job_id from this workdiary entry
-      final response = await _supabase
-          .from('jobtasks')
-          .select('task_id')
-          .eq('job_id', jobId)
-          .limit(1)
-          .maybeSingle();
+      // Load job name
+      if (jobId != null) {
+        final jobResponse = await _supabase
+            .from('jobshead')
+            .select('work_desc')
+            .eq('job_id', jobId)
+            .maybeSingle();
 
-      if (response != null && response['task_id'] != null) {
+        debugPrint('Job response: $jobResponse');
+
+        if (jobResponse != null && jobResponse['work_desc'] != null) {
+          _jobName = jobResponse['work_desc'].toString();
+          debugPrint('Job name loaded: $_jobName');
+        }
+
+        // Get task description from jobtasks
+        // Note: taskmaster table is empty, so we get task_desc from jobtasks
+        final taskResponse = await _supabase
+            .from('jobtasks')
+            .select('task_desc, task_id')
+            .eq('job_id', jobId)
+            .limit(1)
+            .maybeSingle();
+
+        debugPrint('Task response: $taskResponse');
+
+        if (taskResponse != null) {
+          // Use task_desc from jobtasks if available
+          if (taskResponse['task_desc'] != null && taskResponse['task_desc'].toString().isNotEmpty) {
+            _taskName = taskResponse['task_desc'].toString();
+            debugPrint('Task name from jobtasks: $_taskName');
+          }
+        }
+      }
+
+      // Load client name
+      if (clientId != null) {
+        final clientResponse = await _supabase
+            .from('climaster')
+            .select('clientname')
+            .eq('client_id', clientId)
+            .maybeSingle();
+
+        debugPrint('Client response: $clientResponse');
+
+        if (clientResponse != null && clientResponse['clientname'] != null) {
+          _clientName = clientResponse['clientname'].toString();
+          debugPrint('Client name loaded: $_clientName');
+        }
+      }
+
+      if (mounted) {
         setState(() {
-          _actualTaskId = response['task_id'].toString();
+          _isLoadingNames = false;
         });
-        debugPrint('Loaded actual task_id: ${response['task_id']} for job_id: $jobId');
-      } else {
-        debugPrint('No jobtask found for job_id: $jobId');
+        debugPrint('Names loaded - Job: $_jobName, Client: $_clientName, Task: $_taskName');
       }
     } catch (e) {
-      debugPrint('Error loading actual task_id: $e');
+      debugPrint('Error loading names: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingNames = false;
+        });
+      }
     }
   }
 
@@ -88,11 +140,21 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
     final tasknotes = widget.entry['tasknotes'] ?? 'No description';
     final minutes = widget.entry['minutes'] ?? 0;
     final hours = _formatMinutesToHours(minutes);
-    final jobId = widget.entry['job_id']?.toString() ?? '';
-    final clientId = widget.entry['client_id']?.toString() ?? '';
-    final taskId = _actualTaskId.isNotEmpty ? _actualTaskId : (widget.entry['task_id']?.toString() ?? '');
+    final jobId = widget.entry['job_id'];
+    final clientId = widget.entry['client_id'];
     final timeFrom = widget.entry['timefrom'] ?? '';
     final timeTo = widget.entry['timeto'] ?? '';
+
+    // Display names or loading state
+    final jobDisplay = _isLoadingNames
+        ? 'Loading...'
+        : (_jobName.isNotEmpty ? _jobName : 'Job #${jobId ?? 'N/A'}');
+    final clientDisplay = _isLoadingNames
+        ? 'Loading...'
+        : (_clientName.isNotEmpty ? _clientName : 'Client #${clientId ?? 'N/A'}');
+    final taskDisplay = _isLoadingNames
+        ? 'Loading...'
+        : (_taskName.isNotEmpty ? _taskName : 'No task assigned');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -212,32 +274,32 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                     SizedBox(height: 12.h),
                   ],
 
-                  // Job ID
-                  if (jobId.isNotEmpty) ...[
+                  // Job Name
+                  if (jobId != null) ...[
                     _buildDetailRow(
                       icon: Icons.work_outline,
-                      label: 'Job ID',
-                      value: jobId,
+                      label: 'Job',
+                      value: jobDisplay,
                     ),
                     SizedBox(height: 12.h),
                   ],
 
-                  // Client ID
-                  if (clientId.isNotEmpty) ...[
+                  // Client Name
+                  if (clientId != null) ...[
                     _buildDetailRow(
                       icon: Icons.business_outlined,
-                      label: 'Client ID',
-                      value: clientId,
+                      label: 'Client',
+                      value: clientDisplay,
                     ),
                     SizedBox(height: 12.h),
                   ],
 
-                  // Task ID
-                  if (taskId.isNotEmpty) ...[
+                  // Task Name
+                  if (_taskName.isNotEmpty || _isLoadingNames) ...[
                     _buildDetailRow(
                       icon: Icons.task_outlined,
-                      label: 'Task ID',
-                      value: taskId,
+                      label: 'Task',
+                      value: taskDisplay,
                     ),
                   ],
                 ],
@@ -455,7 +517,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                         MaterialPageRoute(
                           builder: (context) => WorkLogChecklistPage(
                             staffId: widget.staffId,
-                            jobId: int.tryParse(jobId) ?? 0,
+                            jobId: jobId ?? 0,
                             selectedDate: widget.selectedDate,
                           ),
                         ),
