@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../app/theme.dart';
 import '../../../auth/domain/entities/staff.dart';
 import 'pinboard_detail_page.dart';
 
@@ -111,6 +113,9 @@ class _PinboardMainPageState extends State<PinboardMainPage>
   List<Map<String, dynamic>> _getFilteredReminders() {
     List<Map<String, dynamic>> filtered;
 
+    // Get today's date at start of day for comparison
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+
     // Filter reminders based on current tab
     switch (_tabController.index) {
       case 0: // Due Date - work-related reminders
@@ -147,6 +152,19 @@ class _PinboardMainPageState extends State<PinboardMainPage>
         filtered = _reminders;
     }
 
+    // Filter to show only current and future reminders (today or later)
+    filtered = filtered.where((r) {
+      final remdate = r['remdate'] as DateTime?;
+      final remduedate = r['remduedate'] as DateTime?;
+      final displayDate = remduedate ?? remdate;
+
+      if (displayDate == null) return false;
+
+      // Normalize to start of day for comparison
+      final normalizedDate = DateTime(displayDate.year, displayDate.month, displayDate.day);
+      return normalizedDate.compareTo(today) >= 0; // Today or future
+    }).toList();
+
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((r) {
@@ -158,13 +176,23 @@ class _PinboardMainPageState extends State<PinboardMainPage>
       }).toList();
     }
 
+    // Sort by date (nearest first)
+    filtered.sort((a, b) {
+      final dateA = (a['remduedate'] ?? a['remdate']) as DateTime?;
+      final dateB = (b['remduedate'] ?? b['remdate']) as DateTime?;
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+      return dateA.compareTo(dateB);
+    });
+
     return filtered;
   }
 
   Color _getCategoryColor(int tabIndex) {
     switch (tabIndex) {
       case 0:
-        return const Color(0xFF2563EB); // Primary blue for Due Date
+        return AppTheme.primaryColor; // Primary blue for Due Date
       case 1:
         return const Color(0xFF0D9488); // Teal accent for Meetings
       default:
@@ -183,9 +211,9 @@ class _PinboardMainPageState extends State<PinboardMainPage>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Search/Filter Bar
+        // Search Bar
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           color: Colors.white,
           child: TextField(
             controller: _searchController,
@@ -196,19 +224,19 @@ class _PinboardMainPageState extends State<PinboardMainPage>
             },
             decoration: InputDecoration(
               hintText: 'Search reminders...',
-              hintStyle: const TextStyle(
+              hintStyle: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 13,
-                color: Color(0xFF9CA3AF),
+                fontSize: 13.sp,
+                color: const Color(0xFF9CA3AF),
               ),
-              prefixIcon: const Icon(
+              prefixIcon: Icon(
                 Icons.search,
-                size: 20,
-                color: Color(0xFF9CA3AF),
+                size: 20.sp,
+                color: const Color(0xFF9CA3AF),
               ),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18, color: Color(0xFF9CA3AF)),
+                      icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
                       onPressed: () {
                         _searchController.clear();
                         setState(() {
@@ -219,49 +247,55 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                   : null,
               filled: true,
               fillColor: const Color(0xFFF3F4F6),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide.none,
               ),
             ),
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 13,
-              color: Color(0xFF1F2937),
+              fontSize: 13.sp,
+              color: const Color(0xFF1F2937),
             ),
           ),
         ),
 
         // Tab Bar
         Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          margin: EdgeInsets.symmetric(horizontal: 12.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F7FA),
+            borderRadius: BorderRadius.circular(10.r),
+          ),
           child: TabBar(
             controller: _tabController,
-            labelColor: const Color(0xFF2563EB),
-            unselectedLabelColor: const Color(0xFF6B7280),
-            indicatorColor: const Color(0xFF2563EB),
-            indicatorWeight: 2,
+            indicator: BoxDecoration(
+              color: AppTheme.primaryColor,
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
             dividerColor: Colors.transparent,
-            labelStyle: const TextStyle(
+            labelColor: Colors.white,
+            unselectedLabelColor: const Color(0xFF8F8E90),
+            labelStyle: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 12,
+              fontSize: 13.sp,
               fontWeight: FontWeight.w600,
             ),
-            unselectedLabelStyle: const TextStyle(
+            unselectedLabelStyle: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w500,
             ),
-            tabs: const [
+            tabs: [
               Tab(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.calendar_today, size: 16),
-                    SizedBox(width: 6),
-                    Text('Due Date'),
+                    Icon(Icons.calendar_today_rounded, size: 16.sp),
+                    SizedBox(width: 6.w),
+                    const Text('Due Dates'),
                   ],
                 ),
               ),
@@ -269,15 +303,17 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.people, size: 16),
-                    SizedBox(width: 6),
-                    Text('Meetings'),
+                    Icon(Icons.people_rounded, size: 16.sp),
+                    SizedBox(width: 6.w),
+                    const Text('Meetings'),
                   ],
                 ),
               ),
             ],
           ),
         ),
+
+        SizedBox(height: 8.h),
 
         // Tab Views
         Expanded(
@@ -288,14 +324,14 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                          const SizedBox(height: 16),
+                          Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
+                          SizedBox(height: 16.h),
                           Text(
                             _errorMessage!,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 16),
+                            style: TextStyle(fontSize: 14.sp),
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16.h),
                           ElevatedButton.icon(
                             onPressed: _loadReminders,
                             icon: const Icon(Icons.refresh),
@@ -318,6 +354,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
 
   Widget _buildReminderList(int tabIndex) {
     final filteredReminders = _getFilteredReminders();
+    final categoryColor = _getCategoryColor(tabIndex);
 
     if (filteredReminders.isEmpty) {
       return Center(
@@ -325,16 +362,28 @@ class _PinboardMainPageState extends State<PinboardMainPage>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.inbox_outlined,
-              size: 64,
-              color: Colors.grey[400],
+              tabIndex == 0 ? Icons.event_available_rounded : Icons.event_busy_rounded,
+              size: 64.sp,
+              color: const Color(0xFFE0E0E0),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
             Text(
-              'No items yet',
+              tabIndex == 0 ? 'No upcoming due dates' : 'No upcoming meetings',
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+                fontFamily: 'Inter',
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF8F8E90),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Only current and future items are shown',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFFA8A8A8),
               ),
             ),
           ],
@@ -344,28 +393,31 @@ class _PinboardMainPageState extends State<PinboardMainPage>
 
     return RefreshIndicator(
       onRefresh: _loadReminders,
-      color: const Color(0xFF2563EB),
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      color: AppTheme.primaryColor,
+      child: ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
         itemCount: filteredReminders.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           final reminder = filteredReminders[index];
-          return _buildReminderCard(reminder, tabIndex);
+          return _buildReminderCard(reminder, tabIndex, categoryColor);
         },
       ),
     );
   }
 
-  Widget _buildReminderCard(Map<String, dynamic> reminder, int tabIndex) {
+  Widget _buildReminderCard(Map<String, dynamic> reminder, int tabIndex, Color categoryColor) {
     final dateFormat = DateFormat('dd MMM yyyy');
-    final categoryColor = _getCategoryColor(tabIndex);
 
     // Parse the date
     final remdate = reminder['remdate'] as DateTime?;
     final remduedate = reminder['remduedate'] as DateTime?;
     final displayDate = remduedate ?? remdate ?? DateTime.now();
 
+    // Check if due today
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final normalizedDate = DateTime(displayDate.year, displayDate.month, displayDate.day);
+    final isDueToday = normalizedDate.compareTo(today) == 0;
+    final daysUntil = normalizedDate.difference(today).inDays;
 
     return GestureDetector(
       onTap: () {
@@ -380,190 +432,211 @@ class _PinboardMainPageState extends State<PinboardMainPage>
         );
       },
       child: Container(
+        margin: EdgeInsets.only(bottom: 10.h),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Column(
-          children: [
-            // Header with Type and Status
-            Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: categoryColor.withValues(alpha: 0.06),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              children: [
-                // Category Icon
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: categoryColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    tabIndex == 0 ? Icons.calendar_today : Icons.people,
-                    size: 18,
-                    color: categoryColor,
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Left accent bar
+              Container(
+                width: 4.w,
+                decoration: BoxDecoration(
+                  color: isDueToday ? AppTheme.warningColor : categoryColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(14.r),
+                    bottomLeft: Radius.circular(14.r),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Type
-                Expanded(
+              ),
+              // Main content
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(12.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Type',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF6B7280),
-                        ),
-                      ),
-                      Text(
-                        reminder['remtype'] as String,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: categoryColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Content Section
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                Text(
-                  reminder['remtitle'] as String,
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2937),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-
-                // Description
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.notes_outlined,
-                      size: 14,
-                      color: Color(0xFF9CA3AF),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        reminder['remnotes'] as String,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
-                          height: 1.3,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                // Divider
-                const Divider(height: 1, color: Color(0xFFE5E7EB)),
-                const SizedBox(height: 6),
-
-                // Client and Date Row
-                Row(
-                  children: [
-                    // Client
-                    Expanded(
-                      child: Row(
+                      // Header: Type badge and date badge
+                      Row(
                         children: [
-                          const Icon(
-                            Icons.business_outlined,
-                            size: 14,
-                            color: Color(0xFF6B7280),
+                          // Type badge
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: categoryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  tabIndex == 0 ? Icons.calendar_today_rounded : Icons.people_rounded,
+                                  size: 12.sp,
+                                  color: categoryColor,
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  reminder['remtype'] as String,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: categoryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(width: 4),
+                          const Spacer(),
+                          // Days until badge
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: isDueToday
+                                  ? AppTheme.warningColor.withValues(alpha: 0.1)
+                                  : const Color(0xFFF5F7FA),
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Text(
+                              isDueToday
+                                  ? 'Today'
+                                  : daysUntil == 1
+                                      ? 'Tomorrow'
+                                      : 'In $daysUntil days',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w600,
+                                color: isDueToday
+                                    ? AppTheme.warningColor
+                                    : const Color(0xFF6B7280),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 10.h),
+
+                      // Title
+                      Text(
+                        reminder['remtitle'] as String,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF080E29),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      SizedBox(height: 6.h),
+
+                      // Notes
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.notes_rounded,
+                            size: 14.sp,
+                            color: const Color(0xFFA8A8A8),
+                          ),
+                          SizedBox(width: 6.w),
                           Expanded(
                             child: Text(
-                              reminder['clientName'] as String,
-                              style: const TextStyle(
+                              reminder['remnotes'] as String,
+                              style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151),
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF8F8E90),
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    // Due Date
-                    Expanded(
-                      child: Row(
+
+                      SizedBox(height: 8.h),
+
+                      // Footer: Client and Date
+                      Row(
                         children: [
-                          Icon(
-                            Icons.event_outlined,
-                            size: 14,
-                            color: categoryColor,
-                          ),
-                          const SizedBox(width: 4),
+                          // Client
                           Expanded(
-                            child: Text(
-                              dateFormat.format(displayDate),
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.business_rounded,
+                                  size: 12.sp,
+                                  color: const Color(0xFFCBD5E1),
+                                ),
+                                SizedBox(width: 4.w),
+                                Expanded(
+                                  child: Text(
+                                    reminder['clientName'] as String,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF6B7280),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Date
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.event_rounded,
+                                size: 12.sp,
                                 color: categoryColor,
                               ),
-                            ),
+                              SizedBox(width: 4.w),
+                              Text(
+                                dateFormat.format(displayDate),
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: categoryColor,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+              // Right chevron
+              Padding(
+                padding: EdgeInsets.only(right: 12.w),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20.sp,
+                  color: const Color(0xFFCBD5E1),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
       ),
     );
   }

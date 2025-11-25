@@ -11,6 +11,9 @@ import '../../../../core/services/priority_service.dart';
 import '../../../auth/domain/entities/staff.dart';
 import 'jobs_filtered_page.dart';
 
+// Debug print for priority service
+import 'package:flutter/foundation.dart';
+
 class JobsPage extends StatefulWidget {
   final Staff currentStaff;
 
@@ -72,6 +75,15 @@ class _JobsPageState extends State<JobsPage> {
   @override
   void initState() {
     super.initState();
+    _initializeAndLoad();
+  }
+
+  Future<void> _initializeAndLoad() async {
+    // Set staff ID in PriorityService first
+    debugPrint('JobsPage: Setting staff ID ${widget.currentStaff.staffId} in PriorityService');
+    await PriorityService.setCurrentStaffId(widget.currentStaff.staffId);
+
+    // Then load jobs and priority jobs
     _loadJobs();
     _loadPriorityJobs();
   }

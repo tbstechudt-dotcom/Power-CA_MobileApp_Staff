@@ -79,7 +79,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 70.h,
+      height: 75.h,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
@@ -173,17 +173,17 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                   return Transform.scale(
                     scale: 1.0 + (animation.value * 0.08),
                     child: Container(
-                      width: 24.w,
-                      height: 24.h,
+                      width: 32.w,
+                      height: 32.h,
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.primaryColor.withValues(alpha: 0.12)
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6.r),
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Icon(
                         isSelected ? selectedIcon : icon,
-                        size: 16.sp,
+                        size: 22.sp,
                         color: isSelected
                             ? AppTheme.primaryColor
                             : const Color(0xFF9E9E9E),
@@ -203,7 +203,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                       label,
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 8.sp,
+                        fontSize: 10.sp,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w500,
                         color: isSelected
@@ -220,11 +220,11 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                 animation: animation,
                 builder: (context, child) {
                   return Container(
-                    width: 16.w * animation.value,
-                    height: 2.h,
+                    width: 20.w * animation.value,
+                    height: 3.h,
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(1.r),
+                      borderRadius: BorderRadius.circular(1.5.r),
                     ),
                   );
                 },
