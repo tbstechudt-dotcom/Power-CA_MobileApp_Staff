@@ -67,7 +67,24 @@ async function insertWorkdiaryToDailyWork() {
           continue;
         }
 
-        const { org_id, loc_id, year_id } = jobInfo.rows[0];
+        const { org_id, loc_id } = jobInfo.rows[0];
+
+        // Find the CORRECT year_id for the work date (not the job's year_id)
+        // This prevents trigger errors when work date is in a different fiscal year than the job
+        const yearInfo = await desktopPool.query(`
+          SELECT DISTINCT year_id
+          FROM jc_week
+          WHERE org_id = $1 AND $2 BETWEEN week_start AND week_end
+          LIMIT 1
+        `, [org_id, record.work_dt]);
+
+        if (yearInfo.rows.length === 0) {
+          console.log(`  [SKIP] No fiscal year found for work date ${record.work_dt}`);
+          skipped++;
+          continue;
+        }
+
+        const year_id = yearInfo.rows[0].year_id;
 
         // Verify task exists in jobcard_det
         const taskExists = await desktopPool.query(`
@@ -93,7 +110,7 @@ async function insertWorkdiaryToDailyWork() {
           continue;
         }
 
-        // Insert into daily_work
+        // Insert into daily_work (triggers will handle dw_id, jc_weeklyplan, etc.)
         await desktopPool.query(`
           INSERT INTO daily_work (
             org_id, loc_id, work_dt, sporgid, task_id, job_id,
@@ -113,8 +130,8 @@ async function insertWorkdiaryToDailyWork() {
           record.manhrs_from,
           record.manhrs_to,
           record.work_man_min || 0,
-          year_id,
-          1, // jobdet_slno - default to 1 (can be updated based on your logic)
+          year_id, // Using fiscal year from work date, not job's year_id
+          1, // jobdet_slno - default to 1
           record.wd_id // Use wd_id as work_id for reference
         ]);
 
