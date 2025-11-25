@@ -7,7 +7,7 @@ import '../../../../app/theme.dart';
 import 'work_log_entry_form_page.dart';
 import 'work_log_detail_page.dart';
 
-/// Professional Work Log List Page - Clean Minimal Design
+/// Work Log List Page - Redesigned to match Jobs Page style
 class WorkLogListPage extends StatefulWidget {
   final DateTime selectedDate;
   final List<Map<String, dynamic>> entries;
@@ -89,148 +89,202 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, size: 20.sp, color: const Color(0xFF1F2937)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Column(
           children: [
-            Text(
-              'Work Log',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1F2937),
-              ),
-            ),
-            Text(
-              DateFormat('EEE, MMM d, yyyy').format(widget.selectedDate),
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF6B7280),
-              ),
+            _buildHeader(),
+            Expanded(
+              child: _entries.isEmpty
+                  ? _buildEmptyState()
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        await _loadClientAndJobNames();
+                      },
+                      color: AppTheme.primaryColor,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.all(16.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Summary Cards Row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildSummaryCard(
+                                    title: 'Total Time',
+                                    value: _formatMinutesToHours(_calculateTotalMinutes()),
+                                    icon: Icons.schedule_rounded,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  child: _buildSummaryCard(
+                                    title: 'Entries',
+                                    value: '${_entries.length}',
+                                    icon: Icons.assignment_rounded,
+                                    color: const Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 24.h),
+
+                            // Section Title
+                            Text(
+                              'Work Entries',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+
+                            // Entries List
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _entries.length,
+                              itemBuilder: (context, index) {
+                                return _buildEntryCard(_entries[index], index + 1);
+                              },
+                            ),
+                            SizedBox(height: 80.h), // Space for FAB
+                          ],
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),
-        actions: const [],
       ),
-      body: Column(
+      floatingActionButton: _buildFAB(),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
+      color: Colors.white,
+      child: Row(
         children: [
-          // Summary Section
-          Container(
-            margin: EdgeInsets.all(16.w),
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppTheme.primaryColor,
-                  AppTheme.primaryColor.withValues(alpha: 0.85),
-                ],
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10.r),
               ),
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildSummaryItem(
-                    icon: Icons.format_list_numbered,
-                    value: _entries.length.toString(),
-                    label: 'Entries',
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 40.h,
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-                Expanded(
-                  child: _buildSummaryItem(
-                    icon: Icons.access_time_filled,
-                    value: _calculateTotalHours(),
-                    label: 'Total Time',
-                  ),
-                ),
-              ],
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 18.sp,
+                color: const Color(0xFF334155),
+              ),
             ),
           ),
-
-          // Entries List
+          SizedBox(width: 16.w),
           Expanded(
-            child: _entries.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 100.h),
-                    itemCount: _entries.length,
-                    itemBuilder: (context, index) {
-                      return _buildEntryCard(context, _entries[index], index + 1);
-                    },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Work Log',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
                   ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  DateFormat('EEEE, MMMM d, yyyy').format(widget.selectedDate),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _addNewEntry(context),
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 4,
-        icon: Icon(Icons.add, size: 20.sp, color: Colors.white),
-        label: Text(
-          'Add Entry',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
       ),
     );
   }
 
-  Widget _buildSummaryItem({
-    required IconData icon,
+  Widget _buildSummaryCard({
+    required String title,
     required String value,
-    required String label,
+    required IconData icon,
+    required Color color,
   }) {
-    return Column(
-      children: [
-        Icon(icon, size: 24.sp, color: Colors.white.withValues(alpha: 0.9)),
-        SizedBox(height: 8.h),
-        Text(
-          value,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 22.sp,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w400,
-            color: Colors.white.withValues(alpha: 0.8),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20.sp,
+                  color: color,
+                ),
+              ),
+              Icon(
+                Icons.trending_up_rounded,
+                size: 16.sp,
+                color: const Color(0xFF10B981),
+              ),
+            ],
           ),
-        ),
-      ],
+          SizedBox(height: 12.h),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 24.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -242,35 +296,73 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(20.w),
+              padding: EdgeInsets.all(24.w),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.assignment_outlined,
-                size: 40.sp,
-                color: const Color(0xFF9CA3AF),
+                Icons.post_add_rounded,
+                size: 48.sp,
+                color: AppTheme.primaryColor,
               ),
             ),
             SizedBox(height: 24.h),
             Text(
-              'No entries for this day',
+              'No Entries Yet',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF374151),
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F172A),
               ),
             ),
             SizedBox(height: 8.h),
             Text(
-              'Tap the + button to log your work',
+              'Start logging your work for this day',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 13.sp,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFF9CA3AF),
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            SizedBox(height: 24.h),
+            GestureDetector(
+              onTap: () => _addNewEntry(context),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(12.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.add_rounded,
+                      size: 18.sp,
+                      color: Colors.white,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Add Entry',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -279,7 +371,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
     );
   }
 
-  Widget _buildEntryCard(BuildContext context, Map<String, dynamic> entry, int index) {
+  Widget _buildEntryCard(Map<String, dynamic> entry, int index) {
     final tasknotes = entry['tasknotes'] ?? '';
     final minutes = entry['minutes'] ?? 0;
     final hours = _formatMinutesToHours(minutes);
@@ -307,221 +399,221 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
         );
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: 16.h),
+        margin: EdgeInsets.only(bottom: 10.h),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: const Color(0xFFD1D5DB), width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Job Name Title Header
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(10.r),
-                  topRight: Radius.circular(10.r),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Left accent bar
+              Container(
+                width: 4.w,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(14.r),
+                    bottomLeft: Radius.circular(14.r),
+                  ),
                 ),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.work_rounded,
-                    size: 18.sp,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 8.w),
-                  Expanded(
-                    child: Text(
-                      _isLoadingNames
-                          ? 'Loading...'
-                          : (jobName ?? 'Job #$jobId'),
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  // Duration Badge
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6.r),
-                    ),
-                    child: Text(
-                      hours,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content Area
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Time Row
-                  Row(
+              // Main content
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(14.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        size: 18.sp,
-                        color: const Color(0xFF374151),
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        hasTimeRange ? '$timeFrom - $timeTo' : 'Duration: $hours',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF000000),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Task Notes
-                  if (tasknotes.isNotEmpty) ...[
-                    SizedBox(height: 12.h),
-                    Text(
-                      'Task Notes:',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF6B7280),
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      tasknotes,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF000000),
-                        height: 1.5,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-
-                  // Client Info
-                  if (clientId != null) ...[
-                    SizedBox(height: 12.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person_rounded,
-                          size: 16.sp,
-                          color: const Color(0xFF374151),
-                        ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          'Client: ',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF6B7280),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            _isLoadingNames
-                                ? 'Loading...'
-                                : (clientName ?? 'Client #$clientId'),
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF000000),
+                      // Top row - Job name and duration
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _isLoadingNames
+                                      ? 'Loading...'
+                                      : (jobName ?? 'Job #$jobId'),
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF1E293B),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 3.h),
+                                Row(
+                                  children: [
+                                    if (clientId != null) ...[
+                                      Icon(
+                                        Icons.business_rounded,
+                                        size: 12.sp,
+                                        color: const Color(0xFF94A3B8),
+                                      ),
+                                      SizedBox(width: 4.w),
+                                      Flexible(
+                                        child: Text(
+                                          _isLoadingNames
+                                              ? 'Loading...'
+                                              : (clientName ?? 'Client #$clientId'),
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 12.sp,
+                                            fontWeight: FontWeight.w400,
+                                            color: const Color(0xFF64748B),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(width: 12.w),
+                          // Duration display
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.primaryColor,
+                                  AppTheme.primaryColor.withValues(alpha: 0.85),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Text(
+                              hours,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Time range and notes
+                      if (hasTimeRange || tasknotes.isNotEmpty) ...[
+                        SizedBox(height: 10.h),
+                        Container(
+                          padding: EdgeInsets.all(10.w),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (hasTimeRange)
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.schedule_rounded,
+                                      size: 14.sp,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      '$timeFrom - $timeTo',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              if (hasTimeRange && tasknotes.isNotEmpty)
+                                SizedBox(height: 8.h),
+                              if (tasknotes.isNotEmpty)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.notes_rounded,
+                                      size: 14.sp,
+                                      color: const Color(0xFF94A3B8),
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Expanded(
+                                      child: Text(
+                                        tasknotes,
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w400,
+                                          color: const Color(0xFF64748B),
+                                          height: 1.3,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // Footer with Entry Number and Arrow
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(10.r),
-                  bottomRight: Radius.circular(10.r),
+                    ],
+                  ),
                 ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF374151),
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                    child: Text(
-                      'Entry #$index',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'View Details',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF374151),
-                    ),
-                  ),
-                  SizedBox(width: 4.w),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 14.sp,
-                    color: const Color(0xFF374151),
-                  ),
-                ],
+              // Right chevron
+              Padding(
+                padding: EdgeInsets.only(right: 12.w),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20.sp,
+                  color: const Color(0xFFCBD5E1),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFAB() {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: FloatingActionButton(
+        onPressed: () => _addNewEntry(context),
+        backgroundColor: AppTheme.primaryColor,
+        elevation: 0,
+        child: Icon(
+          Icons.add_rounded,
+          color: Colors.white,
+          size: 28.sp,
         ),
       ),
     );
@@ -543,13 +635,13 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
     });
   }
 
-  String _calculateTotalHours() {
+  int _calculateTotalMinutes() {
     int totalMinutes = 0;
     for (var entry in _entries) {
       final minutes = entry['minutes'] ?? 0;
       totalMinutes += minutes as int;
     }
-    return _formatMinutesToHours(totalMinutes);
+    return totalMinutes;
   }
 
   String _formatMinutesToHours(int minutes) {

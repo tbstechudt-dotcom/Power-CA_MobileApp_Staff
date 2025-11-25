@@ -201,78 +201,171 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Task Checklist',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF2563EB),
-          ),
-        ),
-        actions: [
-          // Save button
-          TextButton.icon(
-            onPressed: _tasks.isEmpty ? null : _saveChecklist,
-            icon: Icon(
-              Icons.save_outlined,
-              size: 18.sp,
-              color: AppTheme.primaryColor,
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Custom header
+            _buildHeader(),
+            // Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 64.sp,
+                                color: Colors.red,
+                              ),
+                              SizedBox(height: 16.h),
+                              Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14.sp,
+                                  color: const Color(0xFF6B7280),
+                                ),
+                              ),
+                              SizedBox(height: 16.h),
+                              ElevatedButton.icon(
+                                onPressed: _loadTasks,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _tasks.isEmpty
+                          ? _buildEmptyState()
+                          : _buildTaskList(),
             ),
-            label: Text(
-              'Save',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryColor,
+            // Bottom save button
+            if (_tasks.isNotEmpty) _buildBottomSaveButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
+      color: Colors.white,
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10.r),
               ),
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 18.sp,
+                color: const Color(0xFF334155),
+              ),
+            ),
+          ),
+          SizedBox(width: 16.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Task Checklist',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  'Job #${widget.jobId}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64.sp,
-                        color: Colors.red,
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          color: const Color(0xFF6B7280),
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      ElevatedButton.icon(
-                        onPressed: _loadTasks,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
+    );
+  }
+
+  Widget _buildBottomSaveButton() {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: GestureDetector(
+          onTap: _saveChecklist,
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 14.h),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primaryColor,
+                  AppTheme.primaryColor.withValues(alpha: 0.85),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.save_rounded,
+                  size: 20.sp,
+                  color: Colors.white,
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  'Save Checklist',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
-                )
-              : _tasks.isEmpty
-                  ? _buildEmptyState()
-                  : _buildTaskList(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -316,211 +409,286 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     // Count completed tasks
     final completedCount = _checkedTasks.values.where((v) => v).length;
     final totalCount = _tasks.length;
+    final progressPercent = totalCount > 0 ? (completedCount / totalCount * 100).round() : 0;
 
-    return Column(
-      children: [
-        // Progress header
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(16.w),
-          color: Colors.white,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Progress',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1F2937),
-                    ),
-                  ),
-                  Text(
-                    '$completedCount / $totalCount completed',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF6B7280),
-                    ),
+    return RefreshIndicator(
+      onRefresh: _loadTasks,
+      color: AppTheme.primaryColor,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Progress card
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              SizedBox(height: 8.h),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4.r),
-                child: LinearProgressIndicator(
-                  value: totalCount > 0 ? completedCount / totalCount : 0,
-                  backgroundColor: const Color(0xFFE5E7EB),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    completedCount == totalCount
-                        ? const Color(0xFF4CAF50)
-                        : AppTheme.primaryColor,
-                  ),
-                  minHeight: 8.h,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 8.h),
-
-        // Task list
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadTasks,
-            color: AppTheme.primaryColor,
-            child: ListView.separated(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              itemCount: _tasks.length,
-              separatorBuilder: (context, index) => SizedBox(height: 8.h),
-              itemBuilder: (context, index) {
-                final task = _tasks[index];
-                return _buildTaskCard(task);
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTaskCard(Map<String, dynamic> task) {
-    final jtId = task['jt_id'] as int;
-    final isChecked = _checkedTasks[jtId] ?? false;
-    final taskname = task['taskname'] as String;
-    final status = task['status'] as String;
-    final totalhours = task['totalhours'] ?? 0;
-    final taskId = task['task_id']?.toString() ?? '';
-
-    return GestureDetector(
-      onTap: () => _toggleTask(jtId),
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: isChecked ? const Color(0xFF4CAF50) : const Color(0xFFE5E7EB),
-            width: isChecked ? 1.5 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Checkbox
-            Container(
-              width: 24.w,
-              height: 24.w,
-              margin: EdgeInsets.only(top: 2.h),
-              decoration: BoxDecoration(
-                color: isChecked ? const Color(0xFF4CAF50) : Colors.white,
-                borderRadius: BorderRadius.circular(6.r),
-                border: Border.all(
-                  color: isChecked ? const Color(0xFF4CAF50) : const Color(0xFFD1D5DB),
-                  width: 1.5,
-                ),
-              ),
-              child: isChecked
-                  ? Icon(
-                      Icons.check,
-                      size: 16.sp,
-                      color: Colors.white,
-                    )
-                  : null,
-            ),
-            SizedBox(width: 12.w),
-
-            // Task content
-            Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    taskname,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: isChecked
-                          ? const Color(0xFF9CA3AF)
-                          : const Color(0xFF1F2937),
-                      decoration: isChecked ? TextDecoration.lineThrough : null,
-                    ),
-                  ),
-                  SizedBox(height: 6.h),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Task ID
-                      if (taskId.isNotEmpty) ...[
-                        Icon(
-                          Icons.task_outlined,
-                          size: 12.sp,
-                          color: const Color(0xFF9CA3AF),
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Task #$taskId',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0xFF9CA3AF),
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(8.w),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: Icon(
+                              Icons.checklist_rounded,
+                              size: 20.sp,
+                              color: AppTheme.primaryColor,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 12.w),
-                      ],
-                      // Hours
-                      Icon(
-                        Icons.access_time,
-                        size: 12.sp,
-                        color: const Color(0xFF9CA3AF),
+                          SizedBox(width: 12.w),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Progress',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                              ),
+                              Text(
+                                '$completedCount of $totalCount tasks',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w400,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        '${totalhours}h',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF9CA3AF),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      // Status badge
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(status).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4.r),
+                          color: completedCount == totalCount
+                              ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                              : AppTheme.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
                         child: Text(
-                          isChecked ? 'Completed' : status,
+                          '$progressPercent%',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w500,
-                            color: isChecked ? const Color(0xFF4CAF50) : _getStatusColor(status),
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                            color: completedCount == totalCount
+                                ? const Color(0xFF10B981)
+                                : AppTheme.primaryColor,
                           ),
                         ),
                       ),
                     ],
                   ),
+                  SizedBox(height: 12.h),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6.r),
+                    child: LinearProgressIndicator(
+                      value: totalCount > 0 ? completedCount / totalCount : 0,
+                      backgroundColor: const Color(0xFFE2E8F0),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        completedCount == totalCount
+                            ? const Color(0xFF10B981)
+                            : AppTheme.primaryColor,
+                      ),
+                      minHeight: 6.h,
+                    ),
+                  ),
                 ],
               ),
             ),
+            SizedBox(height: 20.h),
+
+            // Section title
+            Text(
+              'Checklist Items',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF334155),
+              ),
+            ),
+            SizedBox(height: 12.h),
+
+            // Task list
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _tasks.length,
+              itemBuilder: (context, index) {
+                final task = _tasks[index];
+                return _buildTaskCard(task, index + 1);
+              },
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(Map<String, dynamic> task, int index) {
+    final jtId = task['jt_id'] as int;
+    final isChecked = _checkedTasks[jtId] ?? false;
+    final taskname = task['taskname'] as String;
+
+    return GestureDetector(
+      onTap: () => _toggleTask(jtId),
+      child: Container(
+        margin: EdgeInsets.only(bottom: 10.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Left accent bar
+              Container(
+                width: 4.w,
+                decoration: BoxDecoration(
+                  color: isChecked ? const Color(0xFF10B981) : AppTheme.primaryColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(14.r),
+                    bottomLeft: Radius.circular(14.r),
+                  ),
+                ),
+              ),
+              // Main content
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(14.w),
+                  child: Row(
+                    children: [
+                      // Checkbox
+                      GestureDetector(
+                        onTap: () => _toggleTask(jtId),
+                        child: Container(
+                          width: 28.w,
+                          height: 28.w,
+                          decoration: BoxDecoration(
+                            color: isChecked
+                                ? const Color(0xFF10B981)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(8.r),
+                            border: Border.all(
+                              color: isChecked
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFCBD5E1),
+                              width: 2,
+                            ),
+                          ),
+                          child: isChecked
+                              ? Icon(
+                                  Icons.check_rounded,
+                                  size: 18.sp,
+                                  color: Colors.white,
+                                )
+                              : null,
+                        ),
+                      ),
+                      SizedBox(width: 14.w),
+                      // Task content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              taskname,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w500,
+                                color: isChecked
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF1E293B),
+                                decoration: isChecked
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                                decorationColor: const Color(0xFF94A3B8),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: 4.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.tag_rounded,
+                                  size: 12.sp,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  'Item $index',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Status indicator
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                        decoration: BoxDecoration(
+                          color: isChecked
+                              ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                              : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Text(
+                          isChecked ? 'Done' : 'Pending',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w600,
+                            color: isChecked
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

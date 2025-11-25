@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/services/priority_service.dart';
 import '../../domain/usecases/get_current_staff_usecase.dart';
 import '../../domain/usecases/sign_in_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
@@ -45,7 +46,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthError(failure.message)),
-      (staff) => emit(Authenticated(staff)),
+      (staff) async {
+        // Set staff ID in PriorityService for priority jobs persistence
+        await PriorityService.setCurrentStaffId(staff.staffId);
+        emit(Authenticated(staff));
+      },
     );
   }
 
@@ -75,8 +80,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(const Unauthenticated()),
-      (staff) {
+      (staff) async {
         if (staff != null) {
+          // Set staff ID in PriorityService for priority jobs persistence
+          await PriorityService.setCurrentStaffId(staff.staffId);
           emit(Authenticated(staff));
         } else {
           emit(const Unauthenticated());
@@ -94,8 +101,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthError(failure.message)),
-      (staff) {
+      (staff) async {
         if (staff != null) {
+          // Set staff ID in PriorityService for priority jobs persistence
+          await PriorityService.setCurrentStaffId(staff.staffId);
           emit(Authenticated(staff));
         } else {
           emit(const Unauthenticated());

@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../auth/domain/entities/staff.dart';
+import '../../../home/presentation/pages/work_log_checklist_page.dart';
+import '../../../home/presentation/pages/work_log_detail_page.dart';
 
 class JobDetailPage extends StatefulWidget {
   final Staff currentStaff;
@@ -516,9 +518,10 @@ class _JobDetailPageState extends State<JobDetailPage>
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _tasks.length,
-                separatorBuilder: (context, index) => const Divider(
+                separatorBuilder: (context, index) => Divider(
                   height: 1,
-                  color: Color(0xFFE5E7EB),
+                  thickness: 1,
+                  color: const Color(0xFFE5E7EB),
                 ),
                 itemBuilder: (context, index) {
                   final task = _tasks[index];
@@ -527,77 +530,92 @@ class _JobDetailPageState extends State<JobDetailPage>
                   final otherStaffHours = task['otherStaffHours'] as double;
                   final actHours = task['actHours'] as double;
 
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            task['taskName'] as String,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF1F2937),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                  return InkWell(
+                    onTap: () {
+                      // Navigate to WorkLogChecklistPage
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => WorkLogChecklistPage(
+                            staffId: widget.currentStaff.staffId,
+                            jobId: widget.job['job_id'] as int,
+                            selectedDate: DateTime.now(),
                           ),
                         ),
-                        SizedBox(
-                          width: 45.w,
-                          child: Text(
-                            _formatHours(estHours),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF6B7280),
+                      );
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 24.h),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              task['taskName'] as String,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF1F2937),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: 45.w,
-                          child: Text(
-                            _formatHours(loginStaffHours),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF2563EB),
+                          SizedBox(
+                            width: 45.w,
+                            child: Text(
+                              _formatHours(estHours),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF6B7280),
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: 45.w,
-                          child: Text(
-                            _formatHours(otherStaffHours),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF6B7280),
+                          SizedBox(
+                            width: 45.w,
+                            child: Text(
+                              _formatHours(loginStaffHours),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF2563EB),
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: 45.w,
-                          child: Text(
-                            _formatHours(actHours),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w600,
-                              color: actHours > 0 ? const Color(0xFF10B981) : const Color(0xFF6B7280),
+                          SizedBox(
+                            width: 45.w,
+                            child: Text(
+                              _formatHours(otherStaffHours),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF6B7280),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          SizedBox(
+                            width: 45.w,
+                            child: Text(
+                              _formatHours(actHours),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w600,
+                                color: actHours > 0 ? const Color(0xFF10B981) : const Color(0xFF6B7280),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -696,168 +714,202 @@ class _JobDetailPageState extends State<JobDetailPage>
     return RefreshIndicator(
       onRefresh: _loadWorkDiary,
       color: AppTheme.primaryColor,
-      child: Column(
-        children: [
-          // Table Header
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            decoration: const BoxDecoration(
-              color: Color(0xFF3B82F6),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 80.w,
-                  child: Text(
-                    'Work Date',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Task',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    'Work Details',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 50.w,
-                  child: Text(
-                    'hh:mm',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(12.w),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          // Table Body
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: _workDiaryEntries.length,
-              itemBuilder: (context, index) {
+          child: Column(
+            children: [
+              // Table Header
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(12.r),
+                    topRight: Radius.circular(12.r),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 80.w,
+                      child: Text(
+                        'Work Date',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Task',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        'Work Details',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 50.w,
+                      child: Text(
+                        'hh:mm',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Table Rows
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: _workDiaryEntries.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: const Color(0xFFE5E7EB),
+                ),
+                itemBuilder: (context, index) {
                 final entry = _workDiaryEntries[index];
 
-                return Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                  decoration: BoxDecoration(
-                    color: index % 2 == 0 ? Colors.white : const Color(0xFFF9FAFB),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: const Color(0xFFE5E7EB),
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Work Date
-                      SizedBox(
-                        width: 80.w,
-                        child: Text(
-                          entry['date'] != null
-                              ? DateFormat('dd/MM/yyyy').format(entry['date'])
-                              : '-',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF374151),
-                          ),
+                return InkWell(
+                  onTap: () {
+                    // Navigate to WorkLogDetailPage
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WorkLogDetailPage(
+                          entry: entry,
+                          entryIndex: index,
+                          selectedDate: entry['date'] ?? DateTime.now(),
+                          staffId: widget.currentStaff.staffId,
                         ),
                       ),
-                      // Task
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          entry['taskDesc'] as String,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF374151),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      // Work Details
-                      Expanded(
-                        flex: 3,
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 4.w),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 24.h),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Work Date
+                        SizedBox(
+                          width: 80.w,
                           child: Text(
-                            entry['notes'] as String,
+                            entry['date'] != null
+                                ? DateFormat('dd/MM/yyyy').format(entry['date'])
+                                : '-',
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 10.sp,
-                              fontWeight: FontWeight.w400,
-                              color: const Color(0xFF6B7280),
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF374151),
+                            ),
+                          ),
+                        ),
+                        // Task
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            entry['taskDesc'] as String,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF374151),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                      // Hours
-                      SizedBox(
-                        width: 50.w,
-                        child: Text(
-                          entry['hoursFormatted'] as String,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF3B82F6),
+                        // Work Details
+                        Expanded(
+                          flex: 3,
+                          child: Padding(
+                            padding: EdgeInsets.only(left: 4.w),
+                            child: Text(
+                              entry['notes'] as String,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF6B7280),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        // Hours
+                        SizedBox(
+                          width: 50.w,
+                          child: Text(
+                            entry['hoursFormatted'] as String,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF3B82F6),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
-          ),
-          // Total Row
-          Container(
+            // Total Row
+            Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF3F4F6),
-              border: Border(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              border: const Border(
                 top: BorderSide(
                   color: Color(0xFFD1D5DB),
                   width: 1,
                 ),
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(12.r),
+                bottomRight: Radius.circular(12.r),
               ),
             ),
             child: Row(
@@ -891,7 +943,9 @@ class _JobDetailPageState extends State<JobDetailPage>
               ],
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
