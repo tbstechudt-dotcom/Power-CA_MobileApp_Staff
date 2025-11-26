@@ -7,6 +7,7 @@ import '../../../../app/theme.dart';
 import '../../../auth/domain/entities/staff.dart';
 import '../../../home/presentation/pages/work_log_checklist_page.dart';
 import '../../../home/presentation/pages/work_log_detail_page.dart';
+import 'task_checklist_detail_page.dart';
 
 class JobDetailPage extends StatefulWidget {
   final Staff currentStaff;
@@ -532,14 +533,23 @@ class _JobDetailPageState extends State<JobDetailPage>
 
                   return InkWell(
                     onTap: () {
-                      // Navigate to WorkLogChecklistPage
+                      final taskId = task['task_id'] as int?;
+                      if (taskId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Task ID not available')),
+                        );
+                        return;
+                      }
+
+                      // Navigate to TaskChecklistDetailPage
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => WorkLogChecklistPage(
-                            staffId: widget.currentStaff.staffId,
+                          builder: (context) => TaskChecklistDetailPage(
                             jobId: widget.job['job_id'] as int,
-                            selectedDate: DateTime.now(),
+                            taskId: taskId,
+                            taskName: task['taskName'] as String,
+                            jobNo: widget.job['jobNo'] ?? 'Job',
                           ),
                         ),
                       );

@@ -80,10 +80,10 @@ class ReverseSyncEngine {
       `);
       console.log('[OK] Created _reverse_sync_metadata table');
 
-      // Seed initial records for all reverse sync tables (using DESKTOP table names)
+      // Seed initial records for mobile-created tables only (using DESKTOP table names)
       const tables = [
-        'orgmaster', 'locmaster', 'conmaster', 'climaster', 'mbstaff', 'taskmaster',
-        'jobshead', 'mbreminder', 'learequest'  // Note: mbreminder (desktop) not reminder (Supabase)
+        'workdiary',   // Mobile time tracking
+        'learequest'   // Mobile leave requests
       ];
 
       for (const table of tables) {
@@ -124,39 +124,15 @@ class ReverseSyncEngine {
     console.log('Tracking: Metadata-based (last_sync_timestamp per table)');
 
     try {
-      // Sync ALL tables in correct dependency order
-      // Master tables first (reference data)
-      const masterTables = [
-        'orgmaster',     // Organizations
-        'locmaster',     // Locations
-        'conmaster',     // Contacts
-        'climaster',     // Clients
-        'mbstaff',       // Staff members
-        'taskmaster',    // Task templates (optional)
-        'jobmaster',     // Job templates (optional)
-        'cliunimaster',  // Client units (optional)
+      // ONLY sync mobile-created tables (workdiary and learequest)
+      // All other tables sync forward only (Desktop -> Supabase)
+      const mobileCreatedTables = [
+        'workdiary',     // Work diary entries (mobile time tracking)
+        'learequest',    // Leave requests (mobile leave applications)
       ];
 
-      // Transactional tables (depend on master tables)
-      // IMPORTANT: Only sync tables that can have TRULY mobile-created records
-      // Tables with mobile-generated PKs are EXCLUDED to prevent duplicates
-      const transactionalTables = [
-        'jobshead',      // Job headers (uses job_id from desktop, safe to sync)
-        // 'jobtasks',   // EXCLUDED: Uses jt_id (mobile-generated PK) - causes duplicates!
-        // 'taskchecklist', // EXCLUDED: Uses tc_id (mobile-generated PK) - causes duplicates!
-        // 'workdiary',  // EXCLUDED: Uses wd_id (mobile-generated PK) - causes duplicates!
-        'reminder',      // Reminders (uses rem_id from desktop, safe to sync)
-        // 'remdetail',  // EXCLUDED: Uses remd_id (mobile-generated PK) - causes duplicates!
-        'learequest',    // Leave requests (mobile-created, uses lea_id)
-      ];
-
-      console.log('\n--- Master Tables ---');
-      for (const tableName of masterTables) {
-        await this.syncTable(tableName);
-      }
-
-      console.log('\n--- Transactional Tables ---');
-      for (const tableName of transactionalTables) {
+      console.log('\n--- Mobile-Created Tables (Reverse Sync) ---');
+      for (const tableName of mobileCreatedTables) {
         await this.syncTable(tableName);
       }
 
