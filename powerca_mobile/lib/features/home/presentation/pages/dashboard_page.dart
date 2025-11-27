@@ -209,11 +209,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildStaffProfileCard() {
     final staffRole = _getStaffRole(widget.currentStaff.staffType);
-    final initials = widget.currentStaff.name
-        .split(' ')
-        .take(2)
-        .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
-        .join();
 
     return Container(
       width: double.infinity,
@@ -232,27 +227,6 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       child: Row(
         children: [
-          // Profile Avatar with Initials
-          Container(
-            width: 48.w,
-            height: 48.w,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFF2563EB),
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 12.w),
           // Staff Info
           Expanded(
             child: Column(

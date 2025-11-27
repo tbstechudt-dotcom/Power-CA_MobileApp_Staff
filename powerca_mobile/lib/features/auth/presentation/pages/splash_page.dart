@@ -156,22 +156,8 @@ class _SplashPageState extends State<SplashPage> {
                         ),
                       ),
 
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 24),
                     ],
-                  ),
-                ),
-              ),
-
-              // Bottom navigation indicator
-              Container(
-                height: 30,
-                alignment: Alignment.center,
-                child: Container(
-                  width: 108,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentColor, // #263238
-                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
