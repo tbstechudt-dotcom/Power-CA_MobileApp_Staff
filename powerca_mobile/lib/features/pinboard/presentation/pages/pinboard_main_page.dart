@@ -50,50 +50,29 @@ class _PinboardMainPageState extends State<PinboardMainPage>
     try {
       final supabase = Supabase.instance.client;
 
-      // Fetch reminders for current staff
-      final remindersResponse = await supabase
-          .from('reminder')
-          .select('rem_id, staff_id, client_id, remtype, remdate, remduedate, remtime, remtitle, remnotes, remstatus')
-          .eq('staff_id', widget.currentStaff.staffId)
-          .order('remdate', ascending: true);
-
-      // Get unique client IDs
-      final clientIds = remindersResponse
-          .map((reminder) => reminder['client_id'])
-          .where((id) => id != null)
-          .toSet()
-          .toList();
-
-      // Fetch client names for all client IDs
-      Map<int, String> clientNames = {};
-      if (clientIds.isNotEmpty) {
-        final clientsResponse = await supabase
-            .from('climaster')
-            .select('client_id, clientname')
-            .inFilter('client_id', clientIds);
-
-        for (var client in clientsResponse) {
-          clientNames[client['client_id'] as int] = client['clientname'] ?? 'Unknown Client';
-        }
-      }
+      // Fetch pinboard items from pinboard_items table
+      final pinboardResponse = await supabase
+          .from('pinboard_items')
+          .select('id, title, description, image_url, location, event_date, category, author_id, author_name, created_at')
+          .order('event_date', ascending: true);
 
       // Transform database records to UI format
-      final reminders = remindersResponse.map<Map<String, dynamic>>((record) {
-        final clientId = record['client_id'] as int?;
-        final clientName = clientId != null ? (clientNames[clientId] ?? 'Unknown Client') : 'No Client';
-
+      final reminders = pinboardResponse.map<Map<String, dynamic>>((record) {
         return {
-          'rem_id': record['rem_id'],
-          'staff_id': record['staff_id'],
-          'client_id': clientId,
-          'clientName': clientName,
-          'remtype': record['remtype'] ?? 'General',
-          'remdate': record['remdate'] != null ? DateTime.parse(record['remdate']) : null,
-          'remduedate': record['remduedate'] != null ? DateTime.parse(record['remduedate']) : null,
-          'remtime': record['remtime'] ?? '',
-          'remtitle': record['remtitle'] ?? 'No Title',
-          'remnotes': record['remnotes'] ?? 'No description',
-          'remstatus': record['remstatus'] ?? 0,
+          'rem_id': record['id'],
+          'staff_id': null,
+          'client_id': null,
+          'clientName': record['author_name'] ?? 'Unknown Author',
+          'remtype': _getCategoryDisplayName(record['category'] as String?),
+          'category': record['category'] ?? 'due_date',
+          'remdate': record['event_date'] != null ? DateTime.parse(record['event_date']) : null,
+          'remduedate': record['event_date'] != null ? DateTime.parse(record['event_date']) : null,
+          'remtime': '',
+          'remtitle': record['title'] ?? 'No Title',
+          'remnotes': record['description'] ?? 'No description',
+          'remstatus': 0,
+          'image_url': record['image_url'],
+          'location': record['location'],
         };
       }).toList();
 
@@ -102,11 +81,24 @@ class _PinboardMainPageState extends State<PinboardMainPage>
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading reminders: $e');
+      print('Error loading pinboard items: $e');
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  String _getCategoryDisplayName(String? category) {
+    switch (category) {
+      case 'due_date':
+        return 'Due Date';
+      case 'meetings':
+        return 'Meeting';
+      case 'greetings':
+        return 'Greeting';
+      default:
+        return 'General';
     }
   }
 
@@ -116,35 +108,19 @@ class _PinboardMainPageState extends State<PinboardMainPage>
     // Get today's date at start of day for comparison
     final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
-    // Filter reminders based on current tab
+    // Filter pinboard items based on current tab (using category field)
     switch (_tabController.index) {
-      case 0: // Due Date - work-related reminders
+      case 0: // Due Date category
         filtered = _reminders.where((r) {
-          final remtype = (r['remtype'] as String).toLowerCase();
-          return remtype.contains('gst') ||
-                 remtype.contains('tds') ||
-                 remtype.contains('income') ||
-                 remtype.contains('tax') ||
-                 remtype.contains('companies') ||
-                 remtype.contains('office') ||
-                 remtype.contains('work') ||
-                 remtype.contains('tcs') ||
-                 remtype.contains('llp') ||
-                 remtype.contains('filing') ||
-                 remtype.contains('renewal');
+          final category = (r['category'] as String?) ?? '';
+          return category == 'due_date';
         }).toList();
         break;
 
-      case 1: // Meetings - meeting related
+      case 1: // Meetings category
         filtered = _reminders.where((r) {
-          final remtype = (r['remtype'] as String).toLowerCase();
-          final remtitle = (r['remtitle'] as String).toLowerCase();
-          final remnotes = (r['remnotes'] as String).toLowerCase();
-          return remtype.contains('meeting') ||
-                 remtitle.contains('meeting') ||
-                 remnotes.contains('meeting') ||
-                 remtype.contains('board') ||
-                 remtype.contains('discussion');
+          final category = (r['category'] as String?) ?? '';
+          return category == 'meetings';
         }).toList();
         break;
 

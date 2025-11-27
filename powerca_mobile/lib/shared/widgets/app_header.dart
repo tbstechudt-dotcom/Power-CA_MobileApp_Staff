@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/domain/entities/staff.dart';
 import '../../features/pinboard/presentation/pages/pinboard_page.dart';
+
+/// Key for storing last pinboard visit timestamp
+const String _kLastPinboardVisitKey = 'last_pinboard_visit_timestamp';
 
 /// Shared app header widget that displays company name and location
 /// Fetches data from orgmaster and locmaster tables
@@ -33,43 +37,80 @@ class _AppHeaderState extends State<AppHeader> {
   void initState() {
     super.initState();
     _fetchCompanyAndLocation();
-    _checkForNewReminders();
+    _checkForNewPinboardItems();
   }
 
-  Future<void> _checkForNewReminders() async {
+  /// Check for new pinboard items since last visit
+  Future<void> _checkForNewPinboardItems() async {
     try {
       final supabase = Supabase.instance.client;
+      final prefs = await SharedPreferences.getInstance();
 
-      // Check for pending reminders (status = 0) for current staff
-      final response = await supabase
-          .from('reminder')
-          .select('rem_id')
-          .eq('staff_id', widget.currentStaff.staffId)
-          .eq('remstatus', 0)
-          .limit(1);
+      // Get last visit timestamp
+      final lastVisitString = prefs.getString(_kLastPinboardVisitKey);
+
+      // Query for pinboard items
+      final List<dynamic> items;
+      if (lastVisitString != null) {
+        // Check for items created after last visit
+        items = await supabase
+            .from('pinboard_items')
+            .select('id')
+            .gt('created_at', lastVisitString);
+      } else {
+        // First time user - check if there are any items
+        items = await supabase
+            .from('pinboard_items')
+            .select('id')
+            .limit(1);
+      }
 
       if (mounted) {
-        // Show notification dot if there are ANY pending reminders
         setState(() {
-          _hasNewNotifications = response.isNotEmpty;
+          _hasNewNotifications = items.isNotEmpty;
         });
       }
     } catch (e) {
-      debugPrint('Error checking for new reminders: $e');
+      debugPrint('Error checking for new pinboard items: $e');
     }
   }
 
-  void _navigateToPinboard() {
+  /// Save current timestamp as last pinboard visit
+  Future<void> _markPinboardAsVisited() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _kLastPinboardVisitKey,
+        DateTime.now().toIso8601String(),
+      );
+    } catch (e) {
+      debugPrint('Error saving pinboard visit timestamp: $e');
+    }
+  }
+
+  void _navigateToPinboard() async {
     if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PinboardPage(currentStaff: widget.currentStaff),
-        ),
-      ).then((_) {
-        // Re-check for pending reminders when returning from Pinboard
-        _checkForNewReminders();
-      });
+      // Mark pinboard as visited BEFORE navigating (clears notification immediately)
+      await _markPinboardAsVisited();
+
+      // Clear the notification indicator immediately
+      if (mounted) {
+        setState(() {
+          _hasNewNotifications = false;
+        });
+      }
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PinboardPage(currentStaff: widget.currentStaff),
+          ),
+        ).then((_) {
+          // Re-check for new pinboard items when returning
+          _checkForNewPinboardItems();
+        });
+      }
     }
   }
 

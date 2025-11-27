@@ -533,7 +533,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                                     ),
                                     SizedBox(width: 6.w),
                                     Text(
-                                      '$timeFrom - $timeTo',
+                                      '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
                                       style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontSize: 12.sp,
@@ -598,6 +598,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
   Widget _buildFAB() {
     return Container(
       decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
             color: AppTheme.primaryColor.withValues(alpha: 0.3),
@@ -606,17 +607,50 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
           ),
         ],
       ),
-      child: FloatingActionButton(
+      child: FloatingActionButton.extended(
         onPressed: () => _addNewEntry(context),
         backgroundColor: AppTheme.primaryColor,
         elevation: 0,
-        child: Icon(
+        icon: Icon(
           Icons.add_rounded,
           color: Colors.white,
-          size: 28.sp,
+          size: 22.sp,
+        ),
+        label: Text(
+          'New Entry',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _reloadEntries() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final dateStr = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+
+      final response = await supabase
+          .from('workdiary')
+          .select()
+          .eq('staff_id', widget.staffId)
+          .eq('date', dateStr)
+          .order('created_at', ascending: false);
+
+      if (mounted) {
+        setState(() {
+          _entries = List<Map<String, dynamic>>.from(response);
+          _isLoadingNames = true;
+        });
+        await _loadClientAndJobNames();
+      }
+    } catch (e) {
+      debugPrint('Error reloading entries: $e');
+    }
   }
 
   void _addNewEntry(BuildContext context) {
@@ -630,7 +664,8 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
       ),
     ).then((result) {
       if (result == true) {
-        Navigator.pop(context, true);
+        // Reload entries to show the new one
+        _reloadEntries();
       }
     });
   }
@@ -657,5 +692,53 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
     } else {
       return '${hours}h ${remainingMinutes}m';
     }
+  }
+
+  /// Format time value for display with AM/PM (handles both timestamp and time formats)
+  /// Input could be: "2025-11-26T12:30:00", "12:30:00", "12:30:00+00", etc.
+  /// Output: "12:30 PM" or "11:30 AM"
+  String _formatTimeDisplay(dynamic timeValue) {
+    if (timeValue == null) return '';
+
+    String timeStr = timeValue.toString();
+
+    // If it contains 'T', it's a full datetime - extract just the time part
+    if (timeStr.contains('T')) {
+      timeStr = timeStr.split('T')[1];
+    }
+
+    // Remove timezone info (+00, -05:30, Z, etc.)
+    timeStr = timeStr.split('+')[0].split('Z')[0];
+    if (timeStr.contains('-') && timeStr.indexOf('-') > 2) {
+      // Handle negative timezone like -05:30 but not time like 12:30
+      final parts = timeStr.split('-');
+      if (parts.length > 1 && parts.last.contains(':')) {
+        timeStr = parts[0];
+      }
+    }
+
+    // Remove milliseconds if present (.000)
+    timeStr = timeStr.split('.')[0];
+
+    // Now we should have HH:mm:ss format - convert to 12-hour with AM/PM
+    final timeParts = timeStr.split(':');
+    if (timeParts.length >= 2) {
+      int hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = timeParts[1];
+
+      // Determine AM/PM
+      final period = hour >= 12 ? 'PM' : 'AM';
+
+      // Convert to 12-hour format
+      if (hour == 0) {
+        hour = 12; // Midnight is 12 AM
+      } else if (hour > 12) {
+        hour = hour - 12;
+      }
+
+      return '$hour:$minute $period';
+    }
+
+    return timeStr;
   }
 }

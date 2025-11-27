@@ -228,6 +228,90 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     return to > from ? to - from : 0.0;
   }
 
+  /// Check if the new time range overlaps with any existing work entries
+  /// Returns the overlapping entry details if overlap found, null otherwise
+  Future<Map<String, dynamic>?> _checkTimeOverlap() async {
+    if (_selectedDate == null || _fromTime == null || _toTime == null) {
+      return null;
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+
+      // Convert new entry times to minutes for comparison
+      final newFromMinutes = _fromTime!.hour * 60 + _fromTime!.minute;
+      final newToMinutes = _toTime!.hour * 60 + _toTime!.minute;
+
+      // Query existing entries for the same staff and date
+      final existingEntries = await supabase
+          .from('workdiary')
+          .select('wd_id, timefrom, timeto, job_id')
+          .eq('staff_id', widget.staffId)
+          .eq('date', dateStr);
+
+      // Check for overlaps
+      for (final entry in existingEntries) {
+        final existingFrom = entry['timefrom'];
+        final existingTo = entry['timeto'];
+
+        if (existingFrom == null || existingTo == null) continue;
+
+        // Parse existing times (format: "HH:mm:ss" or "HH:mm:ss+00")
+        int existingFromMinutes;
+        int existingToMinutes;
+
+        try {
+          // Handle time format - could be "17:00:00" or "2025-11-26T17:00:00"
+          String fromTimeStr = existingFrom.toString();
+          String toTimeStr = existingTo.toString();
+
+          // If it contains 'T', it's a full datetime - extract just the time part
+          if (fromTimeStr.contains('T')) {
+            fromTimeStr = fromTimeStr.split('T')[1].split('+')[0].split('.')[0];
+          }
+          if (toTimeStr.contains('T')) {
+            toTimeStr = toTimeStr.split('T')[1].split('+')[0].split('.')[0];
+          }
+
+          // Remove any timezone info
+          fromTimeStr = fromTimeStr.split('+')[0].split('-')[0];
+          toTimeStr = toTimeStr.split('+')[0].split('-')[0];
+
+          final fromParts = fromTimeStr.split(':');
+          final toParts = toTimeStr.split(':');
+
+          existingFromMinutes = int.parse(fromParts[0]) * 60 + int.parse(fromParts[1]);
+          existingToMinutes = int.parse(toParts[0]) * 60 + int.parse(toParts[1]);
+        } catch (e) {
+          debugPrint('Error parsing time: $e');
+          continue;
+        }
+
+        // Check for overlap: two ranges overlap if one starts before the other ends
+        // Overlap occurs when: newFrom < existingTo AND newTo > existingFrom
+        if (newFromMinutes < existingToMinutes && newToMinutes > existingFromMinutes) {
+          // Format times for display
+          final existingFromFormatted =
+              '${(existingFromMinutes ~/ 60).toString().padLeft(2, '0')}:${(existingFromMinutes % 60).toString().padLeft(2, '0')}';
+          final existingToFormatted =
+              '${(existingToMinutes ~/ 60).toString().padLeft(2, '0')}:${(existingToMinutes % 60).toString().padLeft(2, '0')}';
+
+          return {
+            'fromTime': existingFromFormatted,
+            'toTime': existingToFormatted,
+            'job_id': entry['job_id'],
+          };
+        }
+      }
+
+      return null; // No overlap found
+    } catch (e) {
+      debugPrint('Error checking time overlap: $e');
+      return null; // On error, allow the entry (let server handle it)
+    }
+  }
+
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -261,20 +345,49 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
     setState(() => _isSubmitting = true);
 
+    // Check for time overlap with existing entries
+    final overlap = await _checkTimeOverlap();
+    if (overlap != null) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Time overlap! You already have an entry from ${overlap['fromTime']} to ${overlap['toTime']}',
+            ),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       final supabase = Supabase.instance.client;
       final hours = _calculateHours();
       final minutes = (hours * 60).round(); // Convert hours to minutes
 
       // IMPORTANT: workdiary columns are: date, minutes, tasknotes (NOT wd_date, actual_hrs, wd_notes)
+      // Format times as TIME ONLY (HH:mm:ss) - timefrom/timeto columns are time type
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+      final fromTimeStr = _fromTime != null
+          ? '${_fromTime!.hour.toString().padLeft(2, '0')}:${_fromTime!.minute.toString().padLeft(2, '0')}:00'
+          : null;
+      final toTimeStr = _toTime != null
+          ? '${_toTime!.hour.toString().padLeft(2, '0')}:${_toTime!.minute.toString().padLeft(2, '0')}:00'
+          : null;
+
       await supabase.from('workdiary').insert({
         'staff_id': widget.staffId,
         'job_id': _selectedJobId,
         'client_id': _selectedClientId,
         'task_id': _selectedTaskId,
-        'date': DateFormat('yyyy-MM-dd').format(_selectedDate!), // Column is 'date'
+        'date': dateStr, // Column is 'date'
         'tasknotes': _descriptionController.text.trim(), // Column is 'tasknotes'
         'minutes': minutes, // Column is 'minutes' (integer)
+        'timefrom': fromTimeStr, // From time (full timestamp format)
+        'timeto': toTimeStr, // To time (full timestamp format)
         'source': 'M', // Mobile source
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
