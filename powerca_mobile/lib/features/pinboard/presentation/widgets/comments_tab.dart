@@ -173,19 +173,6 @@ class _CommentItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Avatar
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-          child: Icon(
-            Icons.person,
-            color: Theme.of(context).primaryColor,
-            size: 20,
-          ),
-        ),
-
-        const SizedBox(width: 12),
-
         // Comment Content
         Expanded(
           child: Column(

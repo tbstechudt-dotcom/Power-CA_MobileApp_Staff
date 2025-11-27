@@ -26,36 +26,31 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
   }) async {
     try {
-      // Call Supabase Edge Function for server-side authentication
-      // Password decryption happens on backend with secure encryption key
-      final response = await supabaseClient.functions.invoke(
-        'auth-login',
-        body: {
-          'username': username,
-          'password': password,
-        },
-      );
+      // TEMPORARY: Direct database authentication for testing
+      // TODO: Replace with Edge Function call when deployed
 
-      // Check for error response
-      if (response.status != 200) {
-        final error = response.data['error'] ?? 'Authentication failed';
-        throw Exception(error);
+      // Query mbstaff table for user with matching username
+      final response = await supabaseClient
+          .from('mbstaff')
+          .select()
+          .eq('app_username', username)
+          .maybeSingle();
+
+      if (response == null) {
+        throw Exception('User not found');
       }
 
-      // Parse successful response
-      final data = response.data;
-
-      if (data['success'] != true) {
-        throw Exception(data['error'] ?? 'Authentication failed');
+      // Check if user is active
+      // active_status: 1 = active, 2 = inactive
+      if (response['active_status'] != 1) {
+        throw Exception('User account is inactive');
       }
 
-      // Extract staff data from response
-      final staffData = data['staff'] as Map<String, dynamic>;
+      // TEMPORARY: For testing, accept any password
+      // In production, this should validate encrypted password via Edge Function
 
       // Create and return staff model
-      return StaffModel.fromJson(staffData);
-    } on FunctionException catch (e) {
-      throw Exception('Backend error: ${e.details}');
+      return StaffModel.fromJson(response);
     } catch (e) {
       rethrow;
     }

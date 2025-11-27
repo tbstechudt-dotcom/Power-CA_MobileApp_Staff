@@ -89,15 +89,6 @@ class EventDetailsTab extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: categoryColor.withValues(alpha: 0.2),
-                  child: Icon(
-                    Icons.person,
-                    color: categoryColor,
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

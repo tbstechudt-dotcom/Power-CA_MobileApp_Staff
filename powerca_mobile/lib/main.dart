@@ -8,7 +8,6 @@ import 'core/config/injection.dart';
 import 'core/config/supabase_config.dart';
 import 'features/auth/domain/entities/staff.dart';
 import 'features/auth/presentation/pages/sign_in_page.dart';
-import 'features/auth/presentation/pages/sign_up_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/home/presentation/pages/dashboard_page.dart';
 import 'features/jobs/presentation/pages/jobs_page.dart';
@@ -75,7 +74,7 @@ class PowerCAApp extends StatelessWidget {
           title: 'PowerCA - Auditor WorkLog',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          home: DashboardPage(currentStaff: mockStaff),
+          home: const SplashPage(),
           onGenerateRoute: (settings) {
             switch (settings.name) {
               case '/':
@@ -83,8 +82,6 @@ class PowerCAApp extends StatelessWidget {
                 return MaterialPageRoute(builder: (_) => const SplashPage());
               case '/sign-in':
                 return MaterialPageRoute(builder: (_) => const SignInPage());
-              case '/sign-up':
-                return MaterialPageRoute(builder: (_) => const SignUpPage());
               case '/dashboard':
                 final staff = settings.arguments as Staff;
                 return MaterialPageRoute(
@@ -265,6 +262,107 @@ class PlaceholderHomePage extends StatelessWidget {
                 ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Auto Splash Screen that redirects to Dashboard after delay
+class AutoSplashScreen extends StatefulWidget {
+  final Staff mockStaff;
+
+  const AutoSplashScreen({super.key, required this.mockStaff});
+
+  @override
+  State<AutoSplashScreen> createState() => _AutoSplashScreenState();
+}
+
+class _AutoSplashScreenState extends State<AutoSplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Set status bar to light mode for white text on blue background
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+    );
+
+    // Navigate to dashboard after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardPage(currentStaff: widget.mockStaff),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.primaryColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // App Logo/Icon
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                Icons.business_center_rounded,
+                size: 60,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // App Name
+            const Text(
+              'POWER CA',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 32,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Subtitle
+            const Text(
+              'Auditor WorkLog',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(height: 48),
+
+            // Loading indicator
+            const SizedBox(
+              width: 40,
+              height: 40,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                strokeWidth: 3,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

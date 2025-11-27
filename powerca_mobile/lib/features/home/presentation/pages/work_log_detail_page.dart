@@ -58,6 +58,79 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
   void initState() {
     super.initState();
     _loadAllNames();
+    _loadExistingAttachments();
+  }
+
+  /// Load existing attachments from database (fetch fresh data)
+  Future<void> _loadExistingAttachments() async {
+    final wdId = widget.entry['wd_id'];
+    debugPrint('=== _loadExistingAttachments START ===');
+    debugPrint('Entry data: ${widget.entry}');
+    debugPrint('wd_id from entry: $wdId (type: ${wdId.runtimeType})');
+
+    if (wdId == null) {
+      debugPrint('ERROR: wd_id is null - cannot load attachments');
+      return;
+    }
+
+    try {
+      // Fetch fresh data from database to get latest doc_ref
+      debugPrint('Querying workdiary for wd_id: $wdId');
+      final response = await _supabase
+          .from('workdiary')
+          .select('wd_id, doc_ref')
+          .eq('wd_id', wdId)
+          .maybeSingle();
+
+      debugPrint('Query response: $response');
+
+      if (response == null) {
+        debugPrint('ERROR: No record found for wd_id: $wdId');
+        return;
+      }
+
+      final docRef = response['doc_ref'];
+      debugPrint('doc_ref value: $docRef (type: ${docRef.runtimeType})');
+
+      if (docRef != null && docRef.toString().isNotEmpty) {
+        // Extract filename from URL
+        final url = docRef.toString();
+        debugPrint('Processing doc_ref URL: $url');
+
+        String fileName = 'Attached File';
+        try {
+          final uri = Uri.parse(url);
+          fileName = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'Attached File';
+          debugPrint('Extracted filename: $fileName');
+        } catch (e) {
+          debugPrint('Error parsing doc_ref URL: $e');
+        }
+
+        // Determine file type from extension
+        final extension = fileName.split('.').last.toLowerCase();
+        final isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].contains(extension);
+        debugPrint('File extension: $extension, isImage: $isImage');
+
+        if (mounted) {
+          setState(() {
+            // Clear existing and add fresh data
+            _attachedFiles.clear();
+            _attachedFiles.add(AttachedFile(
+              name: fileName,
+              path: url,
+              type: isImage ? 'image' : 'document',
+            ));
+          });
+          debugPrint('SUCCESS: Added attachment to list - total: ${_attachedFiles.length}');
+        }
+      } else {
+        debugPrint('doc_ref is null or empty - no attachment to load');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('ERROR loading attachments: $e');
+      debugPrint('Stack trace: $stackTrace');
+    }
+    debugPrint('=== _loadExistingAttachments END ===');
   }
 
   /// Load job name, client name, and task name from database
@@ -269,7 +342,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                     _buildDetailRow(
                       icon: Icons.schedule,
                       label: 'Time',
-                      value: '$timeFrom - $timeTo',
+                      value: '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
                     ),
                     SizedBox(height: 12.h),
                   ],
@@ -862,10 +935,61 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
     }
   }
 
+  /// Format time value for display with AM/PM (handles both timestamp and time formats)
+  /// Input could be: "2025-11-26T12:30:00", "12:30:00", "12:30:00+00", etc.
+  /// Output: "12:30 PM" or "11:30 AM"
+  String _formatTimeDisplay(dynamic timeValue) {
+    if (timeValue == null || timeValue.toString().isEmpty) return '';
+
+    String timeStr = timeValue.toString();
+
+    // If it contains 'T', it's a full datetime - extract just the time part
+    if (timeStr.contains('T')) {
+      timeStr = timeStr.split('T')[1];
+    }
+
+    // Remove timezone info (+00, -05:30, Z, etc.)
+    timeStr = timeStr.split('+')[0].split('Z')[0];
+    if (timeStr.contains('-') && timeStr.indexOf('-') > 2) {
+      final parts = timeStr.split('-');
+      if (parts.length > 1 && parts.last.contains(':')) {
+        timeStr = parts[0];
+      }
+    }
+
+    // Remove milliseconds if present (.000)
+    timeStr = timeStr.split('.')[0];
+
+    // Now we should have HH:mm:ss format - convert to 12-hour with AM/PM
+    final timeParts = timeStr.split(':');
+    if (timeParts.length >= 2) {
+      int hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = timeParts[1];
+
+      // Determine AM/PM
+      final period = hour >= 12 ? 'PM' : 'AM';
+
+      // Convert to 12-hour format
+      if (hour == 0) {
+        hour = 12; // Midnight is 12 AM
+      } else if (hour > 12) {
+        hour = hour - 12;
+      }
+
+      return '$hour:$minute $period';
+    }
+
+    return timeStr;
+  }
+
   /// Upload file to Supabase Storage and update workdiary doc_ref
   Future<void> _uploadFileToSupabase(Uint8List bytes, String fileName, BuildContext context) async {
     final wdId = widget.entry['wd_id'];
+    debugPrint('=== _uploadFileToSupabase START ===');
+    debugPrint('wd_id: $wdId, fileName: $fileName, bytes length: ${bytes.length}');
+
     if (wdId == null) {
+      debugPrint('ERROR: wd_id is null - cannot upload');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -886,28 +1010,41 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
     });
 
     try {
-
       // Generate unique file name with timestamp
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final extension = fileName.split('.').last;
-      final uniqueFileName = '${wdId}_${timestamp}.$extension';
+      final uniqueFileName = '${wdId}_$timestamp.$extension';
       final storagePath = 'workdiary/$uniqueFileName';
+      debugPrint('Storage path: $storagePath');
 
       // Upload to Supabase Storage
+      debugPrint('Uploading to Supabase Storage...');
       await _supabase.storage
           .from('attachments')
           .uploadBinary(storagePath, bytes);
+      debugPrint('Upload to storage successful');
 
       // Get public URL
       final publicUrl = _supabase.storage
           .from('attachments')
           .getPublicUrl(storagePath);
+      debugPrint('Public URL: $publicUrl');
 
       // Update workdiary doc_ref column
+      debugPrint('Updating workdiary doc_ref for wd_id: $wdId');
       await _supabase
           .from('workdiary')
-          .update({'doc_ref': publicUrl})
+          .update({'doc_ref': publicUrl, 'updated_at': DateTime.now().toIso8601String()})
           .eq('wd_id', wdId);
+      debugPrint('Database update successful');
+
+      // Verify the update by fetching the record back
+      final verifyResponse = await _supabase
+          .from('workdiary')
+          .select('wd_id, doc_ref')
+          .eq('wd_id', wdId)
+          .maybeSingle();
+      debugPrint('Verification query result: $verifyResponse');
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -936,7 +1073,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
           ),
         );
       }
-    } catch (e) {
+      debugPrint('=== _uploadFileToSupabase SUCCESS ===');
+    } catch (e, stackTrace) {
+      debugPrint('ERROR uploading file: $e');
+      debugPrint('Stack trace: $stackTrace');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
