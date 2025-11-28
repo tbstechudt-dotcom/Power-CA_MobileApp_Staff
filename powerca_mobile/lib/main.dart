@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -16,32 +18,128 @@ import 'features/pinboard/presentation/pages/pinboard_page.dart';
 import 'features/work_diary/domain/entities/job.dart';
 import 'features/work_diary/presentation/pages/work_diary_list_page.dart';
 
+// Global error message for display
+String? _initializationError;
+
 void main() async {
-  // Ensure Flutter bindings are initialized
-  WidgetsFlutterBinding.ensureInitialized();
+  // Catch all errors and display them
+  runZonedGuarded(() async {
+    // Ensure Flutter bindings are initialized
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase
-  await Supabase.initialize(
-    url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.anonKey,
-  );
+    // Set up Flutter error handler to show errors on screen
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('Flutter Error: ${details.exception}');
+      debugPrint('Stack: ${details.stack}');
+    };
 
-  // Configure dependency injection
-  await configureDependencies();
+    try {
+      // Set preferred orientations first
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
 
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+      // Show status bar
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.edgeToEdge,
+      );
 
-  // Hide status bar on all pages
-  SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.immersiveSticky,
-    overlays: [],
-  );
+      // Initialize Supabase with error handling
+      bool supabaseInitialized = false;
+      try {
+        await Supabase.initialize(
+          url: SupabaseConfig.url,
+          anonKey: SupabaseConfig.anonKey,
+        );
+        supabaseInitialized = true;
+        debugPrint('Supabase initialized successfully');
+      } catch (e, stack) {
+        _initializationError = 'Supabase Error: $e';
+        debugPrint('Supabase initialization error: $e');
+        debugPrint('Stack: $stack');
+      }
 
-  runApp(const PowerCAApp());
+      // Configure dependency injection only if Supabase is initialized
+      if (supabaseInitialized) {
+        try {
+          await configureDependencies();
+          debugPrint('Dependencies configured successfully');
+        } catch (e, stack) {
+          _initializationError = 'DI Error: $e';
+          debugPrint('Dependency injection error: $e');
+          debugPrint('Stack: $stack');
+        }
+      }
+
+      runApp(const PowerCAApp());
+    } catch (e, stack) {
+      _initializationError = 'Init Error: $e';
+      debugPrint('Main initialization error: $e');
+      debugPrint('Stack: $stack');
+      runApp(ErrorApp(error: e.toString(), stack: stack.toString()));
+    }
+  }, (error, stack) {
+    debugPrint('Uncaught Error: $error');
+    debugPrint('Stack: $stack');
+  });
+}
+
+/// Error display app for when main app fails to initialize
+class ErrorApp extends StatelessWidget {
+  final String error;
+  final String stack;
+
+  const ErrorApp({super.key, required this.error, required this.stack});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.red[50],
+        appBar: AppBar(
+          title: const Text('App Error'),
+          backgroundColor: Colors.red,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The app failed to start:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                color: Colors.white,
+                child: Text(
+                  error,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Stack Trace:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                color: Colors.white,
+                child: Text(
+                  stack,
+                  style: const TextStyle(fontSize: 10),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class PowerCAApp extends StatelessWidget {
@@ -49,20 +147,48 @@ class PowerCAApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Create a mock staff for development/testing
-    final mockStaff = Staff(
-      staffId: 2,
-      name: 'MUTHAMMAL M',
-      username: 'MM',
-      orgId: 1,
-      locId: 1,
-      conId: 1,
-      email: 'logaram2009@gmail.com',
-      phoneNumber: '9842865699',
-      dateOfBirth: DateTime(1971, 4, 15),
-      staffType: 1,
-      isActive: true,
-    );
+    // Show error screen if there was an initialization error
+    if (_initializationError != null) {
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.orange[50],
+          appBar: AppBar(
+            title: const Text('Initialization Warning'),
+            backgroundColor: Colors.orange,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'App started with errors:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  color: Colors.white,
+                  width: double.infinity,
+                  child: Text(
+                    _initializationError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 14),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Please check:\n'
+                  '1. Internet connection\n'
+                  '2. Supabase configuration\n'
+                  '3. App permissions',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return ScreenUtilInit(
       designSize: const Size(

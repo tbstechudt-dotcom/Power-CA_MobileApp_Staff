@@ -42,7 +42,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       // Check if user is active
       // active_status: 1 = active, 2 = inactive
-      if (response['active_status'] != 1) {
+      // Only reject if explicitly set to inactive (2)
+      // Note: Some users may have active_status = 0 (which is valid/active)
+      final activeStatus = response['active_status'];
+      final isInactive = activeStatus == 2 || activeStatus == '2';
+      if (isInactive) {
         throw Exception('User account is inactive');
       }
 

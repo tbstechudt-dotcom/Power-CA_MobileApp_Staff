@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../../../auth/domain/entities/staff.dart';
 
@@ -27,28 +28,28 @@ class PinboardDetailPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Reminder Details',
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 16,
+            fontSize: 16.sp,
             fontWeight: FontWeight.w600,
             color: Color(0xFF2563EB),
           ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Main Details Card
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
@@ -75,7 +76,7 @@ class PinboardDetailPage extends StatelessWidget {
                     label: 'Type',
                     value: reminder['remtype'] as String,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12.h),
 
                   // Client
                   _buildDetailRow(
@@ -83,7 +84,7 @@ class PinboardDetailPage extends StatelessWidget {
                     label: 'Client',
                     value: reminder['clientName'] as String,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12.h),
 
                   // Created Date
                   if (remdate != null) ...[
@@ -92,7 +93,7 @@ class PinboardDetailPage extends StatelessWidget {
                       label: 'Created Date',
                       value: dateFormat.format(remdate),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                   ],
 
                   // Due Date
@@ -103,7 +104,7 @@ class PinboardDetailPage extends StatelessWidget {
                       value: dateFormat.format(remduedate),
                       valueColor: const Color(0xFFDC2626),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                   ],
 
                   // Time
@@ -113,20 +114,20 @@ class PinboardDetailPage extends StatelessWidget {
                       label: 'Time',
                       value: reminder['remtime'] as String,
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                   ],
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
 
             // Notes Card
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
@@ -138,31 +139,31 @@ class PinboardDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Icon(
                         Icons.notes_outlined,
-                        size: 18,
+                        size: 18.sp,
                         color: Color(0xFF6B7280),
                       ),
-                      SizedBox(width: 8),
+                      SizedBox(width: 8.w),
                       Text(
                         'Notes',
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF6B7280),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   Text(
                     reminder['remnotes'] as String,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 14,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w400,
                       color: Color(0xFF1F2937),
                       height: 1.5,
@@ -189,29 +190,29 @@ class PinboardDetailPage extends StatelessWidget {
       children: [
         Icon(
           icon,
-          size: 18,
+          size: 18.sp,
           color: const Color(0xFF6B7280),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8.w),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 11,
+                  fontSize: 11.sp,
                   fontWeight: FontWeight.w400,
                   color: Color(0xFF9CA3AF),
                 ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: 2.h),
               Text(
                 value,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: isTitle ? 16 : 13,
+                  fontSize: isTitle ? 16.sp : 13.sp,
                   fontWeight: isTitle ? FontWeight.w600 : FontWeight.w500,
                   color: valueColor ?? const Color(0xFF1F2937),
                 ),
@@ -223,3 +224,4 @@ class PinboardDetailPage extends StatelessWidget {
     );
   }
 }
+

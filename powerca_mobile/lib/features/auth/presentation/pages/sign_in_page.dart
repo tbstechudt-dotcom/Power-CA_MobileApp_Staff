@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
@@ -93,7 +94,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
           body: SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -102,37 +103,37 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                       // PowerCA Logo
                       Image.asset(
                         'assets/images/splash/Power CA Logo Only-06.png',
-                        width: 120,
-                        height: 100,
+                        width: 120.w,
+                        height: 100.h,
                       ),
 
-                      const SizedBox(height: 32),
+                      SizedBox(height: 32.h),
 
                       // Welcome text
                       Text(
                         'Welcome Back!',
                         style: GoogleFonts.inter(
-                          fontSize: 24,
+                          fontSize: 24.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF263238),
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8.h),
 
                       // Subtitle
                       Text(
                         'Enter your details to log in and continue\nwhere you left off.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
-                          fontSize: 14,
+                          fontSize: 14.sp,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF8F8E90),
                           height: 1.5,
                         ),
                       ),
 
-                      const SizedBox(height: 40),
+                      SizedBox(height: 40.h),
 
                       // Username label
                       Align(
@@ -140,14 +141,14 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         child: Text(
                           'Username',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF080E29),
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8.h),
 
                       // Username field
                       TextFormField(
@@ -155,40 +156,36 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         decoration: InputDecoration(
                           hintText: 'Enter Your Username',
                           hintStyle: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF8F8E90),
                           ),
-                          prefixIcon: const Icon(
-                            Icons.person_outline,
+                          prefixIcon: Icon(Icons.person_outline,
                             color: Color(0xFF8F8E90),
-                            size: 22,
+                            size: 22.sp,
                           ),
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                             borderSide: const BorderSide(
                               color: Color(0xFF8F8E90),
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                             borderSide: const BorderSide(
                               color: Color(0xFF8F8E90),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                             borderSide: const BorderSide(
                               color: AppTheme.primaryColor,
                               width: 2,
                             ),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 13,
-                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 13.h),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -198,7 +195,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         },
                       ),
 
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20.h),
 
                       // Password label
                       Align(
@@ -206,14 +203,14 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         child: Text(
                           'Password',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF080E29),
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8.h),
 
                       // Password field
                       TextFormField(
@@ -222,14 +219,13 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         decoration: InputDecoration(
                           hintText: 'Enter Your Password',
                           hintStyle: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF8F8E90),
                           ),
-                          prefixIcon: const Icon(
-                            Icons.lock_outline,
+                          prefixIcon: Icon(Icons.lock_outline,
                             color: Color(0xFF8F8E90),
-                            size: 22,
+                            size: 22.sp,
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -237,7 +233,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
                               color: const Color(0xFF8F8E90),
-                              size: 22,
+                              size: 22.sp,
                             ),
                             onPressed: () {
                               setState(() {
@@ -248,28 +244,25 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                             borderSide: const BorderSide(
                               color: Color(0xFF8F8E90),
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                             borderSide: const BorderSide(
                               color: Color(0xFF8F8E90),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                             borderSide: const BorderSide(
                               color: AppTheme.primaryColor,
                               width: 2,
                             ),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 13,
-                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 13.h),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -279,18 +272,18 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         },
                       ),
 
-                      const SizedBox(height: 32),
+                      SizedBox(height: 32.h),
 
                       // Sign In button
                       SizedBox(
                         width: double.infinity,
-                        height: 48,
+                        height: 48.h,
                         child: ElevatedButton(
                           onPressed: isLoading ? null : _handleSignIn,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryColor,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(8.r),
                             ),
                             elevation: 0,
                           ),
@@ -310,14 +303,13 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                                     Text(
                                       'Sign in',
                                       style: GoogleFonts.inter(
-                                        fontSize: 15,
+                                        fontSize: 15.sp,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.arrow_forward,
-                                      size: 18,
+                                    SizedBox(width: 4.w),
+                                    Icon(Icons.arrow_forward,
+                                      size: 18.sp,
                                     ),
                                   ],
                                 ),

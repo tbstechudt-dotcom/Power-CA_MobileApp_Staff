@@ -3,14 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../app/theme.dart';
 import '../../features/auth/domain/entities/staff.dart';
 
-/// Modern Bottom Navigation Bar with Floating Action Button
-///
-/// Features:
-/// - Elevated floating center button for primary actions
-/// - Smooth animations and transitions
-/// - Modern glassmorphism design
-/// - Active indicator with smooth transitions
-/// - Haptic feedback on tap
+/// Modern Bottom Navigation Bar - Fully Responsive
+/// Works on all devices including Xiaomi, Samsung, etc.
+/// Uses ClipRect to absolutely prevent any overflow
 class ModernBottomNavigation extends StatefulWidget {
   final int currentIndex;
   final Staff currentStaff;
@@ -49,7 +44,6 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
             ),)
         .toList();
 
-    // Animate the selected item
     if (widget.currentIndex < _controllers.length) {
       _controllers[widget.currentIndex].forward();
     }
@@ -78,74 +72,83 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 75.h,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24.r),
-          topRight: Radius.circular(24.r),
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    // Use very small fixed height to prevent any overflow
+    const double navContentHeight = 48.0;
+    final totalHeight = navContentHeight + bottomPadding;
+
+    return ClipRect(
+      child: Container(
+        height: totalHeight,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16.r),
+            topRight: Radius.circular(16.r),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -2),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.w),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                context: context,
-                icon: Icons.home_outlined,
-                selectedIcon: Icons.home_rounded,
-                label: 'Home',
-                index: 0,
-                animation: _animations[0],
-                onTap: () => _navigateTo(context, '/dashboard', 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Nav content area - fixed height with clip
+            ClipRect(
+              child: SizedBox(
+                height: navContentHeight,
+                child: Row(
+                  children: [
+                    _buildNavItem(
+                      icon: Icons.home_outlined,
+                      selectedIcon: Icons.home_rounded,
+                      label: 'Home',
+                      index: 0,
+                      animation: _animations[0],
+                      onTap: () => _navigateTo(context, '/dashboard', 0),
+                    ),
+                    _buildNavItem(
+                      icon: Icons.work_outline_rounded,
+                      selectedIcon: Icons.work_rounded,
+                      label: 'Jobs',
+                      index: 1,
+                      animation: _animations[1],
+                      onTap: () => _navigateTo(context, '/jobs', 1),
+                    ),
+                    _buildNavItem(
+                      icon: Icons.calendar_month_outlined,
+                      selectedIcon: Icons.calendar_month_rounded,
+                      label: 'Leave',
+                      index: 2,
+                      animation: _animations[2],
+                      onTap: () => _navigateTo(context, '/leave', 2),
+                    ),
+                    _buildNavItem(
+                      icon: Icons.push_pin_outlined,
+                      selectedIcon: Icons.push_pin,
+                      label: 'Pinboard',
+                      index: 3,
+                      animation: _animations[3],
+                      onTap: () => _navigateTo(context, '/pinboard', 3),
+                    ),
+                  ],
+                ),
               ),
-              _buildNavItem(
-                context: context,
-                icon: Icons.work_outline_rounded,
-                selectedIcon: Icons.work_rounded,
-                label: 'Jobs',
-                index: 1,
-                animation: _animations[1],
-                onTap: () => _navigateTo(context, '/jobs', 1),
-              ),
-              _buildNavItem(
-                context: context,
-                icon: Icons.calendar_month_outlined,
-                selectedIcon: Icons.calendar_month_rounded,
-                label: 'Leave',
-                index: 2,
-                animation: _animations[2],
-                onTap: () => _navigateTo(context, '/leave', 2),
-              ),
-              _buildNavItem(
-                context: context,
-                icon: Icons.push_pin_outlined,
-                selectedIcon: Icons.push_pin,
-                label: 'Pinboard',
-                index: 3,
-                animation: _animations[3],
-                onTap: () => _navigateTo(context, '/pinboard', 3),
-              ),
-            ],
-          ),
+            ),
+            // Bottom safe area padding
+            if (bottomPadding > 0)
+              SizedBox(height: bottomPadding),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildNavItem({
-    required BuildContext context,
     required IconData icon,
     required IconData selectedIcon,
     required String label,
@@ -156,80 +159,58 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
     final isSelected = widget.currentIndex == index;
 
     return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16.r),
-        splashColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-        highlightColor: AppTheme.primaryColor.withValues(alpha: 0.05),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 2.h),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Icon with scale animation
-              AnimatedBuilder(
-                animation: animation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: 1.0 + (animation.value * 0.08),
-                    child: Container(
-                      width: 32.w,
-                      height: 32.h,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.primaryColor.withValues(alpha: 0.12)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Icon(
-                        isSelected ? selectedIcon : icon,
-                        size: 22.sp,
-                        color: isSelected
-                            ? AppTheme.primaryColor
-                            : const Color(0xFF9E9E9E),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              SizedBox(height: 2.h),
-              // Label with fade animation
-              AnimatedBuilder(
-                animation: animation,
-                builder: (context, child) {
-                  return Opacity(
-                    opacity: 0.6 + (animation.value * 0.4),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 10.sp,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: isSelected
-                            ? AppTheme.primaryColor
-                            : const Color(0xFF9E9E9E),
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              // Active indicator
-              AnimatedBuilder(
-                animation: animation,
-                builder: (context, child) {
-                  return Container(
-                    width: 20.w * animation.value,
-                    height: 3.h,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8.r),
+          splashColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+          highlightColor: AppTheme.primaryColor.withValues(alpha: 0.05),
+          child: Container(
+            height: 48,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon - minimal size
+                Icon(
+                  isSelected ? selectedIcon : icon,
+                  size: 18,
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : const Color(0xFF9E9E9E),
+                ),
+                const SizedBox(height: 2),
+                // Label - minimal size
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 9,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected
+                        ? AppTheme.primaryColor
+                        : const Color(0xFF9E9E9E),
+                    height: 1.0,
+                  ),
+                  overflow: TextOverflow.clip,
+                  maxLines: 1,
+                ),
+                // Active indicator - only show when selected
+                if (isSelected) ...[
+                  const SizedBox(height: 2),
+                  Container(
+                    width: 12,
+                    height: 2,
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(1.5.r),
+                      borderRadius: BorderRadius.circular(1),
                     ),
-                  );
-                },
-              ),
-            ],
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),

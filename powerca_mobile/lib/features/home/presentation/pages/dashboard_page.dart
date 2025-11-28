@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -35,6 +36,15 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    // Reset status bar to dark icons for light background
+    // (Splash page sets light icons for blue background)
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // Dark icons for light background
+        statusBarBrightness: Brightness.light,
+      ),
+    );
     _fetchDashboardStats();
   }
 
@@ -134,7 +144,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(
+      body: SafeArea(top: false,
         child: Builder(
           builder: (scaffoldContext) => Column(
           children: [
@@ -161,17 +171,15 @@ class _DashboardPageState extends State<DashboardPage> {
                           // Staff Profile Card
                           _buildStaffProfileCard(),
 
-                          SizedBox(height: 16.h),
+                          const SizedBox(height: 16),
 
                           // Monthly Calendar (Moved to second section)
                           _buildMonthlyCalendar(),
 
-                          SizedBox(height: 24.h),
-
                           // Statistics Grid (4 cards in 2x2)
                           _buildStatisticsGrid(),
 
-                          SizedBox(height: 20.h),
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
@@ -346,7 +354,7 @@ class _DashboardPageState extends State<DashboardPage> {
           BoxShadow(
             color: gradient[1].withValues(alpha: 0.3),
             blurRadius: 12,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -435,3 +443,5 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
 }
+
+
