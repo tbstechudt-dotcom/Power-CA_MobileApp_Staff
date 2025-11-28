@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
@@ -18,6 +19,9 @@ import '../../domain/usecases/toggle_like_usecase.dart';
 import '../bloc/pinboard_bloc.dart';
 import 'pinboard_main_page.dart';
 
+/// Key for storing last pinboard visit timestamp (shared with app_header.dart)
+const String _kLastPinboardVisitKey = 'last_pinboard_visit_timestamp';
+
 class PinboardPage extends StatefulWidget {
   final Staff currentStaff;
 
@@ -32,6 +36,26 @@ class PinboardPage extends StatefulWidget {
 
 class _PinboardPageState extends State<PinboardPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Mark pinboard as visited when this page opens
+    _markPinboardAsVisited();
+  }
+
+  /// Save current timestamp as last pinboard visit
+  Future<void> _markPinboardAsVisited() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _kLastPinboardVisitKey,
+        DateTime.now().toIso8601String(),
+      );
+    } catch (e) {
+      debugPrint('Error saving pinboard visit timestamp: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

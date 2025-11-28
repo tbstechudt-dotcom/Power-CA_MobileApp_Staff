@@ -42,42 +42,6 @@ class _AppDrawerState extends State<AppDrawer> {
                     title: 'Profile',
                     onTap: () => _handleMenuTap(context, 'Profile'),
                   ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.videocam_outlined,
-                    title: 'Video Meet',
-                    onTap: () => _handleMenuTap(context, 'Video Meet'),
-                  ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.chat_bubble_outline,
-                    title: 'Chat',
-                    onTap: () => _handleMenuTap(context, 'Chat'),
-                  ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.help_outline,
-                    title: 'Job Queries',
-                    onTap: () => _handleMenuTap(context, 'Job Queries'),
-                  ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.description_outlined,
-                    title: 'Responsive Form',
-                    onTap: () => _handleMenuTap(context, 'Responsive Form'),
-                  ),
-
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Divider(height: 1, color: Color(0xFFE5E7EB)),
-                  ),
-
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.settings_outlined,
-                    title: 'Settings',
-                    onTap: () => _handleMenuTap(context, 'Settings'),
-                  ),
                 ],
               ),
             ),
@@ -93,65 +57,28 @@ class _AppDrawerState extends State<AppDrawer> {
   Widget _buildProfileHeader() {
     return Container(
       padding: EdgeInsets.all(20.w),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 60.w,
-            height: 60.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+          Text(
+            widget.currentStaff.name,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimaryColor,
             ),
-            child: Center(
-              child: Text(
-                _getInitials(widget.currentStaff.name),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 20.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.currentStaff.name,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimaryColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  'Staff ID: ${widget.currentStaff.staffId}',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF6B7280),
-                  ),
-                ),
-              ],
+          SizedBox(height: 4.h),
+          Text(
+            'Staff ID: ${widget.currentStaff.staffId}',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF6B7280),
             ),
           ),
         ],
@@ -231,16 +158,6 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 
-  String _getInitials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
-      return parts[0][0].toUpperCase();
-    }
-    return 'U';
-  }
-
   void _handleMenuTap(BuildContext context, String title) {
     Navigator.pop(context); // Close drawer
 
@@ -251,18 +168,6 @@ class _AppDrawerState extends State<AppDrawer> {
         MaterialPageRoute(
           builder: (context) => ProfilePage(
             currentStaff: widget.currentStaff,
-          ),
-        ),
-      );
-    } else {
-      // Show a snackbar for other menu items
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$title - Coming Soon'),
-          backgroundColor: AppTheme.primaryColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
           ),
         ),
       );

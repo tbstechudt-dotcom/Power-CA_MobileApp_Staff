@@ -44,8 +44,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       password: event.password,
     );
 
-    result.fold(
-      (failure) => emit(AuthError(failure.message)),
+    await result.fold(
+      (failure) async => emit(AuthError(failure.message)),
       (staff) async {
         // Set staff ID in PriorityService for priority jobs persistence
         await PriorityService.setCurrentStaffId(staff.staffId);
