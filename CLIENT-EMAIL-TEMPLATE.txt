@@ -1,0 +1,63 @@
+===============================================================
+PowerCA Mobile - Client Installation Email Template
+===============================================================
+
+SUBJECT: PowerCA Mobile Sync Service - Installation Package
+
+---------------------------------------------------------------
+
+Dear [CLIENT NAME],
+
+I hope this email finds you well.
+
+Attached is the PowerCA Mobile sync service installation package. This service will automatically synchronize your desktop PowerCA data with our cloud-based mobile application, allowing your team to access job information, tasks, and work diaries from their mobile devices.
+
+WHAT'S INCLUDED:
+- Automated sync service (runs as Windows Service)
+- All required dependencies pre-installed
+- Complete installation instructions
+- Daily automatic synchronization (2:00 AM)
+- Weekly full backup sync (Sunday 3:00 AM)
+
+INSTALLATION TIME: Approximately 5-10 minutes
+
+INSTALLATION STEPS (Brief):
+1. Download and install Node.js (link provided in package)
+2. Extract the ZIP file to C:\PowerCA-Sync\
+3. Edit the .env file with your PostgreSQL password
+4. Run the installer as Administrator
+5. Done! The service runs automatically
+
+DETAILED INSTRUCTIONS:
+Please follow the INSTALL.txt file included in the package. It provides step-by-step guidance with screenshots and troubleshooting tips.
+
+REQUIREMENTS:
+- Windows 10/11 or Windows Server 2016+
+- 2GB RAM minimum
+- Network access to your PostgreCA database
+- Internet connection (for cloud sync)
+
+SECURITY:
+- No inbound firewall rules required
+- All connections are outbound and encrypted (HTTPS)
+- Your desktop database remains on your network
+- Only the sync service needs internet access
+
+SUPPORT:
+If you encounter any issues during installation, please don't hesitate to contact me:
+- Email: [YOUR EMAIL]
+- Phone: [YOUR PHONE]
+- Support Hours: [YOUR HOURS]
+
+I'm here to help ensure a smooth installation and answer any questions you may have.
+
+Best regards,
+[YOUR NAME]
+[YOUR TITLE]
+PowerCA Team
+
+---------------------------------------------------------------
+
+ATTACHMENT: PowerCA-Sync-Installer.zip (3.3 MB)
+
+===============================================================
