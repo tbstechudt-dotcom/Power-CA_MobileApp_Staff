@@ -92,7 +92,7 @@ class _PinboardPageState extends State<PinboardPage> {
         key: _scaffoldKey,
         backgroundColor: AppTheme.backgroundColor,
         drawer: AppDrawer(currentStaff: widget.currentStaff),
-        body: SafeArea(
+        body: SafeArea(top: false,
           child: Column(
             children: [
               // Modern Top App Bar with menu handler

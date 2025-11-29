@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme.dart';
 import '../widgets/powerca_logo.dart';
@@ -51,18 +52,18 @@ class _SplashPageState extends State<SplashPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Logo
-                      const PowerCALogo(
-                        width: 61,
-                        height: 49,
+                      PowerCALogo(
+                        width: 61.w,
+                        height: 49.h,
                       ),
 
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24.h),
 
                       // App Name "POWER CA"
                       Text(
                         'POWER CA',
                         style: GoogleFonts.inter(
-                          fontSize: 28,
+                          fontSize: 28.sp,
                           fontWeight: FontWeight.w600, // SemiBold
                           color: Colors.white,
                           letterSpacing: 0,
@@ -70,13 +71,13 @@ class _SplashPageState extends State<SplashPage> {
                         ),
                       ),
 
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2.h),
 
                       // Subtitle "Auditor WorkLog"
                       Text(
                         'Auditor WorkLog',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.w500, // Medium
                           color: Colors.white,
                           letterSpacing: 0,
@@ -99,20 +100,20 @@ class _SplashPageState extends State<SplashPage> {
                       Image.asset(
                         'assets/images/splash/welcome_illustration.png',
                         width: screenWidth * 0.7,
-                        height: screenHeight * 0.3,
+                        height: screenHeight * 0.25,
                         fit: BoxFit.contain,
                       ),
 
-                      const SizedBox(height: 32),
+                      SizedBox(height: 32.h),
 
                       // Description text
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        padding: EdgeInsets.symmetric(horizontal: 32.w),
                         child: Text(
                           'The Auditor WorkLog application is specially designed for Auditor Offices that have adopted the PowerCA system.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.w400,
                             color: Colors.white,
                             height: 1.5,
@@ -128,14 +129,14 @@ class _SplashPageState extends State<SplashPage> {
               Expanded(
                 flex: 3,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  padding: EdgeInsets.symmetric(horizontal: 32.w),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Sign In Button (White background)
                       SizedBox(
                         width: double.infinity,
-                        height: 52,
+                        height: 52.h,
                         child: ElevatedButton(
                           onPressed: _navigateToSignIn,
                           style: ElevatedButton.styleFrom(
@@ -143,20 +144,20 @@ class _SplashPageState extends State<SplashPage> {
                             foregroundColor: AppTheme.primaryColor,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12.r),
                             ),
                           ),
                           child: Text(
                             'Sign in',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24.h),
                     ],
                   ),
                 ),
@@ -168,3 +169,5 @@ class _SplashPageState extends State<SplashPage> {
     );
   }
 }
+
+

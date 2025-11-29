@@ -7,24 +7,28 @@ plugins {
 
 android {
     namespace = "com.powerca.mobile"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36  // Android 16 / Latest SDK for plugin compatibility
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
         applicationId = "com.powerca.mobile"
-        minSdk = flutter.minSdkVersion  // Required for most modern Android features
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 24  // Android 7.0+ (wider compatibility)
+        targetSdk = 35  // Android 15 target
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Enable multidex for larger apps
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -32,10 +36,23 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // Disable minification to prevent crashes
+            isMinifyEnabled = false
+            isShrinkResources = false
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

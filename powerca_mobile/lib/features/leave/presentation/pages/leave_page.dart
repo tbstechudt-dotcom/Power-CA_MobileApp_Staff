@@ -203,7 +203,7 @@ class _LeavePageState extends State<LeavePage> {
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF8FAFC),
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(
+      body: SafeArea(top: false,
         child: Column(
           children: [
             // Top App Bar with menu handler
@@ -221,7 +221,7 @@ class _LeavePageState extends State<LeavePage> {
                       color: AppTheme.primaryColor,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(16.w),
+                        padding: EdgeInsets.all(12.w),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -230,8 +230,8 @@ class _LeavePageState extends State<LeavePage> {
                               'My Leaves',
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w700,
                                 color: const Color(0xFF334155),
                               ),
                             ),
@@ -240,7 +240,7 @@ class _LeavePageState extends State<LeavePage> {
                               'Manage your time off',
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 12.sp,
+                                fontSize: 14.sp,
                                 fontWeight: FontWeight.w400,
                                 color: const Color(0xFF64748B),
                               ),
@@ -269,7 +269,7 @@ class _LeavePageState extends State<LeavePage> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 20.h),
+                            const SizedBox(height: 16),
 
                             // Section Title
                             Text(
@@ -281,11 +281,12 @@ class _LeavePageState extends State<LeavePage> {
                                 color: const Color(0xFF334155),
                               ),
                             ),
-                            SizedBox(height: 12.h),
+                            const SizedBox(height: 8),
 
                             // Status List
                             ListView.builder(
                               shrinkWrap: true,
+                              padding: EdgeInsets.zero,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: _statusConfigs.length,
                               itemBuilder: (context, index) {
@@ -368,7 +369,7 @@ class _LeavePageState extends State<LeavePage> {
     required Color color,
   }) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -376,7 +377,7 @@ class _LeavePageState extends State<LeavePage> {
           BoxShadow(
             color: color.withValues(alpha: 0.08),
             blurRadius: 16,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -548,3 +549,5 @@ class _LeavePageState extends State<LeavePage> {
     );
   }
 }
+
+

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 /// PowerCA Logo Widget
@@ -12,8 +13,8 @@ class PowerCALogo extends StatelessWidget {
 
   const PowerCALogo({
     super.key,
-    this.width = 61,
-    this.height = 49,
+    required this.width,
+    required this.height,
     this.color,
   });
 

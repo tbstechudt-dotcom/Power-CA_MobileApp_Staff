@@ -188,7 +188,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
       key: _scaffoldKey,
       backgroundColor: AppTheme.backgroundColor,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(
+      body: SafeArea(top: false,
         child: Column(
           children: [
             // Custom Header with Back Button

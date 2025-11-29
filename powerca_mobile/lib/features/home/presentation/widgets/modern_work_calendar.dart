@@ -140,11 +140,11 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
             blurRadius: 8,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      padding: EdgeInsets.only(left: 12.w, right: 12.w, top: 12, bottom: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -283,7 +283,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                                   BoxShadow(
                                     color: AppTheme.primaryColor.withOpacity(0.4),
                                     blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                                    offset: const Offset(0, 1),
                                   ),
                                 ]
                               : [
@@ -383,7 +383,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             ),
             weekFormat: false,
             markedDatesMap: _markedDateMap,
-            height: 320.h,
+            height: 350.h,
             selectedDateTime: null,  // No selection
             daysHaveCircularBorder: false,
             showOnlyCurrentMonthDate: false,
