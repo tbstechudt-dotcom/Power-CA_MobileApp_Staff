@@ -1,0 +1,133 @@
+===============================================================
+PowerCA Mobile - Client Configuration Guide
+===============================================================
+
+IMPORTANT: Every client has DIFFERENT database settings!
+This guide shows what to configure for each client.
+
+===============================================================
+
+STEP-BY-STEP CONFIGURATION:
+
+After extracting PowerCA-Sync-Installer.zip to C:\PowerCA-Sync\:
+
+1. Open the configuration file:
+   C:\PowerCA-Sync\.env
+
+2. Find these lines and change BOTH:
+
+   DESKTOP_DB_NAME=___YOUR_DATABASE_NAME___
+   DESKTOP_DB_PASSWORD=___YOUR_POSTGRES_PASSWORD___
+
+3. Replace with CLIENT'S actual values:
+
+   Example for Client A (database: tbsca):
+   DESKTOP_DB_NAME=tbsca
+   DESKTOP_DB_PASSWORD=TheirPassword123
+
+   Example for Client B (database: enterprise_db):
+   DESKTOP_DB_NAME=enterprise_db
+   DESKTOP_DB_PASSWORD=AnotherPassword456
+
+   Example for Client C (database: powerca_db):
+   DESKTOP_DB_NAME=powerca_db
+   DESKTOP_DB_PASSWORD=SecurePass789
+
+4. Save the file
+
+5. Continue with installation (run install-service.bat)
+
+===============================================================
+
+COMMON DATABASE NAMES:
+- tbsca
+- enterprise_db
+- powerca_db
+- powerCA
+- [ask client what their database name is]
+
+===============================================================
+
+HOW TO FIND CLIENT'S DATABASE NAME:
+
+Method 1: Ask the client directly
+   "What is your PostgreSQL database name?"
+
+Method 2: Check their PostgreSQL connection
+   They can run: psql -U postgres -l
+   This lists all databases
+
+Method 3: Check their desktop app configuration
+   Look at their PowerCA desktop app settings
+
+===============================================================
+
+WHAT IF CLIENT HAS DIFFERENT PORT OR HOST?
+
+Most clients use:
+- DESKTOP_DB_HOST=localhost (DB on same PC as sync service)
+- DESKTOP_DB_PORT=5433 (standard PostgreSQL port)
+- DESKTOP_DB_USER=postgres (default user)
+
+BUT if their setup is different, change these too:
+
+Example: DB on different server
+   DESKTOP_DB_HOST=192.168.1.100  (their DB server IP)
+   DESKTOP_DB_PORT=5432           (standard port)
+
+Example: Custom PostgreSQL port
+   DESKTOP_DB_PORT=5434           (custom port)
+
+Example: Different user
+   DESKTOP_DB_USER=powerca        (custom username)
+
+===============================================================
+
+VERIFICATION:
+
+After editing .env, test the connection:
+
+1. Open Command Prompt
+2. cd C:\PowerCA-Sync
+3. node sync\full-sync.js --mode=incremental
+
+Should see:
+   [OK] Connected to Desktop PostgreSQL
+   [OK] Connected to Supabase Cloud
+
+If you see connection errors, double-check:
+   - Database name is correct
+   - Password is correct
+   - PostgreSQL is running
+   - Port number is correct
+
+===============================================================
+
+BEFORE SENDING TO CLIENT:
+
+You can pre-fill some values if you know them:
+
+1. If you know their database name, change:
+   DESKTOP_DB_NAME=tbsca  (example)
+
+2. Tell client: "Only fill in your PostgreSQL password"
+
+3. This makes it even easier for them!
+
+===============================================================
+
+CLIENT QUICK CHECKLIST:
+
+[ ] Extracted ZIP to C:\PowerCA-Sync\
+[ ] Opened C:\PowerCA-Sync\.env
+[ ] Changed DESKTOP_DB_NAME to my database name
+[ ] Changed DESKTOP_DB_PASSWORD to my password
+[ ] Saved the file
+[ ] Ran install-service.bat as Administrator
+[ ] Service is running (checked services.msc)
+
+===============================================================
+
+For support: support@powerca.com
+Version: 1.0
+Last Updated: 2025-11-29

@@ -48,7 +48,7 @@ class StaffModel extends Staff {
       'phonumber': phoneNumber,
       'dob': dateOfBirth?.toIso8601String(),
       'stafftype': staffType,
-      'active_status': isActive ? 1 : 2,
+      'active_status': isActive ? 0 : 1,
     };
   }
 
@@ -97,10 +97,10 @@ class StaffModel extends Staff {
   /// Helper to parse active status (handles 0/1 or bool)
   static bool _parseActiveStatus(dynamic value) {
     if (value is bool) return value;
-    if (value is int) return value == 1 || value == 0;
+    if (value is int) return value == 0;
     if (value is String) {
       final intValue = int.tryParse(value);
-      if (intValue != null) return intValue == 1 || intValue == 0;
+      if (intValue != null) return intValue == 0;
     }
     return true; // Default to active
   }
