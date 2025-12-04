@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,9 +29,18 @@ class _LeavePageState extends State<LeavePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Leave balance - calculated from actual data
-  int _totalLeaves = 24; // Annual leave allocation
+  // CA Financial Year: April 1 to March 31
+  // 1 Earned Leave per month (earned progressively)
+  double _earnedLeaves = 0; // Earned leaves based on months passed
   double _usedLeaves = 0;
+  double _lopDays = 0; // Loss of Pay days (when used > earned)
+  double _currentMonthELUsed = 0; // EL days used in current month
   int _pendingRequests = 0; // Number of pending leave requests
+  bool _allELUsed = false; // Track if all available EL is used
+
+  // Financial year dates
+  late DateTime _financialYearStart;
+  late DateTime _financialYearEnd;
 
   // Leave requests from database
   List<Map<String, dynamic>> _leaveRequests = [];
@@ -61,7 +71,59 @@ class _LeavePageState extends State<LeavePage> {
   @override
   void initState() {
     super.initState();
+    _calculateFinancialYear();
     _loadLeaveRequests();
+    // Set status bar style for white background with dark icons
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
+  }
+
+  /// Calculate financial year dates (April 1 to March 31)
+  /// For Chartered Accountants, the financial year starts April 1
+  void _calculateFinancialYear() {
+    final now = DateTime.now();
+    final currentYear = now.year;
+    final currentMonth = now.month;
+
+    // If current month is April (4) or later, FY starts this year
+    // If current month is Jan-Mar, FY started last year
+    if (currentMonth >= 4) {
+      // April to December: FY is currentYear to currentYear+1
+      _financialYearStart = DateTime(currentYear, 4, 1); // April 1 of current year
+      _financialYearEnd = DateTime(currentYear + 1, 3, 31, 23, 59, 59); // March 31 of next year
+    } else {
+      // January to March: FY is previousYear to currentYear
+      _financialYearStart = DateTime(currentYear - 1, 4, 1); // April 1 of last year
+      _financialYearEnd = DateTime(currentYear, 3, 31, 23, 59, 59); // March 31 of current year
+    }
+
+    // Calculate earned leaves based on months passed since FY start
+    // 1 Earned Leave per month (earned at start of each month)
+    _calculateEarnedLeaves();
+  }
+
+  /// Calculate earned leaves based on months passed in current FY
+  /// April = 1 EL, May = 2 EL, June = 3 EL, ... March = 12 EL
+  void _calculateEarnedLeaves() {
+    final now = DateTime.now();
+
+    // Calculate months from April 1 to current date
+    int monthsFromApril;
+    if (now.month >= 4) {
+      // April(4)=1, May(5)=2, ... Dec(12)=9
+      monthsFromApril = now.month - 3;
+    } else {
+      // Jan(1)=10, Feb(2)=11, Mar(3)=12
+      monthsFromApril = now.month + 9;
+    }
+
+    // Earned leaves = months passed (max 12)
+    _earnedLeaves = monthsFromApril.toDouble();
   }
 
   int _getLeaveCountByStatus(String status) {
@@ -70,6 +132,26 @@ class _LeavePageState extends State<LeavePage> {
 
   List<Map<String, dynamic>> _getLeavesByStatus(String status) {
     return _leaveRequests.where((leave) => leave['status'] == status).toList();
+  }
+
+  /// Count working days between two dates (excluding Sundays)
+  /// Sunday is always a holiday and should not be counted as leave
+  double _countWorkingDays(DateTime fromDate, DateTime toDate) {
+    double count = 0;
+    DateTime current = fromDate;
+    while (!current.isAfter(toDate)) {
+      // Skip Sundays (weekday 7 in Dart)
+      if (current.weekday != DateTime.sunday) {
+        count += 1;
+      }
+      current = current.add(const Duration(days: 1));
+    }
+    return count;
+  }
+
+  /// Check if a single date is Sunday
+  bool _isSunday(DateTime date) {
+    return date.weekday == DateTime.sunday;
   }
 
   void _navigateToFilteredLeaves(String status) {
@@ -125,25 +207,37 @@ class _LeavePageState extends State<LeavePage> {
         final fromDate = DateTime.parse(record['fromdate']);
         final toDate = DateTime.parse(record['todate']);
         final remarks = record['leaveremarks'] ?? '';
-        final status = statusMap[record['approval_status']] ??
+        final approvalStatus = record['approval_status'];
+
+        // Get status from database - Pending, Approved, or Rejected
+        final status = statusMap[approvalStatus] ??
             {'name': 'Unknown', 'color': AppTheme.warningColor};
 
-        // Calculate days including half-day support
-        double days = toDate.difference(fromDate).inDays + 1.0;
+        // Calculate days excluding Sundays (Sunday is always holiday)
+        double days = _countWorkingDays(fromDate, toDate);
         String displayReason = remarks;
 
         // Parse half-day info from remarks
         if (remarks.contains('[First Half]') || remarks.contains('[Second Half]')) {
-          days = 0.5;
+          // Half-day leave - check if it's a Sunday
+          if (_isSunday(fromDate)) {
+            days = 0; // Sunday doesn't count
+          } else {
+            days = 0.5;
+          }
           displayReason = remarks.replaceAll(RegExp(r'\s*\[(First Half|Second Half)\]'), '').trim();
         } else if (remarks.contains('[Start:') || remarks.contains('[End:')) {
-          // Multi-day with half days
+          // Multi-day with half days - adjust for half days (only if not Sunday)
           double adjustment = 0;
           if (remarks.contains('[Start: First Half]') || remarks.contains('[Start: Second Half]')) {
-            adjustment += 0.5;
+            if (!_isSunday(fromDate)) {
+              adjustment += 0.5;
+            }
           }
           if (remarks.contains('[End: First Half]') || remarks.contains('[End: Second Half]')) {
-            adjustment += 0.5;
+            if (!_isSunday(toDate)) {
+              adjustment += 0.5;
+            }
           }
           days = days - adjustment;
           displayReason = remarks.replaceAll(RegExp(r'\s*\[Start: (First Half|Second Half)\]'), '')
@@ -166,25 +260,67 @@ class _LeavePageState extends State<LeavePage> {
         };
       }).toList();
 
-      // Calculate used leaves and count pending requests
-      double usedDays = 0;
+      // Filter leaves to only show current financial year (April 1 - March 31)
+      final currentFYLeaves = leaveRequests.where((leave) {
+        final fromDate = leave['fromDate'] as DateTime;
+        // Check if leave falls within current financial year
+        return !fromDate.isBefore(_financialYearStart) &&
+               !fromDate.isAfter(_financialYearEnd);
+      }).toList();
+
+      // Calculate used EL and LOP (only for current FY)
+      // Rule: Use Available EL first, then LOP
+      // You EARN 1 EL per month, but can USE as many as Available
+      double totalUsedDays = 0;
+      double currentMonthUsedDays = 0;  // Track current month usage for display
       int pendingCount = 0;
 
-      for (final leave in leaveRequests) {
+      // Current month key for display
+      final now = DateTime.now();
+      final currentMonthKey = '${now.year}-${now.month}';
+
+      for (final leave in currentFYLeaves) {
         final days = leave['days'] as double;
         final status = leave['status'] as String;
+        final fromDate = leave['fromDate'] as DateTime;
 
         if (status == 'Approved') {
-          usedDays += days;
+          totalUsedDays += days;
+
+          // Track current month's usage separately for display
+          final monthKey = '${fromDate.year}-${fromDate.month}';
+          if (monthKey == currentMonthKey) {
+            currentMonthUsedDays += days;
+          }
         } else if (status == 'Pending') {
           pendingCount++;
         }
       }
 
+      // Calculate EL used vs LOP
+      // EL = min(totalUsedDays, earnedLeaves) - use available EL first
+      final usedEL = totalUsedDays.clamp(0.0, _earnedLeaves);
+
+      // For current month LOP display: only show if this month's usage exceeds available
+      // Available at start of month = earned - (used before this month)
+      final usedBeforeThisMonth = totalUsedDays - currentMonthUsedDays;
+      final availableAtMonthStart = (_earnedLeaves - usedBeforeThisMonth).clamp(0.0, _earnedLeaves);
+      final currentMonthLOP = (currentMonthUsedDays - availableAtMonthStart).clamp(0.0, double.infinity);
+
+      // Check if all available EL is used (no more EL available)
+      final allELUsed = totalUsedDays >= _earnedLeaves;
+
+      // Calculate current month's EL usage (not LOP)
+      final currentMonthEL = currentMonthUsedDays.clamp(0.0, availableAtMonthStart);
+
       setState(() {
-        _leaveRequests = leaveRequests;
-        _usedLeaves = usedDays;
+        // Only show leaves from current financial year
+        _leaveRequests = currentFYLeaves;
+        _usedLeaves = usedEL;  // Total EL days used
+        _lopDays = currentMonthLOP;  // Only show current month's LOP
+        _currentMonthELUsed = currentMonthEL;  // EL used this month
         _pendingRequests = pendingCount;
+        _allELUsed = allELUsed;  // True if no more EL available
         _isLoadingLeaveRequests = false;
       });
     } catch (e) {
@@ -197,13 +333,17 @@ class _LeavePageState extends State<LeavePage> {
 
   @override
   Widget build(BuildContext context) {
-    final availableLeaves = _totalLeaves - _usedLeaves;
+    // Calculate available leaves
+    // Available = Earned - Used EL (LOP is calculated separately per monthly limit)
+    // Note: _usedLeaves only contains EL days (max 1 per month), not LOP
+    final availableLeaves = (_earnedLeaves - _usedLeaves).clamp(0.0, _earnedLeaves);
+    // _lopDays is already calculated in _loadLeaveRequests() based on monthly limit
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8F9FC),
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(
+      body: SafeArea(top: false,
         child: Column(
           children: [
             // Top App Bar with menu handler
@@ -221,7 +361,7 @@ class _LeavePageState extends State<LeavePage> {
                       color: AppTheme.primaryColor,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(16.w),
+                        padding: EdgeInsets.all(12.w),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -230,46 +370,164 @@ class _LeavePageState extends State<LeavePage> {
                               'My Leaves',
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w700,
                                 color: const Color(0xFF334155),
                               ),
                             ),
                             SizedBox(height: 2.h),
                             Text(
-                              'Manage your time off',
+                              'FY ${DateFormat('MMM yyyy').format(_financialYearStart)} - ${DateFormat('MMM yyyy').format(_financialYearEnd)}',
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 12.sp,
+                                fontSize: 14.sp,
                                 fontWeight: FontWeight.w400,
                                 color: const Color(0xFF64748B),
                               ),
                             ),
                             SizedBox(height: 16.h),
 
-                            // Summary Cards Row
+                            // Summary Cards Row - 3 cards
                             Row(
                               children: [
                                 Expanded(
                                   child: _buildSummaryCard(
+                                    title: 'Earned',
+                                    value: _earnedLeaves,
+                                    icon: Icons.calendar_month_rounded,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                                SizedBox(width: 8.w),
+                                Expanded(
+                                  child: _buildSummaryCard(
+                                    title: 'Used',
+                                    value: _usedLeaves,
+                                    icon: Icons.event_busy_rounded,
+                                    color: const Color(0xFFF59E0B),
+                                  ),
+                                ),
+                                SizedBox(width: 8.w),
+                                Expanded(
+                                  child: _buildSummaryCard(
                                     title: 'Available',
-                                    count: availableLeaves.toInt(),
+                                    value: availableLeaves,
                                     icon: Icons.beach_access_rounded,
                                     color: const Color(0xFF10B981),
                                   ),
                                 ),
-                                SizedBox(width: 12.w),
-                                Expanded(
-                                  child: _buildSummaryCard(
-                                    title: 'Used',
-                                    count: _usedLeaves.toInt(),
-                                    icon: Icons.event_busy_rounded,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                ),
                               ],
                             ),
-                            SizedBox(height: 20.h),
+
+                            // Current Month EL Info (show if any EL used this month)
+                            if (_currentMonthELUsed > 0)
+                              Container(
+                                margin: EdgeInsets.only(top: 12.h),
+                                padding: EdgeInsets.all(12.w),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: const Color(0xFF3B82F6),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      size: 20.sp,
+                                      color: const Color(0xFF2563EB),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Text(
+                                        '${DateFormat('MMMM').format(DateTime.now())}: ${_currentMonthELUsed == _currentMonthELUsed.toInt() ? _currentMonthELUsed.toInt() : _currentMonthELUsed.toStringAsFixed(1)} EL used. Available: ${availableLeaves == availableLeaves.toInt() ? availableLeaves.toInt() : availableLeaves.toStringAsFixed(1)} EL',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            // All EL Used Warning
+                            if (_allELUsed)
+                              Container(
+                                margin: EdgeInsets.only(top: 12.h),
+                                padding: EdgeInsets.all(12.w),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: const Color(0xFFF59E0B),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      size: 20.sp,
+                                      color: const Color(0xFFD97706),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Text(
+                                        'All EL used. Additional leave will be Loss of Pay.',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFFD97706),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            // LOP Warning (if any for current month)
+                            if (_lopDays > 0)
+                              Container(
+                                margin: EdgeInsets.only(top: 12.h),
+                                padding: EdgeInsets.all(12.w),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEE2E2),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: const Color(0xFFEF4444),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      size: 20.sp,
+                                      color: const Color(0xFFEF4444),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Text(
+                                        'Loss of Pay this month: ${_lopDays == _lopDays.toInt() ? _lopDays.toInt() : _lopDays.toStringAsFixed(1)} days',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFFEF4444),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            const SizedBox(height: 16),
 
                             // Section Title
                             Text(
@@ -281,11 +539,12 @@ class _LeavePageState extends State<LeavePage> {
                                 color: const Color(0xFF334155),
                               ),
                             ),
-                            SizedBox(height: 12.h),
+                            const SizedBox(height: 8),
 
                             // Status List
                             ListView.builder(
                               shrinkWrap: true,
+                              padding: EdgeInsets.zero,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: _statusConfigs.length,
                               itemBuilder: (context, index) {
@@ -363,64 +622,61 @@ class _LeavePageState extends State<LeavePage> {
 
   Widget _buildSummaryCard({
     required String title,
-    required int count,
+    required double value,
     required IconData icon,
     required Color color,
   }) {
+    // Format display: show decimal only if not a whole number
+    final displayValue = value == value.toInt()
+        ? value.toInt().toString()
+        : value.toStringAsFixed(1);
+
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20.sp,
-                  color: color,
-                ),
-              ),
-              Icon(
-                Icons.trending_up_rounded,
-                size: 16.sp,
-                color: const Color(0xFF10B981),
-              ),
-            ],
+          // Icon
+          Container(
+            padding: EdgeInsets.all(6.w),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Icon(
+              icon,
+              size: 18.sp,
+              color: color,
+            ),
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 8.h),
+          // Value
           Text(
-            count.toString(),
+            displayValue,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 28.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF0F172A),
             ),
           ),
           SizedBox(height: 2.h),
           Text(
-            '$title Days',
+            title,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 12.sp,
+              fontSize: 11.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF64748B),
             ),
@@ -548,3 +804,5 @@ class _LeavePageState extends State<LeavePage> {
     );
   }
 }
+
+

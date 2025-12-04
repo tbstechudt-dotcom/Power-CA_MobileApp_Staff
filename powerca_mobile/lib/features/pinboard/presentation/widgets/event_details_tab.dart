@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/pinboard_item.dart';
@@ -48,15 +49,12 @@ class EventDetailsTab extends StatelessWidget {
         children: [
           // Category Badge
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
               decoration: BoxDecoration(
                 color: categoryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(20.r),
                 border: Border.all(color: categoryColor, width: 1),
               ),
               child: Text(
@@ -64,7 +62,7 @@ class EventDetailsTab extends StatelessWidget {
                 style: TextStyle(
                   color: categoryColor,
                   fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                  fontSize: 12.sp,
                 ),
               ),
             ),
@@ -72,21 +70,21 @@ class EventDetailsTab extends StatelessWidget {
 
           // Title
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Text(
               item.title,
-              style: const TextStyle(
-                fontSize: 24,
+              style: TextStyle(
+                fontSize: 24.sp,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
 
           // Author and Like Button
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Row(
               children: [
                 Expanded(
@@ -95,16 +93,16 @@ class EventDetailsTab extends StatelessWidget {
                     children: [
                       Text(
                         item.authorName,
-                        style: const TextStyle(
-                          fontSize: 16,
+                        style: TextStyle(
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2.h),
                       Text(
                         'Posted on ${createdFormat.format(item.createdAt)}',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           color: Colors.grey[600],
                         ),
                       ),
@@ -129,63 +127,63 @@ class EventDetailsTab extends StatelessWidget {
                 ),
                 Text(
                   '${item.likesCount}',
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: TextStyle(
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8.w),
               ],
             ),
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
           const Divider(height: 1),
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
 
           // Event Date and Time
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
                     color: categoryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Icon(
                     Icons.access_time,
                     color: categoryColor,
-                    size: 28,
+                    size: 28.sp,
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16.w),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Date & Time',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           color: Colors.grey,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4.h),
                       Text(
                         dateFormat.format(item.eventDate),
-                        style: const TextStyle(
-                          fontSize: 16,
+                        style: TextStyle(
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2.h),
                       Text(
                         timeFormat.format(item.eventDate),
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 14.sp,
                           color: Colors.grey[700],
                         ),
                       ),
@@ -198,41 +196,41 @@ class EventDetailsTab extends StatelessWidget {
 
           // Location (if available)
           if (item.location != null) ...[
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(12.w),
                     decoration: BoxDecoration(
                       color: categoryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Icon(
                       Icons.location_on,
                       color: categoryColor,
-                      size: 28,
+                      size: 28.sp,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16.w),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Location',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 12.sp,
                             color: Colors.grey,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4.h),
                         Text(
                           item.location!,
-                          style: const TextStyle(
-                            fontSize: 16,
+                          style: TextStyle(
+                            fontSize: 16.sp,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -244,28 +242,28 @@ class EventDetailsTab extends StatelessWidget {
             ),
           ],
 
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
           const Divider(height: 1),
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
 
           // Description
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Description',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12.h),
                 Text(
                   item.description,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 15.sp,
                     height: 1.6,
                     color: Colors.grey[800],
                   ),
@@ -274,7 +272,7 @@ class EventDetailsTab extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 32),
+          SizedBox(height: 32.h),
         ],
       ),
     );

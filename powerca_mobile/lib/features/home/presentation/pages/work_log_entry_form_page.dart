@@ -225,7 +225,15 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     final from = _fromTime!.hour + _fromTime!.minute / 60.0;
     final to = _toTime!.hour + _toTime!.minute / 60.0;
 
-    return to > from ? to - from : 0.0;
+    // Handle overnight work (when toTime is past midnight)
+    if (to > from) {
+      return to - from;
+    } else if (to < from) {
+      // Overnight work: add 24 hours to toTime
+      return (24.0 - from) + to;
+    } else {
+      return 0.0; // Same time = 0 hours
+    }
   }
 
   /// Check if the new time range overlaps with any existing work entries
@@ -418,7 +426,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

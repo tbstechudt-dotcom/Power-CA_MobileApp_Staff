@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -76,6 +77,14 @@ class _JobsPageState extends State<JobsPage> {
   void initState() {
     super.initState();
     _initializeAndLoad();
+    // Set status bar style for white background with dark icons
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
   }
 
   Future<void> _initializeAndLoad() async {
@@ -112,7 +121,7 @@ class _JobsPageState extends State<JobsPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Fetch jobs for current staff (filtered by sporg_id)
+      // Fetch jobs for current staff (filtered by sporg_id which stores staff_id in jobshead)
       final jobsResponse = await supabase
           .from('jobshead')
           .select('job_id, job_uid, job_status, jobdate, targetdate, work_desc, client_id')
@@ -257,9 +266,9 @@ class _JobsPageState extends State<JobsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8F9FC),
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(
+      body: SafeArea(top: false,
         child: Column(
           children: [
             // Top App Bar with menu handler
@@ -277,7 +286,7 @@ class _JobsPageState extends State<JobsPage> {
                       color: AppTheme.primaryColor,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(16.w),
+                        padding: EdgeInsets.all(12.w),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -325,7 +334,7 @@ class _JobsPageState extends State<JobsPage> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 24.h),
+                            const SizedBox(height: 16),
 
                             // Section Title
                             Text(
@@ -337,7 +346,7 @@ class _JobsPageState extends State<JobsPage> {
                                 color: const Color(0xFF334155),
                               ),
                             ),
-                            SizedBox(height: 12.h),
+                            const SizedBox(height: 8),
 
                             // Priority Status Item (at top)
                             _buildStatusListItem(
@@ -351,6 +360,7 @@ class _JobsPageState extends State<JobsPage> {
                             // Status List
                             ListView.builder(
                               shrinkWrap: true,
+                              padding: EdgeInsets.zero,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: _statusConfigs.length,
                               itemBuilder: (context, index) {
@@ -391,7 +401,7 @@ class _JobsPageState extends State<JobsPage> {
     required Color color,
   }) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -399,7 +409,7 @@ class _JobsPageState extends State<JobsPage> {
           BoxShadow(
             color: color.withValues(alpha: 0.08),
             blurRadius: 16,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -571,3 +581,5 @@ class _JobsPageState extends State<JobsPage> {
     );
   }
 }
+
+

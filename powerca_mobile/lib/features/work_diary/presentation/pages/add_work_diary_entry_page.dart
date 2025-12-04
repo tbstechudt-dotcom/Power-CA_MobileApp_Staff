@@ -60,7 +60,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
     final isEditing = widget.entry != null;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,

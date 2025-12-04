@@ -76,6 +76,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
+  flutter_launcher_icons: ^0.14.4
 
   # Code Generation
   build_runner: ^2.4.6
@@ -87,6 +88,11 @@ dev_dependencies:
   # Testing
   bloc_test: ^10.0.0
   mockito: ^5.4.3
+
+flutter_launcher_icons:
+  image_path: "assets/icons/Power CA.png"
+  android: true
+  ios: false
 
 flutter:
   uses-material-design: true

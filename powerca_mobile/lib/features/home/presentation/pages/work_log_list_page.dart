@@ -89,7 +89,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8F9FC),
       body: SafeArea(
         child: Column(
           children: [
@@ -517,7 +517,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                         Container(
                           padding: EdgeInsets.all(10.w),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: const Color(0xFFF8F9FC),
                             borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: Column(

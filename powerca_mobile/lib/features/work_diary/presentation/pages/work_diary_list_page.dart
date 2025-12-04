@@ -25,7 +25,7 @@ class WorkDiaryListPage extends StatelessWidget {
       create: (context) => getIt<WorkDiaryBloc>()
         ..add(LoadEntriesEvent(jobId: job.jobId)),
       child: Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
         body: BlocConsumer<WorkDiaryBloc, WorkDiaryState>(
           listener: (context, state) {

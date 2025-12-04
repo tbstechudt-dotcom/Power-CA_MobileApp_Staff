@@ -222,7 +222,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                     )
                   : null,
               filled: true,
-              fillColor: const Color(0xFFF3F4F6),
+              fillColor: const Color(0xFFF8F9FC),
               contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
@@ -239,21 +239,14 @@ class _PinboardMainPageState extends State<PinboardMainPage>
 
         // Tab Bar
         Container(
-          margin: EdgeInsets.symmetric(horizontal: 12.w),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F7FA),
-            borderRadius: BorderRadius.circular(10.r),
-          ),
+          color: Colors.white,
           child: TabBar(
             controller: _tabController,
-            indicator: BoxDecoration(
-              color: AppTheme.primaryColor,
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            indicatorSize: TabBarIndicatorSize.tab,
+            labelColor: AppTheme.primaryColor,
+            unselectedLabelColor: const Color(0xFF6B7280),
+            indicatorColor: AppTheme.primaryColor,
+            indicatorWeight: 3,
             dividerColor: Colors.transparent,
-            labelColor: Colors.white,
-            unselectedLabelColor: const Color(0xFF8F8E90),
             labelStyle: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13.sp,
@@ -262,16 +255,16 @@ class _PinboardMainPageState extends State<PinboardMainPage>
             unselectedLabelStyle: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13.sp,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w400,
             ),
-            tabs: [
+            tabs: const [
               Tab(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.calendar_today_rounded, size: 16.sp),
-                    SizedBox(width: 6.w),
-                    const Text('Due Dates'),
+                    Icon(Icons.calendar_today_rounded, size: 16),
+                    SizedBox(width: 6),
+                    Text('Due Dates'),
                   ],
                 ),
               ),
@@ -279,9 +272,9 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.people_rounded, size: 16.sp),
-                    SizedBox(width: 6.w),
-                    const Text('Meetings'),
+                    Icon(Icons.people_rounded, size: 16),
+                    SizedBox(width: 6),
+                    Text('Meetings'),
                   ],
                 ),
               ),

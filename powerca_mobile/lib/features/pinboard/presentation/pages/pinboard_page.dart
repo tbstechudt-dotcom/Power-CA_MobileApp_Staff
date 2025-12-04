@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -42,6 +43,14 @@ class _PinboardPageState extends State<PinboardPage> {
     super.initState();
     // Mark pinboard as visited when this page opens
     _markPinboardAsVisited();
+    // Set status bar style for white background with dark icons
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
   }
 
   /// Save current timestamp as last pinboard visit
@@ -90,9 +99,9 @@ class _PinboardPageState extends State<PinboardPage> {
       ),
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: const Color(0xFFF8F9FC),
         drawer: AppDrawer(currentStaff: widget.currentStaff),
-        body: SafeArea(
+        body: SafeArea(top: false,
           child: Column(
             children: [
               // Modern Top App Bar with menu handler

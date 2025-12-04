@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -164,14 +164,19 @@ class _AppHeaderState extends State<AppHeader> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+      padding: EdgeInsets.only(
+        left: 16.w,
+        right: 16.w,
+        top: MediaQuery.of(context).padding.top + 6.h,
+        bottom: 8.h,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -186,7 +191,7 @@ class _AppHeaderState extends State<AppHeader> {
                   _isLoading ? 'Loading...' : _companyName,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 16.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF2563EB),
                   ),
@@ -196,15 +201,15 @@ class _AppHeaderState extends State<AppHeader> {
                     children: [
                       Icon(
                         Icons.location_on_outlined,
-                        size: 14.sp,
+                        size: 12.sp,
                         color: const Color(0xFF6B7280),
                       ),
-                      SizedBox(width: 4.w),
+                      SizedBox(width: 2.w),
                       Text(
                         _isLoading ? 'Loading...' : _locationName,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 12.sp,
+                          fontSize: 11.sp,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF6B7280),
                         ),
@@ -221,7 +226,7 @@ class _AppHeaderState extends State<AppHeader> {
               width: 40.w,
               height: 40.h,
               decoration: const BoxDecoration(
-                color: Color(0xFFF3F4F6),
+                color: Color(0xFFe3f2fd),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -229,14 +234,14 @@ class _AppHeaderState extends State<AppHeader> {
                   Center(
                     child: Icon(
                       Icons.notifications_outlined,
-                      size: 20.sp,
+                      size: 22.sp,
                       color: const Color(0xFF1A1A1A),
                     ),
                   ),
                   if (_hasNewNotifications)
                     Positioned(
-                      right: 10.w,
-                      top: 10.h,
+                      right: 9.w,
+                      top: 9.h,
                       child: Container(
                         width: 8.w,
                         height: 8.h,
@@ -258,13 +263,13 @@ class _AppHeaderState extends State<AppHeader> {
               width: 40.w,
               height: 40.h,
               decoration: const BoxDecoration(
-                color: Color(0xFFF3F4F6),
+                color: Color(0xFFe3f2fd),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Icon(
                   Icons.menu,
-                  size: 20.sp,
+                  size: 22.sp,
                   color: const Color(0xFF1A1A1A),
                 ),
               ),

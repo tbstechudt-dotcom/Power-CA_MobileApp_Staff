@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/comment.dart';
@@ -64,22 +65,22 @@ class _CommentsTabState extends State<CommentsTab> {
                         children: [
                           Icon(
                             Icons.comment_outlined,
-                            size: 64,
+                            size: 64.sp,
                             color: Colors.grey[400],
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16.h),
                           Text(
                             'No comments yet',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 16.sp,
                               color: Colors.grey[600],
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h),
                           Text(
                             'Be the first to comment!',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 14.sp,
                               color: Colors.grey[500],
                             ),
                           ),
@@ -87,10 +88,10 @@ class _CommentsTabState extends State<CommentsTab> {
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16.w),
                       itemCount: widget.comments.length,
                       separatorBuilder: (context, index) =>
-                          const Divider(height: 24),
+                          Divider(height: 24.h),
                       itemBuilder: (context, index) {
                         final comment = widget.comments[index];
                         return _CommentItem(comment: comment);
@@ -112,7 +113,7 @@ class _CommentsTabState extends State<CommentsTab> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(16.w),
               child: Row(
                 children: [
                   Expanded(
@@ -124,20 +125,17 @@ class _CommentsTabState extends State<CommentsTab> {
                         filled: true,
                         fillColor: Colors.grey[100],
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(24.r),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
                       ),
                       maxLines: null,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _addComment(),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8.w),
                   Container(
                     decoration: BoxDecoration(
                       color: Theme.of(context).primaryColor,
@@ -184,29 +182,29 @@ class _CommentItem extends StatelessWidget {
                   Expanded(
                     child: Text(
                       comment.authorName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 14.sp,
                       ),
                     ),
                   ),
                   Text(
                     dateFormat.format(comment.createdAt),
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 12.sp,
                       color: Colors.grey[600],
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 6),
+              SizedBox(height: 6.h),
 
               // Comment Text
               Text(
                 comment.content,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 14.sp,
                   height: 1.4,
                   color: Colors.grey[800],
                 ),
@@ -215,11 +213,11 @@ class _CommentItem extends StatelessWidget {
               // Edited indicator
               if (comment.updatedAt != null &&
                   comment.updatedAt != comment.createdAt) ...[
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   'Edited',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 11.sp,
                     color: Colors.grey[500],
                     fontStyle: FontStyle.italic,
                   ),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -478,7 +479,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                         margin: EdgeInsets.only(bottom: index < _attachedFiles.length - 1 ? 8.h : 0),
                         padding: EdgeInsets.all(10.w),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
+                          color: const Color(0xFFF8F9FC),
                           borderRadius: BorderRadius.circular(8.r),
                         ),
                         child: Row(
@@ -774,21 +775,23 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
       );
 
       if (image != null) {
-        setState(() {
-          _attachedFiles.add(AttachedFile(
-            name: image.name,
-            path: image.path,
-            type: 'image',
-          ));
-        });
+        debugPrint('Camera image selected: ${image.name}, path: ${image.path}');
         // Upload to Supabase and update workdiary doc_ref
-        if (context.mounted) {
+        // File will be added to UI list only after successful upload
+        // Use widget's mounted property instead of context.mounted
+        if (mounted) {
           final bytes = await image.readAsBytes();
-          await _uploadFileToSupabase(bytes, image.name, context);
+          debugPrint('Camera image bytes length: ${bytes.length}');
+          await _uploadFileToSupabase(bytes, image.name, context, fileType: 'image');
+        } else {
+          debugPrint('ERROR: Widget unmounted after camera picker');
         }
+      } else {
+        debugPrint('Camera image selection cancelled');
       }
     } catch (e) {
-      if (context.mounted) {
+      debugPrint('Camera error: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error accessing camera: ${e.toString()}'),
@@ -812,21 +815,23 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
       );
 
       if (image != null) {
-        setState(() {
-          _attachedFiles.add(AttachedFile(
-            name: image.name,
-            path: image.path,
-            type: 'image',
-          ));
-        });
+        debugPrint('Gallery image selected: ${image.name}, path: ${image.path}');
         // Upload to Supabase and update workdiary doc_ref
-        if (context.mounted) {
+        // File will be added to UI list only after successful upload
+        // Use widget's mounted property instead of context.mounted
+        if (mounted) {
           final bytes = await image.readAsBytes();
-          await _uploadFileToSupabase(bytes, image.name, context);
+          debugPrint('Gallery image bytes length: ${bytes.length}');
+          await _uploadFileToSupabase(bytes, image.name, context, fileType: 'image');
+        } else {
+          debugPrint('ERROR: Widget unmounted after gallery picker');
         }
+      } else {
+        debugPrint('Gallery image selection cancelled');
       }
     } catch (e) {
-      if (context.mounted) {
+      debugPrint('Gallery error: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error accessing gallery: ${e.toString()}'),
@@ -852,22 +857,33 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
 
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
+        debugPrint('Document picked: name=${file.name}, path=${file.path}, bytes=${file.bytes?.length ?? 'null'}, size=${file.size}');
         final isImage = ['png', 'jpg', 'jpeg'].contains(file.extension?.toLowerCase());
-        setState(() {
-          _attachedFiles.add(AttachedFile(
-            name: file.name,
-            path: file.path ?? '',
-            type: isImage ? 'image' : 'document',
-            size: file.size,
-          ));
-        });
-        // Upload to Supabase and update workdiary doc_ref
-        if (context.mounted && file.bytes != null) {
-          await _uploadFileToSupabase(file.bytes!, file.name, context);
+
+        // Get file bytes - on Android, file.bytes may be null, so read from path
+        Uint8List? bytes = file.bytes;
+        if (bytes == null && file.path != null) {
+          debugPrint('file.bytes is null, reading from path: ${file.path}');
+          bytes = await File(file.path!).readAsBytes();
+          debugPrint('Read ${bytes.length} bytes from file path');
+        } else if (bytes == null && file.path == null) {
+          debugPrint('ERROR: Both file.bytes and file.path are null!');
         }
+
+        // Upload to Supabase and update workdiary doc_ref
+        // File will be added to UI list only after successful upload
+        // Use widget's mounted property instead of context.mounted
+        if (mounted && bytes != null) {
+          debugPrint('Uploading file with ${bytes.length} bytes');
+          await _uploadFileToSupabase(bytes, file.name, context, fileType: isImage ? 'image' : 'document');
+        } else {
+          debugPrint('ERROR: Could not get file bytes for upload (mounted=$mounted, bytes=${bytes?.length ?? 'null'})');
+        }
+      } else {
+        debugPrint('Document picker cancelled or no files selected');
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error selecting file: ${e.toString()}'),
@@ -894,7 +910,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 16.w),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
+          color: const Color(0xFFF8F9FC),
           borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
@@ -983,10 +999,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
   }
 
   /// Upload file to Supabase Storage and update workdiary doc_ref
-  Future<void> _uploadFileToSupabase(Uint8List bytes, String fileName, BuildContext context) async {
+  Future<void> _uploadFileToSupabase(Uint8List bytes, String fileName, BuildContext context, {String fileType = 'document'}) async {
     final wdId = widget.entry['wd_id'];
     debugPrint('=== _uploadFileToSupabase START ===');
-    debugPrint('wd_id: $wdId, fileName: $fileName, bytes length: ${bytes.length}');
+    debugPrint('wd_id: $wdId, fileName: $fileName, bytes length: ${bytes.length}, fileType: $fileType');
 
     if (wdId == null) {
       debugPrint('ERROR: wd_id is null - cannot upload');
@@ -1045,6 +1061,19 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
           .eq('wd_id', wdId)
           .maybeSingle();
       debugPrint('Verification query result: $verifyResponse');
+
+      // Only add to UI after successful upload and database update
+      if (verifyResponse != null && verifyResponse['doc_ref'] != null) {
+        setState(() {
+          _attachedFiles.clear();
+          _attachedFiles.add(AttachedFile(
+            name: fileName,
+            path: publicUrl,
+            type: fileType,
+          ));
+        });
+        debugPrint('SUCCESS: Added file to UI list after successful upload');
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
