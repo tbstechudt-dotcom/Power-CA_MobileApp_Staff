@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
@@ -87,6 +88,19 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Set status bar style for white background with dark icons
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -99,9 +113,9 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.white,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(top: false,
+      body: SafeArea(
         child: Column(
           children: [
             // Custom Header with Back Button
@@ -125,7 +139,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                     child: Container(
                       padding: EdgeInsets.all(8.w),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
+                        color: const Color(0xFFF8F9FC),
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Icon(
@@ -214,7 +228,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFFF3F4F6),
+                  fillColor: const Color(0xFFF8F9FC),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.r),
@@ -231,16 +245,19 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
 
             // Leave List
             Expanded(
-              child: _filteredLeaves.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                      itemCount: _filteredLeaves.length,
-                      itemBuilder: (context, index) {
-                        final leave = _filteredLeaves[index];
-                        return _buildLeaveCard(leave);
-                      },
-                    ),
+              child: Container(
+                color: const Color(0xFFF8F9FC),
+                child: _filteredLeaves.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                        itemCount: _filteredLeaves.length,
+                        itemBuilder: (context, index) {
+                          final leave = _filteredLeaves[index];
+                          return _buildLeaveCard(leave);
+                        },
+                      ),
+              ),
             ),
           ],
         ),
@@ -261,7 +278,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
             width: 80.w,
             height: 80.h,
             decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
+              color: const Color(0xFFF8F9FC),
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: Icon(
@@ -309,10 +326,14 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: const Color(0xFFE5E7EB),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
               offset: const Offset(0, 2),
             ),
           ],
@@ -325,8 +346,8 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(12.r),
-                  topRight: Radius.circular(12.r),
+                  topLeft: Radius.circular(11.r),
+                  topRight: Radius.circular(11.r),
                 ),
               ),
               child: Row(

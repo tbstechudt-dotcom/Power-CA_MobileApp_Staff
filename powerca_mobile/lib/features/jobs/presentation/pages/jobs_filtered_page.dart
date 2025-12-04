@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
@@ -38,6 +39,14 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
   void initState() {
     super.initState();
     _loadPriorityJobs();
+    // Set status bar style for white background with dark icons
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
   }
 
   Future<void> _loadPriorityJobs() async {
@@ -186,9 +195,9 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.white,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(top: false,
+      body: SafeArea(
         child: Column(
           children: [
             // Custom Header with Back Button
@@ -212,7 +221,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                     child: Container(
                       padding: EdgeInsets.all(8.w),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
+                        color: const Color(0xFFF8F9FC),
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Icon(
@@ -275,7 +284,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                         decoration: BoxDecoration(
                           color: _isSelectionMode
                               ? const Color(0xFFEF4444).withValues(alpha: 0.1)
-                              : const Color(0xFFF3F4F6),
+                              : const Color(0xFFF8F9FC),
                           borderRadius: BorderRadius.circular(8.r),
                         ),
                         child: Icon(
@@ -326,7 +335,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFFF3F4F6),
+                  fillColor: const Color(0xFFF8F9FC),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.r),
@@ -343,16 +352,19 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
 
             // Jobs List
             Expanded(
-              child: _filteredJobs.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                      itemCount: _filteredJobs.length,
-                      itemBuilder: (context, index) {
-                        final job = _filteredJobs[index];
-                        return _buildJobCard(job);
-                      },
-                    ),
+              child: Container(
+                color: const Color(0xFFF8F9FC),
+                child: _filteredJobs.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                        itemCount: _filteredJobs.length,
+                        itemBuilder: (context, index) {
+                          final job = _filteredJobs[index];
+                          return _buildJobCard(job);
+                        },
+                      ),
+              ),
             ),
 
             // Bottom confirm button when in selection mode with items selected
@@ -436,7 +448,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
             width: 80.w,
             height: 80.h,
             decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
+              color: const Color(0xFFF8F9FC),
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: Icon(
@@ -498,20 +510,20 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.r),
-          border: (isPriority || isSelected)
-              ? Border.all(
-                  color: isSelected ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                  width: 2
-                )
-              : null,
+          border: Border.all(
+            color: (isPriority || isSelected)
+                ? (isSelected ? const Color(0xFF10B981) : const Color(0xFFEF4444))
+                : const Color(0xFFE5E7EB),
+            width: (isPriority || isSelected) ? 2 : 1,
+          ),
           boxShadow: [
             BoxShadow(
               color: isSelected
                   ? const Color(0xFF10B981).withValues(alpha: 0.15)
                   : isPriority
                       ? const Color(0xFFEF4444).withValues(alpha: 0.15)
-                      : Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
+                      : Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
               offset: const Offset(0, 2),
             ),
           ],
@@ -524,8 +536,8 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular((isPriority || isSelected) ? 10.r : 12.r),
-                  topRight: Radius.circular((isPriority || isSelected) ? 10.r : 12.r),
+                  topLeft: Radius.circular((isPriority || isSelected) ? 10.r : 11.r),
+                  topRight: Radius.circular((isPriority || isSelected) ? 10.r : 11.r),
                 ),
               ),
               child: Row(

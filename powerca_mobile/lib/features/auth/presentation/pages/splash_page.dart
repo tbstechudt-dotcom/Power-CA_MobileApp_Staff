@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme.dart';
+import '../../../../core/config/injection.dart';
+import '../../../../core/services/priority_service.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../widgets/powerca_logo.dart';
 
 /// Splash/Welcome Screen Page
@@ -16,6 +19,8 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
+  bool _isCheckingSession = true;
+
   @override
   void initState() {
     super.initState();
@@ -27,6 +32,57 @@ class _SplashPageState extends State<SplashPage> {
         statusBarBrightness: Brightness.dark,
       ),
     );
+
+    // Check for existing session after a brief delay for splash display
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _checkExistingSession();
+    });
+  }
+
+  /// Check if user has an existing session and auto-login
+  Future<void> _checkExistingSession() async {
+    try {
+      final authRepository = getIt<AuthRepository>();
+      final result = await authRepository.getCurrentStaff();
+
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          // No session or error - show splash screen
+          setState(() {
+            _isCheckingSession = false;
+          });
+        },
+        (staff) async {
+          if (staff != null) {
+            // Set staff ID in PriorityService for priority jobs persistence
+            await PriorityService.setCurrentStaffId(staff.staffId);
+
+            if (!mounted) return;
+
+            // Session exists - navigate to dashboard
+            Navigator.pushReplacementNamed(
+              context,
+              '/dashboard',
+              arguments: staff,
+            );
+          } else {
+            // No session - show splash screen
+            setState(() {
+              _isCheckingSession = false;
+            });
+          }
+        },
+      );
+    } catch (e) {
+      // Error checking session - show splash screen
+      if (mounted) {
+        setState(() {
+          _isCheckingSession = false;
+        });
+      }
+    }
   }
 
   void _navigateToSignIn() {
@@ -125,7 +181,7 @@ class _SplashPageState extends State<SplashPage> {
                 ),
               ),
 
-              // Bottom section: Buttons
+              // Bottom section: Buttons or Loading
               Expanded(
                 flex: 3,
                 child: Padding(
@@ -133,29 +189,35 @@ class _SplashPageState extends State<SplashPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Sign In Button (White background)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52.h,
-                        child: ElevatedButton(
-                          onPressed: _navigateToSignIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: AppTheme.primaryColor,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
+                      if (_isCheckingSession)
+                        // Show loading while checking session
+                        const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      else
+                        // Sign In Button (White background)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52.h,
+                          child: ElevatedButton(
+                            onPressed: _navigateToSignIn,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppTheme.primaryColor,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            'Sign in',
-                            style: GoogleFonts.inter(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
+                            child: Text(
+                              'Sign in',
+                              style: GoogleFonts.inter(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
 
                       SizedBox(height: 24.h),
                     ],

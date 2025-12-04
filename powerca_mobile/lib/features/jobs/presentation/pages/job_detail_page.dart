@@ -379,7 +379,7 @@ class _JobDetailPageState extends State<JobDetailPage>
               width: 80.w,
               height: 80.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: const Color(0xFFF8F9FC),
                 borderRadius: BorderRadius.circular(20.r),
               ),
               child: Icon(
@@ -436,7 +436,7 @@ class _JobDetailPageState extends State<JobDetailPage>
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: const Color(0xFFF8F9FC),
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(12.r),
                     topRight: Radius.circular(12.r),
@@ -652,7 +652,7 @@ class _JobDetailPageState extends State<JobDetailPage>
               width: 80.w,
               height: 80.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: const Color(0xFFF8F9FC),
                 borderRadius: BorderRadius.circular(20.r),
               ),
               child: Icon(
@@ -718,7 +718,7 @@ class _JobDetailPageState extends State<JobDetailPage>
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: const Color(0xFFF8F9FC),
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(12.r),
                     topRight: Radius.circular(12.r),
@@ -869,7 +869,7 @@ class _JobDetailPageState extends State<JobDetailPage>
             Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
             decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
+              color: const Color(0xFFF8F9FC),
               border: const Border(
                 top: BorderSide(
                   color: Color(0xFFD1D5DB),

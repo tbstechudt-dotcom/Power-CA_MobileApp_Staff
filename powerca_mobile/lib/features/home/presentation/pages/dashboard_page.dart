@@ -36,12 +36,11 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    // Reset status bar to dark icons for light background
-    // (Splash page sets light icons for blue background)
+    // Set status bar style for white background with dark icons
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, // Dark icons for light background
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
     );
@@ -142,7 +141,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.white,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
       body: SafeArea(top: false,
         child: Builder(
@@ -158,32 +157,35 @@ class _DashboardPageState extends State<DashboardPage> {
 
             // Content - Show static UI
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    // Main Content Area
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Staff Profile Card
-                          _buildStaffProfileCard(),
+              child: Container(
+                color: const Color(0xFFF8F9FC),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    children: [
+                      // Main Content Area
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Staff Profile Card
+                            _buildStaffProfileCard(),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                          // Monthly Calendar (Moved to second section)
-                          _buildMonthlyCalendar(),
+                            // Monthly Calendar (Moved to second section)
+                            _buildMonthlyCalendar(),
 
-                          // Statistics Grid (4 cards in 2x2)
-                          _buildStatisticsGrid(),
+                            // Statistics Grid (4 cards in 2x2)
+                            _buildStatisticsGrid(),
 
-                          const SizedBox(height: 20),
-                        ],
+                            const SizedBox(height: 20),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -269,7 +271,7 @@ class _DashboardPageState extends State<DashboardPage> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
             decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
+              color: const Color(0xFFF8F9FC),
               borderRadius: BorderRadius.circular(6.r),
             ),
             child: Text(
@@ -381,14 +383,14 @@ class _DashboardPageState extends State<DashboardPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: EdgeInsets.all(8.w),
+                      padding: EdgeInsets.all(10.w),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10.r),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Icon(
                         icon,
-                        size: 18.sp,
+                        size: 24.sp,
                         color: Colors.white,
                       ),
                     ),

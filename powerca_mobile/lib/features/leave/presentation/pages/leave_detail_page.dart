@@ -55,7 +55,7 @@ class LeaveDetailPage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8F9FC),
       body: CustomScrollView(
         slivers: [
           // Custom App Bar with gradient
@@ -417,7 +417,7 @@ class LeaveDetailPage extends StatelessWidget {
                           width: 44.w,
                           height: 44.w,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF3F4F6),
+                            color: const Color(0xFFF8F9FC),
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                           child: Icon(
@@ -556,7 +556,7 @@ class LeaveDetailPage extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: dayType == 'Full Day'
-                      ? const Color(0xFFF3F4F6)
+                      ? const Color(0xFFF8F9FC)
                       : AppTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6.r),
                 ),
