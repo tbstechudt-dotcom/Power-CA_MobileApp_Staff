@@ -9,6 +9,7 @@ import 'app/theme.dart';
 import 'core/config/injection.dart';
 import 'core/config/supabase_config.dart';
 import 'features/auth/domain/entities/staff.dart';
+import 'features/auth/presentation/pages/select_concern_location_page.dart';
 import 'features/auth/presentation/pages/sign_in_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/home/presentation/pages/dashboard_page.dart';
@@ -208,6 +209,11 @@ class PowerCAApp extends StatelessWidget {
                 return MaterialPageRoute(builder: (_) => const SplashPage());
               case '/sign-in':
                 return MaterialPageRoute(builder: (_) => const SignInPage());
+              case '/select-concern-location':
+                final staff = settings.arguments as Staff;
+                return MaterialPageRoute(
+                  builder: (_) => SelectConcernLocationPage(currentStaff: staff),
+                );
               case '/dashboard':
                 final staff = settings.arguments as Staff;
                 return MaterialPageRoute(
