@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../core/config/injection.dart';
 import '../../features/auth/domain/entities/staff.dart';
+import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../app/theme.dart';
 
@@ -56,7 +58,9 @@ class _AppDrawerState extends State<AppDrawer> {
 
   Widget _buildProfileHeader() {
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.all(20.w),
+      alignment: Alignment.centerLeft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -64,20 +68,20 @@ class _AppDrawerState extends State<AppDrawer> {
             widget.currentStaff.name,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w700,
               color: AppTheme.textPrimaryColor,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          SizedBox(height: 4.h),
+          SizedBox(height: 6.h),
           Text(
             'Staff ID: ${widget.currentStaff.staffId}',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w400,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w500,
               color: const Color(0xFF6B7280),
             ),
           ),
@@ -97,7 +101,7 @@ class _AppDrawerState extends State<AppDrawer> {
         width: 40.w,
         height: 40.h,
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
+          color: const Color(0xFFF8F9FC),
           borderRadius: BorderRadius.circular(10.r),
         ),
         child: Icon(
@@ -175,12 +179,13 @@ class _AppDrawerState extends State<AppDrawer> {
   }
 
   void _handleLogout(BuildContext context) {
-    Navigator.pop(context); // Close drawer
+    // Get navigator before any async operations
+    final navigator = Navigator.of(context);
 
-    // Show confirmation dialog
+    // Show confirmation dialog FIRST (before closing drawer)
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         shape: RoundedRectangleBorder(
@@ -188,14 +193,29 @@ class _AppDrawerState extends State<AppDrawer> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Add logout logic here
-              Navigator.pushReplacementNamed(context, '/login');
+            onPressed: () async {
+              // Close dialog first
+              Navigator.pop(dialogContext);
+
+              // Clear the saved session
+              try {
+                final authRepository = getIt<AuthRepository>();
+                await authRepository.signOut();
+                debugPrint('Session cleared successfully');
+              } catch (e) {
+                debugPrint('Error clearing session: $e');
+              }
+
+              // Navigate to splash page and clear ALL navigation stack
+              // This removes drawer, dialog, and all screens
+              navigator.pushNamedAndRemoveUntil(
+                '/splash',
+                (route) => false, // Remove all routes
+              );
             },
             child: const Text(
               'Logout',

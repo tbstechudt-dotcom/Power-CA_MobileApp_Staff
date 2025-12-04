@@ -10,7 +10,7 @@ class AppTheme {
   static const Color primaryDark = Color(0xFF0E2A4F);
 
   static const Color surfaceColor = Color(0xFFFFFFFF);  // White
-  static const Color backgroundColor = Color(0xFFF3F4F6);  // Light Gray
+  static const Color backgroundColor = Color(0xFFF8F9FC);  // Light Gray
   static const Color accentColor = Color(0xFF0D9488);  // Teal - Accent
 
   // Semantic Colors
@@ -34,7 +34,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       primaryColor: primaryColor,
-      scaffoldBackgroundColor: backgroundColor,
+      scaffoldBackgroundColor: surfaceColor,  // White background for all pages
 
       colorScheme: const ColorScheme.light(
         primary: primaryColor,

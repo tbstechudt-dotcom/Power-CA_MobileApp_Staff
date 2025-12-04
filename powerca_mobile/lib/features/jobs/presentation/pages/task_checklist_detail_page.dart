@@ -187,7 +187,7 @@ class _TaskChecklistDetailPageState extends State<TaskChecklistDetailPage> {
               width: 80.w,
               height: 80.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: const Color(0xFFF8F9FC),
                 borderRadius: BorderRadius.circular(20.r),
               ),
               child: Icon(

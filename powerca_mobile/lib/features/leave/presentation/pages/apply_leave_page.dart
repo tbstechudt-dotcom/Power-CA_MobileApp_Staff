@@ -37,10 +37,25 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
     super.dispose();
   }
 
+  /// Count working days between two dates (excluding Sundays)
+  /// Sunday is always a holiday and should not be counted as leave
+  int _countWorkingDays(DateTime fromDate, DateTime toDate) {
+    int count = 0;
+    DateTime current = fromDate;
+    while (!current.isAfter(toDate)) {
+      // Skip Sundays (weekday 7 in Dart)
+      if (current.weekday != DateTime.sunday) {
+        count += 1;
+      }
+      current = current.add(const Duration(days: 1));
+    }
+    return count;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8F9FC),
       body: SafeArea(
         child: Column(
           children: [
@@ -236,17 +251,28 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
     // For single day, toDate is same as fromDate
     DateTime? effectiveToDate = _isMultiDay ? _toDate : _fromDate;
 
-    // Calculate number of days with half-day support
+    // Calculate number of days with half-day support (excluding Sundays)
+    // Sunday is always a holiday and should not be counted as leave
     double? numberOfDays;
     if (_fromDate != null && effectiveToDate != null) {
       if (_fromDate == effectiveToDate) {
+        // Single day - date picker already blocks Sundays
         numberOfDays = _fromDayType == 'full' ? 1.0 : 0.5;
       } else {
-        int fullDays = effectiveToDate.difference(_fromDate!).inDays - 1;
-        if (fullDays < 0) fullDays = 0;
-        double firstDayValue = _fromDayType == 'full' ? 1.0 : 0.5;
-        double lastDayValue = _toDayType == 'full' ? 1.0 : 0.5;
-        numberOfDays = firstDayValue + fullDays + lastDayValue;
+        // Multi-day - count working days excluding Sundays
+        int totalWorkingDays = _countWorkingDays(_fromDate!, effectiveToDate);
+
+        // Adjust for half-days on first and last days
+        double adjustment = 0.0;
+        if (_fromDayType != 'full') {
+          adjustment -= 0.5; // Subtract half day from first day
+        }
+        if (_toDayType != 'full') {
+          adjustment -= 0.5; // Subtract half day from last day
+        }
+
+        numberOfDays = totalWorkingDays + adjustment;
+        if (numberOfDays < 0) numberOfDays = 0;
       }
     }
 

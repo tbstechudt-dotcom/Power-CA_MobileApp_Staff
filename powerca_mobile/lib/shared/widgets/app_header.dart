@@ -223,10 +223,10 @@ class _AppHeaderState extends State<AppHeader> {
           GestureDetector(
             onTap: _navigateToPinboard,
             child: Container(
-              width: 34.w,
-              height: 34.h,
+              width: 40.w,
+              height: 40.h,
               decoration: const BoxDecoration(
-                color: Color(0xFFF3F4F6),
+                color: Color(0xFFe3f2fd),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -234,17 +234,17 @@ class _AppHeaderState extends State<AppHeader> {
                   Center(
                     child: Icon(
                       Icons.notifications_outlined,
-                      size: 18.sp,
+                      size: 22.sp,
                       color: const Color(0xFF1A1A1A),
                     ),
                   ),
                   if (_hasNewNotifications)
                     Positioned(
-                      right: 8.w,
-                      top: 8.h,
+                      right: 9.w,
+                      top: 9.h,
                       child: Container(
-                        width: 7.w,
-                        height: 7.h,
+                        width: 8.w,
+                        height: 8.h,
                         decoration: const BoxDecoration(
                           color: Color(0xFFDC2626),
                           shape: BoxShape.circle,
@@ -255,21 +255,21 @@ class _AppHeaderState extends State<AppHeader> {
               ),
             ),
           ),
-          SizedBox(width: 6.w),
+          SizedBox(width: 8.w),
           // Menu
           GestureDetector(
             onTap: widget.onMenuTap,
             child: Container(
-              width: 34.w,
-              height: 34.h,
+              width: 40.w,
+              height: 40.h,
               decoration: const BoxDecoration(
-                color: Color(0xFFF3F4F6),
+                color: Color(0xFFe3f2fd),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Icon(
                   Icons.menu,
-                  size: 18.sp,
+                  size: 22.sp,
                   color: const Color(0xFF1A1A1A),
                 ),
               ),

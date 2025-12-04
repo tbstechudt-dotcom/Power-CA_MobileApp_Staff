@@ -73,8 +73,8 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    // Use very small fixed height to prevent any overflow
-    const double navContentHeight = 48.0;
+    // Increased height for better visibility
+    const double navContentHeight = 64.0;
     final totalHeight = navContentHeight + bottomPadding;
 
     return ClipRect(
@@ -167,27 +167,27 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
           splashColor: AppTheme.primaryColor.withValues(alpha: 0.1),
           highlightColor: AppTheme.primaryColor.withValues(alpha: 0.05),
           child: Container(
-            height: 48,
+            height: 64,
             alignment: Alignment.center,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon - minimal size
+                // Icon - increased size
                 Icon(
                   isSelected ? selectedIcon : icon,
-                  size: 18,
+                  size: 22,
                   color: isSelected
                       ? AppTheme.primaryColor
                       : const Color(0xFF9E9E9E),
                 ),
-                const SizedBox(height: 2),
-                // Label - minimal size
+                const SizedBox(height: 4),
+                // Label - increased size
                 Text(
                   label,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 9,
+                    fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     color: isSelected
                         ? AppTheme.primaryColor
@@ -199,13 +199,13 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                 ),
                 // Active indicator - only show when selected
                 if (isSelected) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Container(
-                    width: 12,
-                    height: 2,
+                    width: 16,
+                    height: 3,
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(1),
+                      borderRadius: BorderRadius.circular(1.5),
                     ),
                   ),
                 ],
