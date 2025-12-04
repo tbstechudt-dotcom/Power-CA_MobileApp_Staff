@@ -70,10 +70,10 @@ class _SignInPageContentState extends State<_SignInPageContent> {
               duration: const Duration(seconds: 1),
             ),
           );
-          // Navigate to dashboard with staff data
+          // Navigate to concern & location selection page
           Navigator.pushReplacementNamed(
             context,
-            '/dashboard',
+            '/select-concern-location',
             arguments: state.staff,
           );
         } else if (state is AuthError) {
