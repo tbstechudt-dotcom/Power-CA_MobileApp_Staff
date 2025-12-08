@@ -351,6 +351,13 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       return;
     }
 
+    if (_selectedTaskId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a task')),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     // Check for time overlap with existing entries
@@ -499,8 +506,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                     _buildJobDropdown(),
                     SizedBox(height: 20.h),
 
-                    // Task Selector (Optional)
-                    _buildSectionTitle('Select Task (Optional)'),
+                    // Task Selector (Required)
+                    _buildSectionTitle('Select Task'),
                     SizedBox(height: 8.h),
                     _buildTaskDropdown(),
                     SizedBox(height: 20.h),
@@ -754,7 +761,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           hint: Text(
             _tasks.isEmpty
                 ? 'No tasks available'
-                : 'Select a task (optional)',
+                : 'Select a task',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14.sp,
