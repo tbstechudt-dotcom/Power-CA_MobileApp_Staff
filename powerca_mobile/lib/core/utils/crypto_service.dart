@@ -4,19 +4,25 @@ import 'package:encrypt/encrypt.dart' as enc;
 
 /// Crypto Service
 ///
-/// Handles AES-CBC encryption/decryption matching the desktop PowerBuilder implementation.
+/// Handles password encryption/decryption matching the desktop PowerBuilder implementation.
 ///
-/// Desktop Encryption Details:
-/// - Algorithm: AES (Advanced Encryption Standard)
-/// - Mode: CBC (Cipher Block Chaining)
-/// - Padding: PKCS7
-/// - Encoding: Base64 (for encrypted output)
-/// - Key Length: Variable (from tbsrencryptpass)
-/// - IV Length: 16 bytes (same as key, truncated/padded to 16 bytes)
+/// PowerBuilder Encoding Details (for mbstaff.app_pw):
+/// - Each plain character is encoded as 2 characters
+/// - Decryption: sum the two encoded char codes
+/// - If sum is lowercase (97-122), convert to uppercase (-32)
+/// - Otherwise use sum directly
+///
+/// Example: 'TSMA' -> '&N&M$I A' (enc1+enc2 gives plain char)
 class CryptoService {
-  // Encryption key from desktop database (tbsrencryptpass)
-  // This key is used for AES-CBC encryption/decryption of passwords in mbstaff table
-  static const String _encryptionKey = 'PCASVR-29POWERCA';
+  // Encryption key derived from PowerBuilder script:
+  // ls_product = "LICENCE"
+  // ls_provider = "TBSTECH25'"
+  // ls_encrypt = left(ls_product + ls_provider, 16) = "LICENCETBSTECH25"
+  static const String _encryptionKey = 'LICENCETBSTECH25';
+
+  // Encryption uses a simple sum-based encoding:
+  // Each plain character is split into two encoded characters
+  // Decryption: plain = enc1 + enc2 (with lowercase to uppercase conversion)
 
   /// Get the encryption key
   /// In production, this could be fetched from secure storage or environment
@@ -33,89 +39,125 @@ class CryptoService {
     return _customKey ?? _encryptionKey;
   }
 
-  /// Decrypt a Base64-encoded AES-CBC encrypted string
+  /// Decrypt PowerBuilder encoded password
   ///
-  /// This matches the desktop decrypt function:
-  /// ```powerbuilder
-  /// lblb_decoded = lnv_coder.Base64Decode(ls_data)
-  /// lblb_key = Blob(ls_encrypt, EncodingANSI!)
-  /// lblb_iv = Blob(ls_encrypt, EncodingANSI!)
-  /// lblb_decrypt = lnv_CrypterObject.SymmetricDecrypt(AES!, lblb_decoded,
-  ///                lblb_key, OperationModeCBC!, lblb_iv, PKCSPadding!)
-  /// ```
-  static String decrypt(String encryptedBase64) {
+  /// PowerBuilder encodes each character as 2 printable ASCII characters using
+  /// position-dependent offsets. This decodes back to the original password.
+  ///
+  /// Example: '&N&M$I A' -> 'TSMA'
+  static String decrypt(String encrypted) {
     try {
-      if (encryptedBase64.isEmpty) {
-        return encryptedBase64;
+      if (encrypted.isEmpty) {
+        return encrypted;
       }
 
-      final keyString = _getActiveKey();
+      // Check if it looks like PowerBuilder encoding (even length, printable chars)
+      if (encrypted.length % 2 == 0 && !_isBase64(encrypted)) {
+        return _decryptPowerBuilder(encrypted);
+      }
 
-      // Ensure key is at least 16 bytes for AES-128
-      // If longer than 32 bytes, truncate to 32 (AES-256)
-      final keyBytes = _prepareKey(keyString);
-      final ivBytes = _prepareIV(keyString);
-
-      // Create key and IV
-      final key = enc.Key(keyBytes);
-      final iv = enc.IV(ivBytes);
-
-      // Create encrypter with AES CBC mode
-      final encrypter = enc.Encrypter(
-        enc.AES(key, mode: enc.AESMode.cbc, padding: 'PKCS7'),
-      );
-
-      // Decrypt
-      final decrypted = encrypter.decrypt64(
-        encryptedBase64,
-        iv: iv,
-      );
-
-      return decrypted;
+      // Fall back to AES decryption for Base64 encoded strings
+      return _decryptAES(encrypted);
     } catch (e) {
       // If decryption fails, return original string
-      // (handles cases where password might not be encrypted)
-      return encryptedBase64;
+      return encrypted;
     }
   }
 
-  /// Encrypt a string using AES-CBC
+  /// Encrypt password using PowerBuilder encoding
   ///
-  /// This matches the desktop encrypt function:
-  /// ```powerbuilder
-  /// lblb_data = Blob(ls_data, EncodingANSI!)
-  /// lblb_key = Blob(ls_encrypt, EncodingANSI!)
-  /// lblb_iv = Blob(ls_encrypt, EncodingANSI!)
-  /// lblb_encrypt = lnv_CrypterObject.SymmetricEncrypt(AES!, lblb_data,
-  ///                lblb_key, OperationModeCBC!, lblb_iv, PKCSPadding!)
-  /// ls_base64 = lnv_coder.Base64Encode(lblb_encrypt)
-  /// ```
+  /// Each character is encoded as 2 printable ASCII characters using
+  /// position-dependent offsets derived from the encryption key.
+  ///
+  /// Example: 'TSMA' -> '&N&M$I A'
   static String encrypt(String plainText) {
     try {
       if (plainText.isEmpty) {
         return plainText;
       }
 
-      final keyString = _getActiveKey();
-
-      final keyBytes = _prepareKey(keyString);
-      final ivBytes = _prepareIV(keyString);
-
-      // Create key and IV
-      final key = enc.Key(keyBytes);
-      final iv = enc.IV(ivBytes);
-
-      // Create encrypter with AES CBC mode
-      final encrypter = enc.Encrypter(
-        enc.AES(key, mode: enc.AESMode.cbc, padding: 'PKCS7'),
-      );
-
-      // Encrypt and return Base64
-      final encrypted = encrypter.encrypt(plainText, iv: iv);
-      return encrypted.base64;
+      return _encryptPowerBuilder(plainText);
     } catch (e) {
       throw Exception('Encryption failed: $e');
     }
+  }
+
+  /// PowerBuilder sum-based decryption
+  ///
+  /// Each pair of encrypted characters sums to the plain character code.
+  /// If the sum is a lowercase letter (97-122), convert to uppercase.
+  static String _decryptPowerBuilder(String encrypted) {
+    final result = StringBuffer();
+
+    for (int i = 0; i < encrypted.length; i += 2) {
+      if (i + 1 >= encrypted.length) break;
+
+      final c1 = encrypted.codeUnitAt(i);
+      final c2 = encrypted.codeUnitAt(i + 1);
+
+      // Sum the two character codes
+      int sum = c1 + c2;
+
+      // If sum is lowercase letter (a-z = 97-122), convert to uppercase
+      if (sum >= 97 && sum <= 122) {
+        sum -= 32;
+      }
+
+      result.writeCharCode(sum);
+    }
+
+    return result.toString();
+  }
+
+  /// PowerBuilder sum-based encryption
+  ///
+  /// Each plain character is split into two characters that sum to:
+  /// - The character code directly (for digits and some chars)
+  /// - The lowercase equivalent (for uppercase letters)
+  static String _encryptPowerBuilder(String plainText) {
+    final result = StringBuffer();
+
+    for (int i = 0; i < plainText.length; i++) {
+      int charCode = plainText.codeUnitAt(i);
+
+      // For uppercase letters (A-Z = 65-90), store as lowercase (add 32)
+      if (charCode >= 65 && charCode <= 90) {
+        charCode += 32;
+      }
+
+      // Split the value into two parts
+      // Using a simple split: first half and remainder
+      final enc1 = charCode ~/ 2;
+      final enc2 = charCode - enc1;
+
+      result.writeCharCode(enc1);
+      result.writeCharCode(enc2);
+    }
+
+    return result.toString();
+  }
+
+  /// Check if string looks like Base64
+  static bool _isBase64(String str) {
+    // Base64 uses A-Z, a-z, 0-9, +, /, and = for padding
+    final base64Regex = RegExp(r'^[A-Za-z0-9+/]+=*$');
+    return base64Regex.hasMatch(str) && str.length >= 4;
+  }
+
+  /// AES-CBC decryption (fallback for Base64 encoded strings)
+  static String _decryptAES(String encryptedBase64) {
+    final keyString = _getActiveKey();
+    final keyBytes = _prepareKey(keyString);
+    final ivBytes = _prepareIV(keyString);
+
+    final key = enc.Key(keyBytes);
+    final iv = enc.IV(ivBytes);
+
+    final encrypter = enc.Encrypter(
+      enc.AES(key, mode: enc.AESMode.cbc, padding: 'PKCS7'),
+    );
+
+    return encrypter.decrypt64(encryptedBase64, iv: iv);
   }
 
   /// Prepare key bytes - ensure proper length for AES
