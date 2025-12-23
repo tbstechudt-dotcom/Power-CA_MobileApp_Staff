@@ -73,8 +73,8 @@ const config = {
     'jobshead': 'jobshead',
     'jobtasks': 'jobtasks',
     'taskchecklist': 'taskchecklist',
-    'workdiary': 'workdiary',
-    'learequest': 'learequest',
+    // 'workdiary': 'workdiary',      // EXCLUDED: Mobile-only table, use reverse sync
+    // 'learequest': 'learequest',    // EXCLUDED: Mobile-only table, use reverse sync
   },
 
   // Master Tables - Full Sync (replace all data)
@@ -96,10 +96,10 @@ const config = {
     'jobshead',
     'jobtasks',
     'taskchecklist',
-    'workdiary',
+    // 'workdiary',    // EXCLUDED: Mobile-only table, use reverse sync
     'mbreminder', // Desktop name
     'mbremdetail', // Desktop name
-    'learequest',
+    // 'learequest',   // EXCLUDED: Mobile-only table, use reverse sync
   ],
 
   // Column Mappings for Tables with Differences
