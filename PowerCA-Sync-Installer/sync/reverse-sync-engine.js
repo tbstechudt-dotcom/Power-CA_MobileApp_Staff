@@ -389,7 +389,7 @@ class ReverseSyncEngine {
       'workdiary': 'wd_id',
       'mbreminder': 'rem_id',
       'mbremdetail': 'remd_id',
-      'learequest': 'lea_id',
+      'learequest': 'learequest_id',  // Desktop uses learequest_id, not lea_id
     };
 
     return primaryKeys[tableName];
