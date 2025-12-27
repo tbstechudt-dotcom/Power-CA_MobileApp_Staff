@@ -326,10 +326,11 @@ class ReverseSyncEngine {
     }
 
     // Remove mobile-specific columns that don't exist in desktop schema
+    // NOTE: Keep 'source' column - desktop should track record origin (M=mobile, D=desktop)
     const desktopRecord = { ...record };
     delete desktopRecord.created_at;
     delete desktopRecord.updated_at;
-    delete desktopRecord.source;
+    // Don't delete source - let column filtering handle it based on desktop schema
 
     // CRITICAL FIX: Only include columns that exist in desktop table
     // Filter out columns that exist in Supabase but not in desktop
@@ -339,6 +340,9 @@ class ReverseSyncEngine {
         filteredRecord[key] = value;
       }
     }
+
+    // Transform data types to match desktop schema
+    this.transformRecordForDesktop(tableName, filteredRecord);
 
     const pkColumn = this.getPrimaryKeyColumn(tableName);
 
@@ -368,6 +372,48 @@ class ReverseSyncEngine {
   }
 
   /**
+   * Transform record data types to match desktop schema
+   * Handles type mismatches between Supabase and Desktop PostgreSQL
+   */
+  transformRecordForDesktop(tableName, record) {
+    // Workdiary-specific transformations
+    if (tableName === 'workdiary') {
+      // Convert TIME to TIMESTAMP by combining with date
+      // Supabase: timefrom/timeto are TIME (e.g., "09:50:00")
+      // Desktop: timefrom/timeto are TIMESTAMP (e.g., "2025-12-27 09:50:00")
+      if (record.date) {
+        const dateStr = record.date instanceof Date
+          ? record.date.toISOString().split('T')[0]
+          : String(record.date).split('T')[0];
+
+        if (record.timefrom && typeof record.timefrom === 'string') {
+          // Combine date + time into full timestamp
+          record.timefrom = `${dateStr} ${record.timefrom}`;
+        }
+        if (record.timeto && typeof record.timeto === 'string') {
+          // Combine date + time into full timestamp
+          record.timeto = `${dateStr} ${record.timeto}`;
+        }
+      }
+
+      // Truncate tasknotes to 50 chars (desktop varchar(50))
+      if (record.tasknotes && record.tasknotes.length > 50) {
+        record.tasknotes = record.tasknotes.substring(0, 50);
+      }
+
+      // Truncate doc_ref to 15 chars (desktop varchar(15))
+      if (record.doc_ref && record.doc_ref.length > 15) {
+        record.doc_ref = record.doc_ref.substring(0, 15);
+      }
+    }
+
+    // Learequest-specific transformations (if needed)
+    if (tableName === 'learequest') {
+      // Add any learequest-specific transformations here
+    }
+  }
+
+  /**
    * Get primary key column for a table
    */
   getPrimaryKeyColumn(tableName) {
@@ -389,7 +435,7 @@ class ReverseSyncEngine {
       'workdiary': 'wd_id',
       'mbreminder': 'rem_id',
       'mbremdetail': 'remd_id',
-      'learequest': 'lea_id',
+      'learequest': 'learequest_id',  // Desktop uses learequest_id, not lea_id
     };
 
     return primaryKeys[tableName];
