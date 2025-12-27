@@ -254,6 +254,8 @@ class StagingSyncEngine {
    * Get primary key column for table
    */
   getPrimaryKey(tableName) {
+    // NOTE: Some tables use composite primary keys
+    // For composite keys, return comma-separated column names
     const primaryKeys = {
       'orgmaster': 'org_id',
       'locmaster': 'loc_id',
@@ -263,7 +265,7 @@ class StagingSyncEngine {
       'taskmaster': 'task_id',
       'jobmaster': 'job_id',
       'cliunimaster': 'cliu_id',
-      'jobshead': 'job_id',
+      'jobshead': 'job_id, sporg_id',  // Composite key: same job can be assigned to multiple staff/orgs
       'jobtasks': 'jt_id',
       'taskchecklist': 'tc_id',
       'workdiary': 'wd_id',
@@ -288,10 +290,11 @@ class StagingSyncEngine {
    * 2. Have duplicate PK values in desktop (UPSERT would fail)
    */
   hasMobileOnlyPK(tableName) {
-    // CRITICAL FIX: jobshead has DESKTOP PK (job_id), NOT mobile PK!
-    // jobshead should use UPSERT pattern to avoid massive duplicates
-    // Only tables with mobile-generated PKs should use DELETE+INSERT:
-    const deleteInsertTables = ['jobtasks', 'taskchecklist', 'workdiary'];
+    // Tables that must use DELETE+INSERT pattern (no unique PK in Supabase):
+    // - jobshead: No primary key in Supabase (same job_id assigned to multiple staff/orgs)
+    // - jobtasks, taskchecklist, workdiary: Mobile-generated PKs only
+    // - remdetail: remd_id column doesn't exist in Supabase
+    const deleteInsertTables = ['jobshead', 'jobtasks', 'taskchecklist', 'workdiary', 'remdetail'];
     return deleteInsertTables.includes(tableName);
   }
 
