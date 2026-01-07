@@ -58,84 +58,102 @@ class _SignInPageContentState extends State<_SignInPageContent> {
         );
   }
 
+  /// Check if logged-in staff matches the locally verified staff
+  /// This is the simplified staff ID-based verification
+  Future<void> _checkPhoneVerification(
+    BuildContext context,
+    Authenticated state,
+    DeviceSecurityRepository securityRepository,
+  ) async {
+    // Check if device has verified staff locally
+    final isVerified = await securityRepository.isDeviceVerifiedLocally();
+
+    // Debug: Log verification status
+    debugPrint('=== Staff Verification Check ===');
+    debugPrint('Device verified locally: $isVerified');
+    debugPrint('Logged in staff ID: ${state.staff.staffId}');
+    debugPrint('Logged in staff name: ${state.staff.name}');
+
+    if (!context.mounted) return;
+
+    if (!isVerified) {
+      // No staff verified on this device - redirect to security gate
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please verify your phone number first.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      Navigator.pushReplacementNamed(context, '/security-gate');
+      return;
+    }
+
+    // Get the verified staff ID and name from local storage
+    final verifiedStaffId = await securityRepository.getVerifiedStaffId();
+    final verifiedStaffName = await securityRepository.getVerifiedStaffName();
+
+    // Debug: Log verified staff info
+    debugPrint('Verified staff ID from storage: $verifiedStaffId');
+    debugPrint('Verified staff name from storage: $verifiedStaffName');
+
+    if (!context.mounted) return;
+
+    if (verifiedStaffId == null) {
+      // No verified staff stored - redirect to security gate
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please verify your phone number first.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      Navigator.pushReplacementNamed(context, '/security-gate');
+      return;
+    }
+
+    // Debug: Log comparison
+    debugPrint('Staff IDs match: ${state.staff.staffId == verifiedStaffId}');
+
+    // Compare staff IDs
+    if (state.staff.staffId == verifiedStaffId) {
+      // Staff ID matches - allow login
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Welcome, ${state.staff.name}!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+      Navigator.pushReplacementNamed(
+        context,
+        '/select-concern-location',
+        arguments: state.staff,
+      );
+    } else {
+      // Staff ID doesn't match - this device is verified for another staff
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'This device belongs to ${verifiedStaffName ?? 'another staff member'}. '
+            'Please login with that account\'s credentials, or contact admin to reassign this device.',
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      // Don't navigate - stay on login page
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) async {
         if (state is Authenticated) {
-          // Show welcome message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Welcome, ${state.staff.name}!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 1),
-            ),
-          );
-
-          // Check device security status
+          // Simplified phone-based verification (no fingerprint)
           final securityRepository = getIt<DeviceSecurityRepository>();
-          securityRepository.setStaffId(state.staff.staffId);
-
-          // Get device info and check if device is verified
-          final deviceInfoResult = await securityRepository.getDeviceInfo();
-
-          if (!context.mounted) return;
-
-          deviceInfoResult.fold(
-            (failure) {
-              // Error getting device info - proceed to normal flow
-              Navigator.pushReplacementNamed(
-                context,
-                '/select-concern-location',
-                arguments: state.staff,
-              );
-            },
-            (deviceInfo) async {
-              // Check device status with server
-              final statusResult = await securityRepository.checkDeviceStatus(
-                state.staff.staffId,
-                deviceInfo.fingerprint,
-              );
-
-              if (!context.mounted) return;
-
-              statusResult.fold(
-                (failure) {
-                  // Error checking status - proceed to normal flow
-                  Navigator.pushReplacementNamed(
-                    context,
-                    '/select-concern-location',
-                    arguments: state.staff,
-                  );
-                },
-                (status) {
-                  if (status.isVerified) {
-                    // Device already verified - proceed to normal flow
-                    Navigator.pushReplacementNamed(
-                      context,
-                      '/select-concern-location',
-                      arguments: state.staff,
-                    );
-                  } else {
-                    // Device not verified - navigate to phone verification page
-                    // User will enter phone number which will be validated:
-                    // 1. Phone must exist in staff table (server validation)
-                    // 2. Phone must match device's SIM (local validation)
-                    if (!context.mounted) return;
-
-                    Navigator.pushReplacementNamed(
-                      context,
-                      '/phone-verification',
-                      arguments: {
-                        'deviceInfo': deviceInfo,
-                        'staffId': state.staff.staffId,
-                      },
-                    );
-                  }
-                },
-              );
-            },
-          );
+          await _checkPhoneVerification(context, state, securityRepository);
         } else if (state is AuthError) {
           // Show error message
           ScaffoldMessenger.of(context).showSnackBar(

@@ -37,6 +37,8 @@ class OtpVerificationResponseModel extends OtpVerificationResponse {
     super.error,
     super.message,
     super.remainingAttempts,
+    super.staffId,
+    super.staffName,
   });
 
   factory OtpVerificationResponseModel.fromJson(Map<String, dynamic> json) {
@@ -45,6 +47,8 @@ class OtpVerificationResponseModel extends OtpVerificationResponse {
       error: json['error'],
       message: json['message'],
       remainingAttempts: json['remaining_attempts'],
+      staffId: json['staff_id'],
+      staffName: json['staff_name'],
     );
   }
 
@@ -53,5 +57,7 @@ class OtpVerificationResponseModel extends OtpVerificationResponse {
         error: error,
         message: message,
         remainingAttempts: remainingAttempts,
+        staffId: staffId,
+        staffName: staffName,
       );
 }

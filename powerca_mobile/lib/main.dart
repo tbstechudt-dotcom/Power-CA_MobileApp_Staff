@@ -14,7 +14,7 @@ import 'features/auth/presentation/pages/select_concern_location_page.dart';
 import 'features/auth/presentation/pages/sign_in_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/device_security/presentation/bloc/device_security_bloc.dart';
-import 'features/device_security/data/models/device_info_model.dart';
+import 'features/device_security/domain/entities/device_info.dart';
 import 'features/device_security/presentation/pages/otp_verification_page.dart';
 import 'features/device_security/presentation/pages/phone_verification_page.dart';
 import 'features/device_security/presentation/pages/security_gate_page.dart';
@@ -252,7 +252,7 @@ class PowerCAApp extends StatelessWidget {
                 final args = settings.arguments as Map<String, dynamic>;
                 return MaterialPageRoute(
                   builder: (_) => PhoneVerificationPage(
-                    deviceInfo: args['deviceInfo'] as DeviceInfoModel,
+                    deviceInfo: args['deviceInfo'] as DeviceInfo,
                     staffId: args['staffId'] as int?,
                   ),
                 );

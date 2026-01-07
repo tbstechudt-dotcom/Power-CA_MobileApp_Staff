@@ -15,6 +15,7 @@ interface SendOtpRequest {
   device_name: string
   device_model: string
   platform: string
+  staff_id?: number  // Optional: If provided, validates phone belongs to this staff
 }
 
 // Generate 6-digit OTP
@@ -45,7 +46,7 @@ serve(async (req) => {
     const SMS_TEMPLATE_ID = Deno.env.get('BULKSMS_TEMPLATE_ID') || '1407161157481665461'
 
     // Parse request body
-    const { phone, device_fingerprint, device_name, device_model, platform }: SendOtpRequest = await req.json()
+    const { phone, device_fingerprint, device_name, device_model, platform, staff_id }: SendOtpRequest = await req.json()
 
     if (!phone || !device_fingerprint) {
       return new Response(
@@ -67,7 +68,7 @@ serve(async (req) => {
     // Check if phone number exists in mbstaff
     const { data: staffData, error: staffError } = await supabase
       .from('mbstaff')
-      .select('staff_id, phonumber')
+      .select('staff_id, phonumber, name')
       .eq('phonumber', phone)
       .single()
 
@@ -76,10 +77,26 @@ serve(async (req) => {
         JSON.stringify({
           success: false,
           error: 'PHONE_NOT_FOUND',
-          message: 'Phone number not registered in the system.'
+          message: 'Phone number not registered in the Power CA app.'
         }),
         {
           status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // IMPORTANT: Validate phone belongs to logged-in staff
+    // If staff_id is provided, the phone MUST belong to that staff
+    if (staff_id && staffData.staff_id !== staff_id) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'PHONE_MISMATCH',
+          message: 'This phone number is not registered to your account. Please enter your registered phone number.'
+        }),
+        {
+          status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )

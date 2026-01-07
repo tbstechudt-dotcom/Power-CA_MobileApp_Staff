@@ -104,8 +104,9 @@ class DeviceSecurityRepositoryImpl implements DeviceSecurityRepository {
   @override
   Future<Either<Failure, OtpResponse>> sendOtpWithPhone(
     String phone,
-    DeviceInfo deviceInfo,
-  ) async {
+    DeviceInfo deviceInfo, {
+    int? staffId,
+  }) async {
     try {
       final deviceInfoModel = DeviceInfoModel(
         fingerprint: deviceInfo.fingerprint,
@@ -114,7 +115,11 @@ class DeviceSecurityRepositoryImpl implements DeviceSecurityRepository {
         platform: deviceInfo.platform,
       );
 
-      final response = await remoteDataSource.sendOtpWithPhone(phone, deviceInfoModel);
+      final response = await remoteDataSource.sendOtpWithPhone(
+        phone,
+        deviceInfoModel,
+        staffId: staffId,
+      );
 
       if (!response.success) {
         return Left(ServerFailure(response.message ?? 'Failed to send OTP'));
@@ -191,5 +196,46 @@ class DeviceSecurityRepositoryImpl implements DeviceSecurityRepository {
   @override
   Future<String?> getStoredFingerprint() async {
     return localDataSource.getDeviceFingerprint();
+  }
+
+  @override
+  Future<Either<Failure, DeviceOwnerInfo>> checkDeviceOwner(
+    String fingerprint,
+  ) async {
+    try {
+      final response = await remoteDataSource.checkDeviceOwner(fingerprint);
+      return Right(DeviceOwnerInfo.fromJson(response));
+    } catch (e) {
+      return Left(ServerFailure('Failed to check device owner: $e'));
+    }
+  }
+
+  // ============ Phone-based verification (no fingerprint) ============
+
+  @override
+  Future<bool> isDeviceVerifiedLocally() async {
+    return localDataSource.isDeviceVerified();
+  }
+
+  @override
+  Future<String?> getVerifiedPhone() async {
+    return localDataSource.getVerifiedPhone();
+  }
+
+  @override
+  Future<int?> getVerifiedStaffId() async {
+    return localDataSource.getVerifiedStaffId();
+  }
+
+  @override
+  Future<String?> getVerifiedStaffName() async {
+    return localDataSource.getVerifiedStaffName();
+  }
+
+  @override
+  Future<void> storeVerificationData(String phone, int staffId, String staffName) async {
+    await localDataSource.storeVerifiedPhone(phone);
+    await localDataSource.storeVerifiedStaffId(staffId);
+    await localDataSource.storeVerifiedStaffName(staffName);
   }
 }
