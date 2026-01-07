@@ -16,11 +16,15 @@ abstract class DeviceSecurityRemoteDataSource {
   /// Check device status by fingerprint only (no staff_id)
   Future<DeviceStatusModel> checkDeviceStatusByFingerprint(String fingerprint);
 
+  /// Check if device is already owned/verified by another staff
+  Future<Map<String, dynamic>> checkDeviceOwner(String fingerprint);
+
   /// Send OTP via RPC
   Future<OtpResponseModel> sendOtp(int staffId, DeviceInfoModel deviceInfo);
 
   /// Send OTP via phone number (for first-time verification)
-  Future<OtpResponseModel> sendOtpWithPhone(String phone, DeviceInfoModel deviceInfo);
+  /// [staffId] - Optional staff ID for validation (ensures phone belongs to logged-in staff)
+  Future<OtpResponseModel> sendOtpWithPhone(String phone, DeviceInfoModel deviceInfo, {int? staffId});
 
   /// Verify OTP via RPC
   Future<OtpVerificationResponseModel> verifyOtp(
@@ -89,6 +93,26 @@ class DeviceSecurityRemoteDataSourceImpl
   }
 
   @override
+  Future<Map<String, dynamic>> checkDeviceOwner(String fingerprint) async {
+    final response = await supabaseClient.rpc(
+      'check_device_owner',
+      params: {
+        'p_device_fingerprint': fingerprint,
+      },
+    );
+
+    if (response == null) {
+      return {
+        'has_owner': false,
+        'owner_staff_id': null,
+        'owner_name': null,
+      };
+    }
+
+    return response as Map<String, dynamic>;
+  }
+
+  @override
   Future<OtpResponseModel> sendOtp(
     int staffId,
     DeviceInfoModel deviceInfo,
@@ -118,10 +142,26 @@ class DeviceSecurityRemoteDataSourceImpl
   @override
   Future<OtpResponseModel> sendOtpWithPhone(
     String phone,
-    DeviceInfoModel deviceInfo,
-  ) async {
+    DeviceInfoModel deviceInfo, {
+    int? staffId,
+  }) async {
     // Call Edge Function for real SMS OTP via Twilio
     final url = Uri.parse('${SupabaseConfig.url}/functions/v1/send-otp-sms');
+
+    // Build request body - include staff_id if provided for validation
+    final Map<String, dynamic> requestBody = {
+      'phone': phone,
+      'device_fingerprint': deviceInfo.fingerprint,
+      'device_name': deviceInfo.deviceName,
+      'device_model': deviceInfo.deviceModel,
+      'platform': deviceInfo.platform,
+    };
+
+    // Add staff_id for server-side validation if provided
+    // This ensures the phone number belongs to the logged-in staff
+    if (staffId != null) {
+      requestBody['staff_id'] = staffId;
+    }
 
     final response = await http.post(
       url,
@@ -130,13 +170,7 @@ class DeviceSecurityRemoteDataSourceImpl
         'Authorization': 'Bearer ${SupabaseConfig.anonKey}',
         'apikey': SupabaseConfig.anonKey,
       },
-      body: json.encode({
-        'phone': phone,
-        'device_fingerprint': deviceInfo.fingerprint,
-        'device_name': deviceInfo.deviceName,
-        'device_model': deviceInfo.deviceModel,
-        'platform': deviceInfo.platform,
-      }),
+      body: json.encode(requestBody),
     );
 
     if (response.statusCode != 200) {

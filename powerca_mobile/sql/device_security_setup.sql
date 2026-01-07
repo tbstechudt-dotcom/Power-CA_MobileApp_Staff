@@ -323,8 +323,64 @@ CREATE POLICY "Service role has full access to device_otp_requests"
 -- GRANT PERMISSIONS
 -- ============================================
 
+-- 8. check_device_owner - Check if device is already registered to another staff
+-- Returns the staff_id that owns this device (if verified)
+-- Shows masked phone number (last 4 digits only) for privacy
+CREATE OR REPLACE FUNCTION check_device_owner(
+    p_device_fingerprint VARCHAR
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_device RECORD;
+    v_staff RECORD;
+    v_masked_phone VARCHAR;
+BEGIN
+    -- Find if device is already verified by any staff
+    SELECT * INTO v_device
+    FROM staff_devices
+    WHERE device_fingerprint = p_device_fingerprint
+      AND is_verified = true
+    ORDER BY verified_at DESC
+    LIMIT 1;
+
+    IF v_device IS NULL THEN
+        -- Device not registered/verified by anyone
+        RETURN json_build_object(
+            'has_owner', false,
+            'owner_staff_id', null,
+            'owner_name', null,
+            'owner_phone_masked', null
+        );
+    END IF;
+
+    -- Get staff info including phone number
+    SELECT staff_id, name, phonumber INTO v_staff
+    FROM mbstaff
+    WHERE staff_id = v_device.staff_id;
+
+    -- Mask phone number - show only last 4 digits (e.g., ******1234)
+    IF v_staff.phonumber IS NOT NULL AND LENGTH(v_staff.phonumber) >= 4 THEN
+        v_masked_phone := CONCAT('******', RIGHT(v_staff.phonumber, 4));
+    ELSE
+        v_masked_phone := NULL;
+    END IF;
+
+    RETURN json_build_object(
+        'has_owner', true,
+        'owner_staff_id', v_device.staff_id,
+        'owner_name', COALESCE(v_staff.name, 'Unknown'),
+        'owner_phone_masked', v_masked_phone,
+        'verified_at', v_device.verified_at
+    );
+END;
+$$;
+
 -- Grant execute permissions on functions
 GRANT EXECUTE ON FUNCTION check_device_status(NUMERIC, VARCHAR) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION send_device_verification_otp(NUMERIC, VARCHAR, VARCHAR, VARCHAR, VARCHAR) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION verify_device_otp(NUMERIC, VARCHAR, VARCHAR) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION check_device_owner(VARCHAR) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION cleanup_expired_otp_requests() TO service_role;

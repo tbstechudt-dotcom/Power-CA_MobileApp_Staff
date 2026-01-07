@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
 import '../../../../core/services/priority_service.dart';
+import '../../../device_security/data/models/device_info_model.dart';
+import '../../../device_security/domain/repositories/device_security_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 
 /// Splash/Welcome Screen Page

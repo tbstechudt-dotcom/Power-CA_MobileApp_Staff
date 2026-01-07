@@ -74,11 +74,19 @@ class OtpVerifying extends DeviceSecurityState {
 /// OTP verified successfully - device is now verified
 class OtpVerified extends DeviceSecurityState {
   final DeviceInfo deviceInfo;
+  final String? phoneNumber; // Phone number used for verification
+  final int? staffId; // Staff ID returned from backend
+  final String? staffName; // Staff name returned from backend
 
-  const OtpVerified({required this.deviceInfo});
+  const OtpVerified({
+    required this.deviceInfo,
+    this.phoneNumber,
+    this.staffId,
+    this.staffName,
+  });
 
   @override
-  List<Object?> get props => [deviceInfo];
+  List<Object?> get props => [deviceInfo, phoneNumber, staffId, staffName];
 }
 
 /// Error state

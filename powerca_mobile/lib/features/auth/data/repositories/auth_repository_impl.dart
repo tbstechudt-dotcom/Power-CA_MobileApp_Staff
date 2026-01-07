@@ -39,16 +39,20 @@ class AuthRepositoryImpl implements AuthRepository {
       // Map exceptions to specific failures
       final message = e.toString().toLowerCase();
 
-      if (message.contains('user not found')) {
+      if (message.contains('user not found') || message.contains('username not found')) {
         return const Left(UserNotFoundFailure());
-      } else if (message.contains('invalid password')) {
+      } else if (message.contains('invalid password') ||
+                 message.contains('invalid username or password') ||
+                 message.contains('incorrect password') ||
+                 message.contains('wrong password')) {
         return const Left(InvalidCredentialsFailure());
-      } else if (message.contains('inactive')) {
+      } else if (message.contains('inactive') || message.contains('deactivated')) {
         return const Left(InactiveUserFailure());
-      } else if (message.contains('network')) {
-        return Left(NetworkFailure(e.toString()));
+      } else if (message.contains('network') || message.contains('connection')) {
+        return const Left(NetworkFailure('Unable to connect. Please check your internet connection.'));
       } else {
-        return Left(AuthenticationFailure(e.toString()));
+        // Generic auth error - provide user-friendly message
+        return const Left(AuthenticationFailure('Login failed. Please check your credentials and try again.'));
       }
     }
   }
