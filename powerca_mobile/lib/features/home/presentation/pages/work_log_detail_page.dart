@@ -231,45 +231,86 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         : (_taskName.isNotEmpty ? _taskName : 'No task assigned');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Work Log Details',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF2563EB),
-              ),
-            ),
-            Text(
-              DateFormat('EEEE, MMMM d, yyyy').format(widget.selectedDate),
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF6B7280),
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: Stack(
+      backgroundColor: const Color(0xFFF8F9FC),
+      body: Column(
         children: [
-          SingleChildScrollView(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          // White status bar area with custom header
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
+                color: Colors.white,
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 42.w,
+                        height: 42.h,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8EDF3),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFD1D9E6),
+                            width: 1,
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.arrow_back_ios_new,
+                            size: 18.sp,
+                            color: AppTheme.textSecondaryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Work Log Details',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            DateFormat('EEEE, MMMM d, yyyy').format(widget.selectedDate),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w400,
+                              color: AppTheme.textMutedColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    left: 16.w,
+                    right: 16.w,
+                    top: 16.w,
+                    bottom: 16.w + MediaQuery.of(context).padding.bottom,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
             // Entry Header Card
             Container(
               width: double.infinity,
@@ -635,17 +676,20 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                 ),
               ],
             ),
-          ],
-        ),
-          ),
-          // Loading indicator while uploading
-          if (_isUploading)
-            Container(
-              color: Colors.black.withValues(alpha: 0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+                    ],
+                  ),
+                ),
+                // Loading indicator while uploading
+                if (_isUploading)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+              ],
             ),
+          ),
         ],
       ),
     );

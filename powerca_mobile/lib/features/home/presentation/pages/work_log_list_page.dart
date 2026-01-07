@@ -88,81 +88,94 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
-      body: SafeArea(
-        child: Column(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.pop(context, true);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FC),
+        body: Column(
           children: [
-            _buildHeader(),
+            // White status bar area
+            Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: _buildHeader(),
+              ),
+            ),
             Expanded(
-              child: _entries.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        await _loadClientAndJobNames();
-                      },
-                      color: AppTheme.primaryColor,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(16.w),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Summary Cards Row
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSummaryCard(
-                                    title: 'Total Time',
-                                    value: _formatMinutesToHours(_calculateTotalMinutes()),
-                                    icon: Icons.schedule_rounded,
-                                    color: AppTheme.primaryColor,
+                child: _entries.isEmpty
+                    ? _buildEmptyState()
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          await _loadClientAndJobNames();
+                        },
+                        color: AppTheme.primaryColor,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.all(16.w),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Summary Cards Row
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildSummaryCard(
+                                      title: 'Total Time',
+                                      value: _formatMinutesToHours(_calculateTotalMinutes()),
+                                      icon: Icons.schedule_rounded,
+                                      color: AppTheme.primaryColor,
+                                    ),
                                   ),
-                                ),
-                                SizedBox(width: 12.w),
-                                Expanded(
-                                  child: _buildSummaryCard(
-                                    title: 'Entries',
-                                    value: '${_entries.length}',
-                                    icon: Icons.assignment_rounded,
-                                    color: const Color(0xFF10B981),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: _buildSummaryCard(
+                                      title: 'Entries',
+                                      value: '${_entries.length}',
+                                      icon: Icons.assignment_rounded,
+                                      color: const Color(0xFF10B981),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 24.h),
-
-                            // Section Title
-                            Text(
-                              'Work Entries',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF334155),
+                                ],
                               ),
-                            ),
-                            SizedBox(height: 12.h),
+                              const SizedBox(height: 16),
 
-                            // Entries List
-                            ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _entries.length,
-                              itemBuilder: (context, index) {
-                                return _buildEntryCard(_entries[index], index + 1);
-                              },
-                            ),
-                            SizedBox(height: 80.h), // Space for FAB
-                          ],
+                              // Section Title
+                              Text(
+                                'Work Entries',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textSecondaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Entries List
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                padding: EdgeInsets.zero,
+                                itemCount: _entries.length,
+                                itemBuilder: (context, index) {
+                                  return _buildEntryCard(_entries[index], index + 1);
+                                },
+                              ),
+                              SizedBox(height: 80.h), // Space for FAB
+                            ],
+                          ),
                         ),
                       ),
-                    ),
             ),
           ],
         ),
+        floatingActionButton: _buildFAB(),
       ),
-      floatingActionButton: _buildFAB(),
     );
   }
 
@@ -173,17 +186,24 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => Navigator.pop(context, true),
             child: Container(
-              padding: EdgeInsets.all(8.w),
+              width: 42.w,
+              height: 42.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10.r),
+                color: const Color(0xFFE8EDF3),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFD1D9E6),
+                  width: 1,
+                ),
               ),
-              child: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 18.sp,
-                color: const Color(0xFF334155),
+              child: Center(
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 18.sp,
+                  color: AppTheme.textSecondaryColor,
+                ),
               ),
             ),
           ),
@@ -208,7 +228,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                     fontFamily: 'Inter',
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w400,
-                    color: const Color(0xFF64748B),
+                    color: AppTheme.textMutedColor,
                   ),
                 ),
               ],
@@ -280,7 +300,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
               fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
+              color: AppTheme.textMutedColor,
             ),
           ),
         ],
@@ -324,7 +344,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                 fontFamily: 'Inter',
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFF64748B),
+                color: AppTheme.textMutedColor,
               ),
             ),
             SizedBox(height: 24.h),
@@ -460,7 +480,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                                       Icon(
                                         Icons.business_rounded,
                                         size: 12.sp,
-                                        color: const Color(0xFF94A3B8),
+                                        color: AppTheme.textDisabledColor,
                                       ),
                                       SizedBox(width: 4.w),
                                       Flexible(
@@ -472,7 +492,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                                             fontFamily: 'Inter',
                                             fontSize: 12.sp,
                                             fontWeight: FontWeight.w400,
-                                            color: const Color(0xFF64748B),
+                                            color: AppTheme.textMutedColor,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -552,7 +572,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                                     Icon(
                                       Icons.notes_rounded,
                                       size: 14.sp,
-                                      color: const Color(0xFF94A3B8),
+                                      color: AppTheme.textDisabledColor,
                                     ),
                                     SizedBox(width: 6.w),
                                     Expanded(
@@ -562,7 +582,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                                           fontFamily: 'Inter',
                                           fontSize: 12.sp,
                                           fontWeight: FontWeight.w400,
-                                          color: const Color(0xFF64748B),
+                                          color: AppTheme.textMutedColor,
                                           height: 1.3,
                                         ),
                                         maxLines: 2,

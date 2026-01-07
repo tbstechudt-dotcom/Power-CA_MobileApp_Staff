@@ -128,10 +128,12 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       final orgId = staffResponse['org_id'];
 
       // Get recent jobs (last 5) for the staff's organization
+      // Exclude Closer jobs (status code 'C') - they should not appear in the app
       final recentJobs = await supabaseClient
           .from('jobshead')
           .select('job_id, work_desc, job_status, updated_at')
           .eq('org_id', orgId)
+          .neq('job_status', 'C')
           .order('updated_at', ascending: false)
           .limit(5);
 

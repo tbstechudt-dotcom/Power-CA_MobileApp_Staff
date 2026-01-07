@@ -261,15 +261,22 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
-              padding: EdgeInsets.all(8.w),
+              width: 42.w,
+              height: 42.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10.r),
+                color: const Color(0xFFE8EDF3),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFD1D9E6),
+                  width: 1,
+                ),
               ),
-              child: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 18.sp,
-                color: const Color(0xFF334155),
+              child: Center(
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 18.sp,
+                  color: const Color(0xFF6B7280),
+                ),
               ),
             ),
           ),

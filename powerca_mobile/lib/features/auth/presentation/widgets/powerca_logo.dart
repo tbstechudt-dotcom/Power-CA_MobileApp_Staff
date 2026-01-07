@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 /// PowerCA Logo Widget
 ///
-/// Displays the official PowerCA logo from Figma design.
-/// The logo features the "CA" branding with white and green accent colors.
+/// Displays the official PowerCA logo.
+/// The logo features the "CA" branding with white background.
 class PowerCALogo extends StatelessWidget {
   final double width;
   final double height;
@@ -20,13 +18,10 @@ class PowerCALogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SvgPicture.asset(
-      'assets/images/splash/powerca_logo.svg',
+    return Image.asset(
+      'assets/images/Logo/Power CA Logo Only-04.png',
       width: width,
       height: height,
-      colorFilter: color != null
-          ? ColorFilter.mode(color!, BlendMode.srcIn)
-          : null,
       fit: BoxFit.contain,
     );
   }
