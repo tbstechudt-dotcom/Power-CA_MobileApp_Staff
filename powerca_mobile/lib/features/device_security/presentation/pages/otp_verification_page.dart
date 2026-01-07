@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/config/injection.dart';
+import '../../domain/repositories/device_security_repository.dart';
 import '../bloc/device_security_bloc.dart';
 import '../bloc/device_security_event.dart';
 import '../bloc/device_security_state.dart';
@@ -100,6 +102,35 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     }
   }
 
+  Future<void> _handleOtpVerified(OtpVerified state) async {
+    if (!mounted) return;
+
+    // Store phone, staffId, and staffName for future login verification
+    if (state.phoneNumber != null && state.staffId != null) {
+      final securityRepository = getIt<DeviceSecurityRepository>();
+      await securityRepository.storeVerificationData(
+        state.phoneNumber!,
+        state.staffId!,
+        state.staffName ?? 'Unknown',
+      );
+    }
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Phone verified successfully! Please login.'),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    // Navigate to splash/login page
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/splash',
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,22 +160,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
               ),
             );
           } else if (state is OtpVerified) {
-            // OTP verified - navigate to login page
-            // Device is now verified, user needs to login
-            if (!mounted) return;
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Device verified successfully! Please login.'),
-                backgroundColor: Colors.green,
-              ),
-            );
-
-            // Navigate to splash/login page
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              '/splash',
-              (route) => false,
-            );
+            // OTP verified - store verification data locally and navigate
+            _handleOtpVerified(state);
           }
         },
         child: SafeArea(

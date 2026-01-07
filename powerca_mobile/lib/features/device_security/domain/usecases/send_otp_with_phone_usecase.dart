@@ -17,10 +17,12 @@ class SendOtpWithPhoneUseCase {
   /// Send OTP to the provided phone number
   /// [phone] - The phone number to send OTP to
   /// [deviceInfo] - The device information for registration
+  /// [staffId] - Optional staff ID for validation (ensures phone belongs to logged-in staff)
   Future<Either<Failure, OtpResponse>> call({
     required String phone,
     required DeviceInfo deviceInfo,
+    int? staffId,
   }) {
-    return _repository.sendOtpWithPhone(phone, deviceInfo);
+    return _repository.sendOtpWithPhone(phone, deviceInfo, staffId: staffId);
   }
 }

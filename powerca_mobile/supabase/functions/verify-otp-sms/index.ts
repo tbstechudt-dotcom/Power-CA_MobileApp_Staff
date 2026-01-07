@@ -45,10 +45,10 @@ serve(async (req) => {
     // Create Supabase client
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
-    // Find staff by phone number
+    // Find staff by phone number (including name for response)
     const { data: staffData, error: staffError } = await supabase
       .from('mbstaff')
-      .select('staff_id')
+      .select('staff_id, name')
       .eq('phonumber', phone)
       .single()
 
@@ -67,6 +67,7 @@ serve(async (req) => {
     }
 
     const staffId = staffData.staff_id
+    const staffName = staffData.name
 
     // Find the most recent unexpired, unverified OTP
     const { data: otpRecord, error: otpError } = await supabase
@@ -156,7 +157,8 @@ serve(async (req) => {
         success: true,
         message: 'Device verified successfully',
         device_id: deviceData?.id,
-        staff_id: staffId
+        staff_id: staffId,
+        staff_name: staffName
       }),
       {
         status: 200,

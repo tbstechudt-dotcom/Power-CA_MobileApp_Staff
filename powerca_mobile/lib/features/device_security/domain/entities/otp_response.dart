@@ -28,14 +28,18 @@ class OtpVerificationResponse extends Equatable {
   final String? error;
   final String? message;
   final int? remainingAttempts;
+  final int? staffId; // Staff ID returned after verification
+  final String? staffName; // Staff name returned after verification
 
   const OtpVerificationResponse({
     required this.success,
     this.error,
     this.message,
     this.remainingAttempts,
+    this.staffId,
+    this.staffName,
   });
 
   @override
-  List<Object?> get props => [success, error, message, remainingAttempts];
+  List<Object?> get props => [success, error, message, remainingAttempts, staffId, staffName];
 }

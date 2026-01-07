@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
-import '../../data/models/device_info_model.dart';
+import '../../domain/entities/device_info.dart';
 import '../bloc/device_security_bloc.dart';
 import '../bloc/device_security_event.dart';
 import '../bloc/device_security_state.dart';
@@ -14,7 +14,7 @@ import '../bloc/device_security_state.dart';
 /// First step of device verification - user enters phone number
 /// Phone must exist in staff table (validated by server via OTP)
 class PhoneVerificationPage extends StatefulWidget {
-  final DeviceInfoModel deviceInfo;
+  final DeviceInfo deviceInfo;
   final int? staffId;
 
   const PhoneVerificationPage({
@@ -72,12 +72,14 @@ class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
       _isLoading = true;
     });
 
-    // Send OTP via BLoC
+    // Send OTP via BLoC - include staffId for server-side validation
+    // This ensures the phone number belongs to the logged-in staff
     if (mounted) {
       context.read<DeviceSecurityBloc>().add(
         SendOtpWithPhoneRequested(
           phone: phone,
           deviceInfo: widget.deviceInfo,
+          staffId: widget.staffId, // Validate phone belongs to this staff
         ),
       );
     }

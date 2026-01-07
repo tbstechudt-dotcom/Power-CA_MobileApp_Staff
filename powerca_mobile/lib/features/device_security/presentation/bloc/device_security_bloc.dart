@@ -136,9 +136,11 @@ class DeviceSecurityBloc
       platform: event.deviceInfo.platform,
     );
 
+    // Pass staffId for server-side validation (ensures phone belongs to logged-in staff)
     final result = await sendOtpWithPhone(
       phone: event.phone,
       deviceInfo: deviceInfo,
+      staffId: event.staffId,
     );
 
     result.fold(
@@ -245,7 +247,13 @@ class DeviceSecurityBloc
             deviceModel: '',
             platform: '',
           );
-          emit(OtpVerified(deviceInfo: deviceInfo));
+          // Emit with phone, staffId, and staffName for local storage
+          emit(OtpVerified(
+            deviceInfo: deviceInfo,
+            phoneNumber: event.phone,
+            staffId: response.staffId,
+            staffName: response.staffName,
+          ));
         } else {
           emit(DeviceSecurityError(
             message: response.error ?? 'Invalid OTP. Please try again.',
