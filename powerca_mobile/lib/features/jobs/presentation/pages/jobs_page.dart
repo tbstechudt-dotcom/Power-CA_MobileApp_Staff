@@ -29,10 +29,12 @@ class JobsPage extends StatefulWidget {
 
 class _JobsPageState extends State<JobsPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final TextEditingController _searchController = TextEditingController();
 
   // Jobs from database
   List<Map<String, dynamic>> _allJobs = [];
   bool _isLoadingJobs = false;
+  String _searchQuery = '';
 
   // Priority jobs
   Set<int> _priorityJobIds = {};
@@ -70,7 +72,7 @@ class _JobsPageState extends State<JobsPage> {
       'color': const Color(0xFF8B5CF6),
       'gradient': [const Color(0xFFA78BFA), const Color(0xFF8B5CF6)],
     },
-    // Removed 'Closer' status - not displayed on jobs page
+    // Closer status removed - not needed in jobs list
   ];
 
   @override
@@ -85,6 +87,12 @@ class _JobsPageState extends State<JobsPage> {
         statusBarBrightness: Brightness.light,
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeAndLoad() async {
@@ -122,10 +130,12 @@ class _JobsPageState extends State<JobsPage> {
       final supabase = Supabase.instance.client;
 
       // Fetch jobs for current staff (filtered by sporg_id which stores staff_id in jobshead)
+      // Exclude Closer jobs (status code 'C') - they should not appear in the app
       final jobsResponse = await supabase
           .from('jobshead')
           .select('job_id, job_uid, job_status, jobdate, targetdate, work_desc, client_id')
           .eq('sporg_id', widget.currentStaff.staffId)
+          .neq('job_status', 'C')
           .order('job_id', ascending: false);
 
       // Get unique client IDs
@@ -148,26 +158,34 @@ class _JobsPageState extends State<JobsPage> {
         }
       }
 
-      // Map job status codes to display names
+      // Map job status codes to display names (Closer status 'C' excluded - not needed)
       final statusMap = {
         'W': 'Waiting',
         'P': 'Progress',
         'D': 'Delivery',
-        'C': 'Closer',
         'A': 'Planning',
         'G': 'Work Done',
         'L': 'Planning',
       };
 
-      // Transform database records to UI format
-      final jobs = jobsResponse.map<Map<String, dynamic>>((record) {
+      // Transform database records to UI format and deduplicate by job_id
+      // (matching work_log_entry_form_page.dart behavior to ensure consistent counts)
+      final Map<int, Map<String, dynamic>> uniqueJobsMap = {};
+
+      for (var record in jobsResponse) {
+        final jobId = record['job_id'] as int;
+
+        // Skip if we already have this job (deduplicate)
+        if (uniqueJobsMap.containsKey(jobId)) continue;
+
         final statusCode = record['job_status']?.toString().trim() ?? 'W';
         final status = statusMap[statusCode] ?? 'Waiting';
         final clientId = record['client_id'] as int?;
         final clientName = clientId != null ? (clientNames[clientId] ?? 'Unknown Client') : 'Unknown Client';
 
-        return {
-          'job_id': record['job_id'],
+        uniqueJobsMap[jobId] = {
+          'job_id': jobId,
+          'client_id': clientId,
           'jobNo': record['job_uid'] ?? 'N/A',
           'status': status,
           'company': clientName,
@@ -180,7 +198,18 @@ class _JobsPageState extends State<JobsPage> {
               ? DateFormat('dd MMM yyyy').format(DateTime.parse(record['targetdate']))
               : '',
         };
-      }).toList();
+      }
+
+      final jobs = uniqueJobsMap.values.toList();
+      debugPrint('DEBUG JobsPage: Loaded ${jobsResponse.length} records for staff ${widget.currentStaff.staffId}, deduplicated to ${jobs.length} unique jobs');
+
+      // Debug: Count jobs by status
+      final statusCounts = <String, int>{};
+      for (var job in jobs) {
+        final status = job['status'] as String;
+        statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+      }
+      debugPrint('DEBUG JobsPage: Status counts: $statusCounts');
 
       if (!mounted) return;
       setState(() {
@@ -208,8 +237,6 @@ class _JobsPageState extends State<JobsPage> {
         return const Color(0xFF0D9488);
       case 'Delivery':
         return const Color(0xFF8B5CF6);
-      case 'Closer':
-        return const Color(0xFF6B7280);
       default:
         return const Color(0xFF6B7FFF);
     }
@@ -262,20 +289,57 @@ class _JobsPageState extends State<JobsPage> {
     });
   }
 
+  // Search jobs by client name
+  List<Map<String, dynamic>> _searchJobsByClient(String query) {
+    if (query.isEmpty) return [];
+    final lowerQuery = query.toLowerCase();
+    return _allJobs.where((job) {
+      // Exclude Closer jobs from search results
+      if (job['status'] == 'Closer') return false;
+      final company = (job['company'] as String?)?.toLowerCase() ?? '';
+      return company.contains(lowerQuery);
+    }).toList();
+  }
+
+  void _performSearch() {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) return;
+
+    final searchResults = _searchJobsByClient(query);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => JobsFilteredPage(
+          currentStaff: widget.currentStaff,
+          statusFilter: 'Search: "$query"',
+          jobs: searchResults,
+        ),
+      ),
+    ).then((_) {
+      // Reload priority jobs when returning
+      _loadPriorityJobs();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF8F9FC),
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(top: false,
-        child: Column(
-          children: [
-            // Top App Bar with menu handler
-            AppHeader(
-              currentStaff: widget.currentStaff,
-              onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+      body: Column(
+        children: [
+          // White status bar area
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: AppHeader(
+                currentStaff: widget.currentStaff,
+                onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+              ),
             ),
+          ),
 
             // Content
             Expanded(
@@ -297,7 +361,7 @@ class _JobsPageState extends State<JobsPage> {
                                 fontFamily: 'Inter',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF334155),
+                                color: AppTheme.textSecondaryColor,
                               ),
                             ),
                             SizedBox(height: 4.h),
@@ -307,7 +371,7 @@ class _JobsPageState extends State<JobsPage> {
                                 fontFamily: 'Inter',
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w400,
-                                color: const Color(0xFF64748B),
+                                color: AppTheme.textMutedColor,
                               ),
                             ),
                             SizedBox(height: 20.h),
@@ -336,14 +400,102 @@ class _JobsPageState extends State<JobsPage> {
                             ),
                             const SizedBox(height: 16),
 
+                            // Client Search Field
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _searchQuery = value;
+                                  });
+                                },
+                                onSubmitted: (_) => _performSearch(),
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textPrimaryColor,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'Search by client name...',
+                                  hintStyle: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w400,
+                                    color: AppTheme.textDisabledColor,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.search_rounded,
+                                    color: AppTheme.textMutedColor,
+                                    size: 22.sp,
+                                  ),
+                                  suffixIcon: _searchQuery.isNotEmpty
+                                      ? IconButton(
+                                          onPressed: () {
+                                            _searchController.clear();
+                                            setState(() {
+                                              _searchQuery = '';
+                                            });
+                                          },
+                                          icon: Icon(
+                                            Icons.close_rounded,
+                                            color: const Color(0xFF64748B),
+                                            size: 20.sp,
+                                          ),
+                                        )
+                                      : IconButton(
+                                          onPressed: _performSearch,
+                                          icon: Icon(
+                                            Icons.arrow_forward_rounded,
+                                            color: AppTheme.primaryColor,
+                                            size: 22.sp,
+                                          ),
+                                        ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: BorderSide(
+                                      color: AppTheme.primaryColor,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16.w,
+                                    vertical: 14.h,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 20.h),
+
                             // Section Title
                             Text(
-                              'By Status',
+                              'By Jobs Status',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF334155),
+                                color: AppTheme.textSecondaryColor,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -386,7 +538,6 @@ class _JobsPageState extends State<JobsPage> {
             ),
           ],
         ),
-      ),
       bottomNavigationBar: ModernBottomNavigation(
         currentIndex: 1,
         currentStaff: widget.currentStaff,
@@ -404,7 +555,7 @@ class _JobsPageState extends State<JobsPage> {
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.08),
@@ -423,7 +574,7 @@ class _JobsPageState extends State<JobsPage> {
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10.r),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
                   icon,
@@ -480,7 +631,7 @@ class _JobsPageState extends State<JobsPage> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          borderRadius: BorderRadius.circular(14.r),
+          borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
               color: gradient[1].withValues(alpha: 0.25),
@@ -553,7 +704,7 @@ class _JobsPageState extends State<JobsPage> {
                     padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(20.r),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Text(
                       count.toString(),

@@ -103,10 +103,34 @@ class _TaskChecklistDetailPageState extends State<TaskChecklistDetailPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1F2937)),
-          onPressed: () => Navigator.pop(context),
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EDF3),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFD1D9E6),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: const Color(0xFF6B7280),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
+        leadingWidth: 58.w,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -224,7 +248,12 @@ class _TaskChecklistDetailPageState extends State<TaskChecklistDetailPage> {
     return RefreshIndicator(
       onRefresh: _loadChecklistItems,
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.only(
+          left: 16.w,
+          right: 16.w,
+          top: 16.w,
+          bottom: 16.w + MediaQuery.of(context).padding.bottom,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

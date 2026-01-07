@@ -36,6 +36,19 @@ import '../../features/work_diary/domain/usecases/delete_entry_usecase.dart';
 import '../../features/work_diary/domain/usecases/get_total_hours_by_job_usecase.dart';
 import '../../features/work_diary/presentation/bloc/work_diary_bloc.dart';
 
+// Device Security
+import '../../features/device_security/data/datasources/device_security_local_datasource.dart';
+import '../../features/device_security/data/datasources/device_security_remote_datasource.dart';
+import '../../features/device_security/data/repositories/device_security_repository_impl.dart';
+import '../../features/device_security/domain/repositories/device_security_repository.dart';
+import '../../features/device_security/domain/usecases/check_device_status_usecase.dart';
+import '../../features/device_security/domain/usecases/get_device_info_usecase.dart';
+import '../../features/device_security/domain/usecases/send_otp_usecase.dart';
+import '../../features/device_security/domain/usecases/send_otp_with_phone_usecase.dart';
+import '../../features/device_security/domain/usecases/verify_otp_usecase.dart';
+import '../../features/device_security/domain/usecases/verify_otp_with_phone_usecase.dart';
+import '../../features/device_security/presentation/bloc/device_security_bloc.dart';
+
 final getIt = GetIt.instance;
 
 /// Initialize all dependencies
@@ -192,6 +205,68 @@ Future<void> configureDependencies() async {
       updateEntry: getIt<UpdateEntryUseCase>(),
       deleteEntry: getIt<DeleteEntryUseCase>(),
       getTotalHoursByJob: getIt<GetTotalHoursByJobUseCase>(),
+    ),
+  );
+
+  // ========================================
+  // DEVICE SECURITY FEATURE
+  // ========================================
+
+  // Data Sources
+  getIt.registerLazySingleton<DeviceSecurityRemoteDataSource>(
+    () => DeviceSecurityRemoteDataSourceImpl(
+      supabaseClient: getIt<SupabaseClient>(),
+    ),
+  );
+
+  getIt.registerLazySingleton<DeviceSecurityLocalDataSource>(
+    () => DeviceSecurityLocalDataSourceImpl(
+      secureStorage: getIt<FlutterSecureStorage>(),
+    ),
+  );
+
+  // Repository
+  getIt.registerLazySingleton<DeviceSecurityRepository>(
+    () => DeviceSecurityRepositoryImpl(
+      remoteDataSource: getIt<DeviceSecurityRemoteDataSource>(),
+      localDataSource: getIt<DeviceSecurityLocalDataSource>(),
+    ),
+  );
+
+  // Use Cases
+  getIt.registerLazySingleton<CheckDeviceStatusUseCase>(
+    () => CheckDeviceStatusUseCase(getIt<DeviceSecurityRepository>()),
+  );
+
+  getIt.registerLazySingleton<GetDeviceInfoUseCase>(
+    () => GetDeviceInfoUseCase(getIt<DeviceSecurityRepository>()),
+  );
+
+  getIt.registerLazySingleton<SendOtpUseCase>(
+    () => SendOtpUseCase(getIt<DeviceSecurityRepository>()),
+  );
+
+  getIt.registerLazySingleton<SendOtpWithPhoneUseCase>(
+    () => SendOtpWithPhoneUseCase(getIt<DeviceSecurityRepository>()),
+  );
+
+  getIt.registerLazySingleton<VerifyOtpUseCase>(
+    () => VerifyOtpUseCase(getIt<DeviceSecurityRepository>()),
+  );
+
+  getIt.registerLazySingleton<VerifyOtpWithPhoneUseCase>(
+    () => VerifyOtpWithPhoneUseCase(getIt<DeviceSecurityRepository>()),
+  );
+
+  // BLoC
+  getIt.registerFactory<DeviceSecurityBloc>(
+    () => DeviceSecurityBloc(
+      checkDeviceStatus: getIt<CheckDeviceStatusUseCase>(),
+      getDeviceInfo: getIt<GetDeviceInfoUseCase>(),
+      sendOtp: getIt<SendOtpUseCase>(),
+      sendOtpWithPhone: getIt<SendOtpWithPhoneUseCase>(),
+      verifyOtp: getIt<VerifyOtpUseCase>(),
+      verifyOtpWithPhone: getIt<VerifyOtpWithPhoneUseCase>(),
     ),
   );
 

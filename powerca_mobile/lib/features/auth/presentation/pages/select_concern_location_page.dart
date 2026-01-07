@@ -222,7 +222,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -273,7 +273,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: AppTheme.primaryColor.withValues(alpha: 0.3),
@@ -292,7 +292,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
                 height: 48.h,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   Icons.person_rounded,
@@ -349,7 +349,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.red.shade200),
       ),
       child: Row(
@@ -398,7 +398,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -422,7 +422,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
             size: 22.sp,
           ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
         ),
         dropdownColor: Colors.white,
         icon: Icon(
@@ -474,7 +474,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -498,7 +498,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
             size: 22.sp,
           ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
         ),
         dropdownColor: Colors.white,
         icon: Icon(
@@ -534,7 +534,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
       padding: EdgeInsets.symmetric(vertical: 16.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Center(
@@ -555,7 +555,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
       padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
       decoration: BoxDecoration(
         color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.orange.shade200),
       ),
       child: Row(
@@ -579,7 +579,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
       padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
       decoration: BoxDecoration(
         color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
@@ -613,7 +613,7 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
           elevation: isEnabled ? 2 : 0,
           shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
         child: _isSubmitting

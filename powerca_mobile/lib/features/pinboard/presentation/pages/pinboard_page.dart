@@ -101,21 +101,25 @@ class _PinboardPageState extends State<PinboardPage> {
         key: _scaffoldKey,
         backgroundColor: const Color(0xFFF8F9FC),
         drawer: AppDrawer(currentStaff: widget.currentStaff),
-        body: SafeArea(top: false,
-          child: Column(
-            children: [
-              // Modern Top App Bar with menu handler
-              AppHeader(
-                currentStaff: widget.currentStaff,
-                onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+        body: Column(
+          children: [
+            // White status bar area
+            Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: AppHeader(
+                  currentStaff: widget.currentStaff,
+                  onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
               ),
+            ),
 
-              // Pinboard Main Content
-              Expanded(
-                child: PinboardMainPage(currentStaff: widget.currentStaff),
-              ),
-            ],
-          ),
+            // Pinboard Main Content
+            Expanded(
+              child: PinboardMainPage(currentStaff: widget.currentStaff),
+            ),
+          ],
         ),
         bottomNavigationBar: ModernBottomNavigation(
           currentIndex: 3,

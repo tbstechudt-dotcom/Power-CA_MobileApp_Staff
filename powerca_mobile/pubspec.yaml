@@ -24,6 +24,7 @@ dependencies:
 
   # Networking
   dio: ^5.3.3
+  http: ^1.2.0
   connectivity_plus: ^7.0.0
 
   # Local Storage
@@ -64,12 +65,17 @@ dependencies:
   # Encryption
   encrypt: ^5.0.3
   crypto: ^3.0.7
+  pointycastle: ^3.7.3
+
+  # Device Info (for device fingerprint)
+  device_info_plus: ^9.1.0
 
   # Charts
   fl_chart: ^1.1.1
 
   # Notifications
   flutter_local_notifications: ^19.5.0
+  sms_autofill: ^2.4.1
   # firebase_messaging: ^14.7.4  # Only for mobile - disabled for web testing
 
 dev_dependencies:
@@ -77,6 +83,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.1
   flutter_launcher_icons: ^0.14.4
+  image: ^4.1.3
 
   # Code Generation
   build_runner: ^2.4.6
@@ -90,16 +97,20 @@ dev_dependencies:
   mockito: ^5.4.3
 
 flutter_launcher_icons:
-  image_path: "assets/icons/Power CA.png"
+  image_path: "assets/images/Logo/power_ca_icon_padded.png"
   android: true
   ios: false
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/Logo/power_ca_adaptive_foreground.png"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
     - assets/images/splash/
+    - assets/images/Logo/
     - assets/icons/
+    - assets/icons/powerca icons/
 
   # Fonts loaded via google_fonts package (no local files needed)
   # fonts:
