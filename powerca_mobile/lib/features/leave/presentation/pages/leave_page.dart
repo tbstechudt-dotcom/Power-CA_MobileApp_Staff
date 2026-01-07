@@ -343,17 +343,22 @@ class _LeavePageState extends State<LeavePage> {
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF8F9FC),
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(top: false,
-        child: Column(
-          children: [
-            // Top App Bar with menu handler
-            AppHeader(
-              currentStaff: widget.currentStaff,
-              onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+      body: Column(
+        children: [
+          // White status bar area
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: AppHeader(
+                currentStaff: widget.currentStaff,
+                onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+              ),
             ),
+          ),
 
-            // Content
-            Expanded(
+          // Content
+          Expanded(
               child: _isLoadingLeaveRequests
                   ? const Center(child: CircularProgressIndicator())
                   : RefreshIndicator(
@@ -372,7 +377,7 @@ class _LeavePageState extends State<LeavePage> {
                                 fontFamily: 'Inter',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF334155),
+                                color: AppTheme.textSecondaryColor,
                               ),
                             ),
                             SizedBox(height: 2.h),
@@ -382,7 +387,7 @@ class _LeavePageState extends State<LeavePage> {
                                 fontFamily: 'Inter',
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w400,
-                                color: const Color(0xFF64748B),
+                                color: AppTheme.textMutedColor,
                               ),
                             ),
                             SizedBox(height: 16.h),
@@ -531,12 +536,12 @@ class _LeavePageState extends State<LeavePage> {
 
                             // Section Title
                             Text(
-                              'By Status',
+                              'By Leave Status',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF334155),
+                                color: AppTheme.textSecondaryColor,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -570,7 +575,6 @@ class _LeavePageState extends State<LeavePage> {
             ),
           ],
         ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _navigateToApplyLeave(),
         backgroundColor: AppTheme.primaryColor,
@@ -652,7 +656,7 @@ class _LeavePageState extends State<LeavePage> {
             padding: EdgeInsets.all(6.w),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(12.r),
             ),
             child: Icon(
               icon,
@@ -678,7 +682,7 @@ class _LeavePageState extends State<LeavePage> {
               fontFamily: 'Inter',
               fontSize: 11.sp,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
+              color: AppTheme.textMutedColor,
             ),
           ),
         ],
@@ -703,7 +707,7 @@ class _LeavePageState extends State<LeavePage> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          borderRadius: BorderRadius.circular(14.r),
+          borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
               color: gradient[1].withValues(alpha: 0.25),
@@ -776,7 +780,7 @@ class _LeavePageState extends State<LeavePage> {
                     padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(20.r),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Text(
                       count.toString(),

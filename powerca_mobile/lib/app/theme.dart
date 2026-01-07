@@ -5,9 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 /// Professional color scheme with 2-3 unique colors
 class AppTheme {
   // Professional Brand Colors
-  static const Color primaryColor = Color(0xFF2563EB);  // Navy Blue - Primary
-  static const Color primaryLight = Color(0xFF2E4A6F);
-  static const Color primaryDark = Color(0xFF0E2A4F);
+  static const Color primaryColor = Color(0xFF2563EB);  // Blue - Primary (Main)
+  static const Color primaryDark = Color(0xFF1E40AF);   // Deep Blue - Pressed / AppBar
+  static const Color primaryLight = Color(0xFF3B82F6);  // Soft Blue - Hover / Highlight
+  static const Color primaryVeryLight = Color(0xFFEFF6FF); // Pale Blue - Background tint
 
   static const Color surfaceColor = Color(0xFFFFFFFF);  // White
   static const Color backgroundColor = Color(0xFFF8F9FC);  // Light Gray
@@ -20,13 +21,21 @@ class AppTheme {
   static const Color infoColor = Color(0xFF2563EB);  // Navy
 
   // Text Colors
-  static const Color textPrimaryColor = Color(0xFF2563EB);  // Navy Blue
-  static const Color textSecondaryColor = Color(0xFF6B7280);  // Gray
-  static const Color textDisabledColor = Color(0xFF9CA3AF);  // Light Gray
+  static const Color textPrimaryColor = Color(0xFF111827);     // Primary Text
+  static const Color textSecondaryColor = Color(0xFF374151);   // Secondary Text
+  static const Color textMutedColor = Color(0xFF6B7280);       // Muted / Hint Text
+  static const Color textDisabledColor = Color(0xFF9CA3AF);    // Disabled Text
+  static const Color textOnPrimaryColor = Color(0xFFFFFFFF);   // Text on Primary Button
 
   // Border & Divider
   static const Color borderColor = Color(0xFFE0E0E0);
   static const Color dividerColor = Color(0xFFEEEEEE);
+
+  // TextField Colors
+  static const Color textFieldFillColor = Color(0xFFEEF2FF);     // TextField Fill
+  static const Color textFieldBorderColor = Color(0xFFC7D2FE);   // TextField Border (Normal)
+  static const Color textFieldFocusedBorder = Color(0xFF2563EB); // TextField Border (Focused)
+  static const Color textFieldErrorBorder = Color(0xFFDC2626);   // Error Border
 
   /// Light Theme
   static ThemeData get lightTheme {
@@ -115,7 +124,7 @@ class AppTheme {
         bodySmall: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w400,  // Tag - 12Px from Figma
-          color: textSecondaryColor,
+          color: textMutedColor,
         ),
 
         // Label styles
@@ -132,7 +141,7 @@ class AppTheme {
         labelSmall: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w500,
-          color: textSecondaryColor,
+          color: textMutedColor,
         ),
       ),
 
@@ -195,40 +204,40 @@ class AppTheme {
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surfaceColor,
+        fillColor: textFieldFillColor,  // Updated to new TextField Fill color
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
 
         // Border styles
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: borderColor, width: 1),
+          borderSide: const BorderSide(color: textFieldBorderColor, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: borderColor, width: 1),
+          borderSide: const BorderSide(color: textFieldBorderColor, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
+          borderSide: const BorderSide(color: textFieldFocusedBorder, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: errorColor, width: 1),
+          borderSide: const BorderSide(color: textFieldErrorBorder, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: errorColor, width: 2),
+          borderSide: const BorderSide(color: textFieldErrorBorder, width: 2),
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: borderColor.withValues(alpha: 0.5), width: 1),
+          borderSide: BorderSide(color: textFieldBorderColor.withValues(alpha: 0.5), width: 1),
         ),
 
         // Label & Hint styles
         labelStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          color: textSecondaryColor,
+          color: textMutedColor,
         ),
         floatingLabelStyle: GoogleFonts.inter(
           fontSize: 14,
@@ -238,7 +247,7 @@ class AppTheme {
         hintStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          color: textDisabledColor,
+          color: textMutedColor,
         ),
         errorStyle: GoogleFonts.inter(
           fontSize: 12,
@@ -250,7 +259,7 @@ class AppTheme {
       // Bottom Navigation Bar Theme
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         selectedItemColor: primaryColor,
-        unselectedItemColor: textSecondaryColor,
+        unselectedItemColor: textMutedColor,
         elevation: 8,
         type: BottomNavigationBarType.fixed,
         selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),

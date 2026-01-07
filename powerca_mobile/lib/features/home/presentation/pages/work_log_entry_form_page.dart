@@ -5,15 +5,28 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/services/priority_service.dart';
+import 'work_log_list_page.dart';
 
 class WorkLogEntryFormPage extends StatefulWidget {
   final DateTime selectedDate;
   final int staffId;
+  final int? preSelectedJobId;
+  final int? preSelectedClientId;
+  final String? preSelectedJobName;
+  final String? preSelectedClientName;
+  final int? preSelectedTaskId;
+  final String? preSelectedTaskName;
 
   const WorkLogEntryFormPage({
     super.key,
     required this.selectedDate,
     required this.staffId,
+    this.preSelectedJobId,
+    this.preSelectedClientId,
+    this.preSelectedJobName,
+    this.preSelectedClientName,
+    this.preSelectedTaskId,
+    this.preSelectedTaskName,
   });
 
   @override
@@ -32,6 +45,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   int? _selectedTaskId;
 
   List<Map<String, dynamic>> _clients = [];
+  List<Map<String, dynamic>> _allClients = []; // All clients for search in priority dialog
   Map<int, Map<int, Map<String, dynamic>>> _jobsByClient = {};
   List<Map<String, dynamic>> _tasks = [];
 
@@ -41,6 +55,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   // Priority filtering
   Set<int> _priorityJobIds = {};
   bool _hasPriorities = false;
+
+  // All jobs for priority selection
+  List<Map<String, dynamic>> _allJobs = [];
+  Set<int> _selectedPriorityJobIds = {};
 
   @override
   void initState() {
@@ -66,18 +84,62 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       _priorityJobIds = priorityJobIds;
       _hasPriorities = priorityJobIds.isNotEmpty;
 
-      // STEP 1: Load ALL jobs from jobshead (including duplicates)
+      // STEP 1: Load jobs assigned to current staff from jobshead
       // Note: work_desc maps to job_name
-      // IMPORTANT: Supabase has a default limit of 1000 rows, we need to increase it
+      // Filter by sporg_id to match jobs_page.dart behavior
+      // Exclude Closer jobs (status code 'C') - they should not appear in the app
       final jobsResponse = await supabase
           .from('jobshead')
-          .select('job_id, job_uid, work_desc, client_id')
+          .select('job_id, job_uid, work_desc, client_id, job_status')
+          .eq('sporg_id', widget.staffId)
+          .neq('job_status', 'C')
           .order('work_desc')
           .limit(50000); // Increase limit to get all jobs
 
+      // Store all jobs for priority selection dialog (deduplicated by job_id)
+      final Map<int, Map<String, dynamic>> uniqueJobsMap = {};
+      final Set<int> allClientIds = {}; // Collect all client IDs from jobs
+      for (var job in jobsResponse) {
+        final jobId = job['job_id'] as int;
+        if (!uniqueJobsMap.containsKey(jobId)) {
+          uniqueJobsMap[jobId] = job;
+        }
+        // Collect client IDs for loading all clients
+        if (job['client_id'] != null) {
+          allClientIds.add(job['client_id'] as int);
+        }
+      }
+      _allJobs = uniqueJobsMap.values.toList();
+      _selectedPriorityJobIds = Set<int>.from(_priorityJobIds);
+      print('DEBUG WorkLogForm: Loaded ${jobsResponse.length} jobs for staff ${widget.staffId}, deduplicated to ${_allJobs.length} unique jobs');
+
+      // Debug: Count jobs by status (to compare with jobs_page.dart)
+      final statusCounts = <String, int>{};
+      for (var job in _allJobs) {
+        final statusCode = job['job_status']?.toString().trim() ?? 'W';
+        final statusName = _getStatusName(statusCode);
+        statusCounts[statusName] = (statusCounts[statusName] ?? 0) + 1;
+      }
+      print('DEBUG WorkLogForm: Status counts: $statusCounts');
+
+      // Load ALL clients for search functionality in priority dialog
+      if (allClientIds.isNotEmpty) {
+        final allClientsResponse = await supabase
+            .from('climaster')
+            .select('client_id, clientname')
+            .inFilter('client_id', allClientIds.toList())
+            .order('clientname');
+        _allClients = List<Map<String, dynamic>>.from(allClientsResponse);
+        print('DEBUG: Loaded ${_allClients.length} clients for search');
+      }
+
       // STEP 1.5: Filter jobs to priority jobs only if priorities are set
+      // BUT: Skip priority filtering if a job was pre-selected from Jobs page
+      // (user explicitly chose this job, so show it regardless of priority status)
+      final bool hasPreSelection = widget.preSelectedJobId != null && widget.preSelectedClientId != null;
+
       List<dynamic> filteredJobsResponse;
-      if (_hasPriorities) {
+      if (_hasPriorities && !hasPreSelection) {
         filteredJobsResponse = jobsResponse.where((job) {
           final jobId = job['job_id'] as int;
           return _priorityJobIds.contains(jobId);
@@ -85,7 +147,11 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         print('DEBUG: Filtered to ${filteredJobsResponse.length} priority jobs out of ${jobsResponse.length} total jobs');
       } else {
         filteredJobsResponse = jobsResponse;
-        print('DEBUG: No priorities set, showing all ${jobsResponse.length} jobs');
+        if (hasPreSelection) {
+          print('DEBUG: Pre-selection mode - showing all ${jobsResponse.length} jobs (bypassing priority filter)');
+        } else {
+          print('DEBUG: No priorities set, showing all ${jobsResponse.length} jobs');
+        }
       }
 
       // STEP 2: Group jobs by client_id FIRST, then deduplicate within each client
@@ -129,6 +195,29 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         _tasks = []; // Tasks will be loaded when job is selected
         _isLoading = false;
       });
+
+      // Handle pre-selection if job/client was passed from Jobs page
+      if (widget.preSelectedClientId != null && widget.preSelectedJobId != null) {
+        // Set the pre-selected client
+        _selectedClientId = widget.preSelectedClientId;
+        // Set the pre-selected job
+        _selectedJobId = widget.preSelectedJobId;
+        // Load tasks for the pre-selected job
+        await _loadTasksForJob(widget.preSelectedJobId!);
+
+        // Handle task pre-selection if task was also passed (from Job Detail page)
+        if (widget.preSelectedTaskId != null) {
+          // Verify the task exists in the loaded tasks list
+          final taskExists = _tasks.any((task) => task['task_id'] == widget.preSelectedTaskId);
+          if (taskExists) {
+            _selectedTaskId = widget.preSelectedTaskId;
+            print('DEBUG: Pre-selected task ${widget.preSelectedTaskId} (${widget.preSelectedTaskName})');
+          } else {
+            print('DEBUG: Pre-selected task ${widget.preSelectedTaskId} not found in tasks list');
+          }
+        }
+        print('DEBUG: Pre-selected client ${widget.preSelectedClientId}, job ${widget.preSelectedJobId}');
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -415,7 +504,30 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Return true to indicate success
+
+        // Fetch all entries for the selected date to show in the list
+        final entriesResponse = await supabase
+            .from('workdiary')
+            .select()
+            .eq('staff_id', widget.staffId)
+            .eq('date', dateStr)
+            .order('created_at', ascending: false);
+
+        final entries = List<Map<String, dynamic>>.from(entriesResponse);
+
+        // Navigate to Work Log List page
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WorkLogListPage(
+                selectedDate: _selectedDate!,
+                entries: entries,
+                staffId: widget.staffId,
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -433,8 +545,36 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FC),
       appBar: AppBar(
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EDF3),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFD1D9E6),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        leadingWidth: 58.w,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -458,12 +598,20 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: EdgeInsets.all(20.w),
+              padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                top: 20.w,
+                bottom: 20.w + MediaQuery.of(context).padding.bottom,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Priority Selection Banner (always show - staff can add/edit priorities anytime)
+                    _buildPrioritySelectionBanner(),
+
                     // Date Selector
                     _buildSectionTitle('Select Date'),
                     SizedBox(height: 8.h),
@@ -809,8 +957,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             fontFamily: 'Inter',
             fontSize: 14.sp,
             fontWeight: FontWeight.w400,
-            color: const Color(0xFF8F8E90),
+            color: AppTheme.textDisabledColor,
           ),
+          filled: true,
+          fillColor: Colors.white,
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(16.w),
         ),
@@ -879,5 +1029,594 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     } else {
       return '${hours}h ${remainingMinutes}m';
     }
+  }
+
+  // Status configurations for job categorization
+  final List<Map<String, dynamic>> _statusConfigs = [
+    {
+      'status': 'Waiting',
+      'code': 'W',
+      'icon': Icons.hourglass_empty_rounded,
+      'color': const Color(0xFFF59E0B),
+    },
+    {
+      'status': 'Planning',
+      'code': 'A',
+      'icon': Icons.architecture_rounded,
+      'color': const Color(0xFF3B82F6),
+    },
+    {
+      'status': 'Progress',
+      'code': 'P',
+      'icon': Icons.rocket_launch_rounded,
+      'color': const Color(0xFF10B981),
+    },
+    {
+      'status': 'Work Done',
+      'code': 'G',
+      'icon': Icons.task_alt_rounded,
+      'color': const Color(0xFF0D9488),
+    },
+    {
+      'status': 'Delivery',
+      'code': 'D',
+      'icon': Icons.local_shipping_rounded,
+      'color': const Color(0xFF8B5CF6),
+    },
+  ];
+
+  // Map status code to display name (Closer status 'C' excluded - not needed)
+  String _getStatusName(String? statusCode) {
+    final statusMap = {
+      'W': 'Waiting',
+      'P': 'Progress',
+      'D': 'Delivery',
+      'A': 'Planning',
+      'G': 'Work Done',
+      'L': 'Planning',
+    };
+    return statusMap[statusCode?.trim()] ?? 'Waiting';
+  }
+
+  // Get jobs by status
+  List<Map<String, dynamic>> _getJobsByStatus(String status) {
+    return _allJobs.where((job) {
+      final jobStatus = _getStatusName(job['job_status']?.toString());
+      return jobStatus == status;
+    }).toList();
+  }
+
+  // Get client name by client_id for search (uses _allClients for priority dialog search)
+  String _getClientNameById(int? clientId) {
+    if (clientId == null) return '';
+    // Use _allClients which contains all clients with jobs (not just priority-filtered ones)
+    final client = _allClients.firstWhere(
+      (c) => c['client_id'] == clientId,
+      orElse: () => {'clientname': ''},
+    );
+    return (client['clientname'] ?? '').toString();
+  }
+
+  // Get filtered jobs by status and search query
+  List<Map<String, dynamic>> _getFilteredJobsByStatus(String status, String searchQuery) {
+    var jobs = _getJobsByStatus(status);
+    if (searchQuery.isEmpty) return jobs;
+
+    final query = searchQuery.toLowerCase();
+    return jobs.where((job) {
+      final clientName = _getClientNameById(job['client_id']).toLowerCase();
+      final jobDesc = (job['work_desc'] ?? '').toString().toLowerCase();
+      final jobUid = (job['job_uid'] ?? '').toString().toLowerCase();
+      return clientName.contains(query) || jobDesc.contains(query) || jobUid.contains(query);
+    }).toList();
+  }
+
+  /// Show priority job selection dialog
+  Future<void> _showPrioritySelectionDialog() async {
+    Set<int> tempSelectedIds = Set<int>.from(_selectedPriorityJobIds);
+    String? expandedStatus;
+    String searchQuery = '';
+    final searchController = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.75,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    // Handle bar
+                    Container(
+                      margin: EdgeInsets.only(top: 8.h),
+                      width: 36.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.star_rounded,
+                                color: const Color(0xFFEF4444),
+                                size: 20.sp,
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'Select Priority Jobs',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF080E29),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Text(
+                              '${tempSelectedIds.length} selected',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey[200]),
+                    // Search Field
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 4.h),
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: (value) {
+                          setModalState(() {
+                            searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search by client, job description...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.sp,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            size: 20.sp,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setModalState(() {
+                                      searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: const Color(0xFFF8F9FC),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13.sp,
+                          color: const Color(0xFF1F2937),
+                        ),
+                      ),
+                    ),
+                    // Status categories with jobs
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                        children: _statusConfigs.map((config) {
+                          final status = config['status'] as String;
+                          final icon = config['icon'] as IconData;
+                          final color = config['color'] as Color;
+                          final jobs = _getFilteredJobsByStatus(status, searchQuery);
+                          final isExpanded = expandedStatus == status;
+                          final selectedInCategory = jobs.where((j) => tempSelectedIds.contains(j['job_id'])).length;
+
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 8.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(
+                                color: isExpanded ? color.withValues(alpha: 0.5) : Colors.grey[200]!,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                // Category header
+                                InkWell(
+                                  onTap: () {
+                                    setModalState(() {
+                                      expandedStatus = isExpanded ? null : status;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12.w),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 36.w,
+                                          height: 36.h,
+                                          decoration: BoxDecoration(
+                                            color: color.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8.r),
+                                          ),
+                                          child: Icon(icon, size: 18.sp, color: color),
+                                        ),
+                                        SizedBox(width: 12.w),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                status,
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 14.sp,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(0xFF080E29),
+                                                ),
+                                              ),
+                                              Text(
+                                                '${jobs.length} jobs${selectedInCategory > 0 ? ' • $selectedInCategory selected' : ''}',
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 11.sp,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: selectedInCategory > 0 ? color : const Color(0xFF8F8E90),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Icon(
+                                          isExpanded ? Icons.expand_less : Icons.expand_more,
+                                          color: Colors.grey[400],
+                                          size: 20.sp,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // Expanded job list
+                                if (isExpanded && jobs.isNotEmpty)
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[50],
+                                      borderRadius: BorderRadius.only(
+                                        bottomLeft: Radius.circular(12.r),
+                                        bottomRight: Radius.circular(12.r),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: jobs.map((job) {
+                                        final jobId = job['job_id'] as int;
+                                        final isSelected = tempSelectedIds.contains(jobId);
+
+                                        return InkWell(
+                                          onTap: () {
+                                            setModalState(() {
+                                              if (isSelected) {
+                                                tempSelectedIds.remove(jobId);
+                                              } else {
+                                                tempSelectedIds.add(jobId);
+                                              }
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                top: BorderSide(color: Colors.grey[200]!, width: 0.5),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 22.w,
+                                                  height: 22.h,
+                                                  decoration: BoxDecoration(
+                                                    color: isSelected ? color : Colors.white,
+                                                    borderRadius: BorderRadius.circular(6.r),
+                                                    border: Border.all(
+                                                      color: isSelected ? color : Colors.grey[300]!,
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                  child: isSelected
+                                                      ? Icon(Icons.check, size: 14.sp, color: Colors.white)
+                                                      : null,
+                                                ),
+                                                SizedBox(width: 10.w),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        job['work_desc'] ?? 'Unknown Job',
+                                                        style: TextStyle(
+                                                          fontFamily: 'Inter',
+                                                          fontSize: 13.sp,
+                                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                                          color: const Color(0xFF080E29),
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                      // Client name row - always show
+                                                      Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.business_rounded,
+                                                            size: 12.sp,
+                                                            color: AppTheme.textMutedColor,
+                                                          ),
+                                                          SizedBox(width: 4.w),
+                                                          Expanded(
+                                                            child: Text(
+                                                              _getClientNameById(job['client_id']).isNotEmpty
+                                                                  ? _getClientNameById(job['client_id'])
+                                                                  : 'No client assigned',
+                                                              style: TextStyle(
+                                                                fontFamily: 'Inter',
+                                                                fontSize: 11.sp,
+                                                                fontWeight: FontWeight.w500,
+                                                                color: _getClientNameById(job['client_id']).isNotEmpty
+                                                                    ? AppTheme.primaryColor
+                                                                    : const Color(0xFF8F8E90),
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      SizedBox(height: 2.h),
+                                                      // Job UID row
+                                                      Text(
+                                                        job['job_uid'] ?? 'N/A',
+                                                        style: TextStyle(
+                                                          fontFamily: 'Inter',
+                                                          fontSize: 10.sp,
+                                                          fontWeight: FontWeight.w400,
+                                                          color: const Color(0xFF8F8E90),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    // Bottom action bar
+                    Container(
+                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                      ),
+                      child: Row(
+                        children: [
+                          // Clear button
+                          TextButton(
+                            onPressed: tempSelectedIds.isEmpty
+                                ? null
+                                : () {
+                                    setModalState(() => tempSelectedIds.clear());
+                                  },
+                            child: Text(
+                              'Clear',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w500,
+                                color: tempSelectedIds.isEmpty ? Colors.grey[400] : Colors.red,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          // Save button
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: tempSelectedIds.isEmpty
+                                  ? null
+                                  : () async {
+                                      Navigator.pop(context);
+                                      await _savePrioritySelections(tempSelectedIds);
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                disabledBackgroundColor: Colors.grey[300],
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10.r),
+                                ),
+                                padding: EdgeInsets.symmetric(vertical: 12.h),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                'Save Priorities',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Save priority selections to database
+  Future<void> _savePrioritySelections(Set<int> selectedJobIds) async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Clear existing priorities
+      await PriorityService.clearAllPriorities();
+
+      // Add new priorities
+      for (final jobId in selectedJobIds) {
+        await PriorityService.addPriorityJob(jobId);
+      }
+
+      // Reload form data with new priorities
+      await _loadFormData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${selectedJobIds.length} priority jobs saved'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving priorities: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Build priority selection banner - minimalistic design
+  /// Shows different text based on whether priorities are already set
+  Widget _buildPrioritySelectionBanner() {
+    final hasPriorities = _priorityJobIds.isNotEmpty;
+    final priorityCount = _priorityJobIds.length;
+
+    return InkWell(
+      onTap: _showPrioritySelectionDialog,
+      borderRadius: BorderRadius.circular(10.r),
+      child: Container(
+        margin: EdgeInsets.only(bottom: 16.h),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          color: hasPriorities ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(
+            color: hasPriorities ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36.w,
+              height: 36.h,
+              decoration: BoxDecoration(
+                color: hasPriorities
+                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                    : const Color(0xFFEF4444).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Icon(
+                hasPriorities ? Icons.star_rounded : Icons.star_outline_rounded,
+                color: hasPriorities ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                size: 20.sp,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasPriorities ? 'Edit Priority Jobs' : 'Set Priority Jobs',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color: hasPriorities ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                    ),
+                  ),
+                  Text(
+                    hasPriorities
+                        ? '$priorityCount jobs selected • Tap to add more'
+                        : 'Tap to select jobs for quick access',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w400,
+                      color: hasPriorities ? const Color(0xFF047857) : const Color(0xFFB91C1C),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: hasPriorities ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+              size: 16.sp,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

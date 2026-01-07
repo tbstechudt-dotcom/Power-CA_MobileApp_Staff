@@ -63,17 +63,34 @@ class LeaveDetailPage extends StatelessWidget {
             expandedHeight: 180.h,
             pinned: true,
             backgroundColor: AppTheme.primaryColor,
-            leading: IconButton(
-              icon: Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8.r),
+            leading: Padding(
+              padding: EdgeInsets.only(left: 8.w),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 42.w,
+                    height: 42.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 18.sp,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                 ),
-                child: Icon(Icons.arrow_back, color: Colors.white, size: 20.sp),
               ),
-              onPressed: () => Navigator.of(context).pop(),
             ),
+            leadingWidth: 58.w,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(

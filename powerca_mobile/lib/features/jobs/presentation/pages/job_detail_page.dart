@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../auth/domain/entities/staff.dart';
+import '../../../home/presentation/pages/work_log_entry_form_page.dart';
 
 class JobDetailPage extends StatefulWidget {
   final Staff currentStaff;
@@ -240,10 +241,34 @@ class _JobDetailPageState extends State<JobDetailPage>
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
-          onPressed: () => Navigator.pop(context),
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EDF3),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFD1D9E6),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
+        leadingWidth: 58.w,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -457,54 +482,69 @@ class _JobDetailPageState extends State<JobDetailPage>
                       ),
                     ),
                     SizedBox(
-                      width: 45.w,
+                      width: 40.w,
                       child: Text(
                         'Est.\nHrs',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 9.sp,
+                          fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF374151),
                         ),
                       ),
                     ),
                     SizedBox(
-                      width: 45.w,
+                      width: 40.w,
                       child: Text(
                         'Login\nStaff',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 9.sp,
+                          fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF374151),
                         ),
                       ),
                     ),
                     SizedBox(
-                      width: 45.w,
+                      width: 40.w,
                       child: Text(
                         'Other\nStaff',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 9.sp,
+                          fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF374151),
                         ),
                       ),
                     ),
                     SizedBox(
-                      width: 45.w,
+                      width: 40.w,
                       child: Text(
                         'Act.\nHrs',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 9.sp,
+                          fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                    // Daily Entry action column header
+                    SizedBox(width: 4.w),
+                    SizedBox(
+                      width: 32.w,
+                      child: Text(
+                        'Daily\nEntry',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF3B82F6),
                         ),
                       ),
                     ),
@@ -528,11 +568,11 @@ class _JobDetailPageState extends State<JobDetailPage>
                   final otherStaffHours = task['otherStaffHours'] as double;
                   final actHours = task['actHours'] as double;
 
-                  // View only - no navigation
                   return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 24.h),
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
                     child: Row(
                       children: [
+                        // Task name
                         Expanded(
                           flex: 3,
                           child: Text(
@@ -547,8 +587,9 @@ class _JobDetailPageState extends State<JobDetailPage>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        // Est Hours
                         SizedBox(
-                          width: 45.w,
+                          width: 40.w,
                           child: Text(
                             _formatHours(estHours),
                             textAlign: TextAlign.center,
@@ -560,8 +601,9 @@ class _JobDetailPageState extends State<JobDetailPage>
                             ),
                           ),
                         ),
+                        // Login Staff Hours
                         SizedBox(
-                          width: 45.w,
+                          width: 40.w,
                           child: Text(
                             _formatHours(loginStaffHours),
                             textAlign: TextAlign.center,
@@ -573,8 +615,9 @@ class _JobDetailPageState extends State<JobDetailPage>
                             ),
                           ),
                         ),
+                        // Other Staff Hours
                         SizedBox(
-                          width: 45.w,
+                          width: 40.w,
                           child: Text(
                             _formatHours(otherStaffHours),
                             textAlign: TextAlign.center,
@@ -586,8 +629,9 @@ class _JobDetailPageState extends State<JobDetailPage>
                             ),
                           ),
                         ),
+                        // Act Hours
                         SizedBox(
-                          width: 45.w,
+                          width: 40.w,
                           child: Text(
                             _formatHours(actHours),
                             textAlign: TextAlign.center,
@@ -596,6 +640,51 @@ class _JobDetailPageState extends State<JobDetailPage>
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w600,
                               color: actHours > 0 ? const Color(0xFF10B981) : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ),
+                        // Select for Daily Entry button - compact icon
+                        SizedBox(width: 4.w),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => WorkLogEntryFormPage(
+                                  selectedDate: DateTime.now(),
+                                  staffId: widget.currentStaff.staffId,
+                                  preSelectedJobId: widget.job['job_id'] as int?,
+                                  preSelectedClientId: widget.job['client_id'] as int?,
+                                  preSelectedJobName: widget.job['job'] as String?,
+                                  preSelectedClientName: widget.job['company'] as String?,
+                                  preSelectedTaskId: task['task_id'] as int?,
+                                  preSelectedTaskName: task['taskName'] as String?,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 32.w,
+                            height: 32.h,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(8.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.add_rounded,
+                              size: 18.sp,
+                              color: Colors.white,
                             ),
                           ),
                         ),

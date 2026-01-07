@@ -24,10 +24,34 @@ class PinboardDetailPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
-          onPressed: () => Navigator.pop(context),
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EDF3),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFD1D9E6),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: const Color(0xFF6B7280),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
+        leadingWidth: 58.w,
         title: Text(
           'Reminder Details',
           style: TextStyle(

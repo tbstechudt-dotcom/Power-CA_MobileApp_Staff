@@ -60,10 +60,33 @@ class _AppDrawerState extends State<AppDrawer> {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(20.w),
-      alignment: Alignment.centerLeft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Close button row
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 36.w,
+                height: 36.h,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF3F4F6),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.close,
+                    size: 20.sp,
+                    color: const Color(0xFF4B5563),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          // Staff name
           Text(
             widget.currentStaff.name,
             style: TextStyle(
@@ -76,13 +99,14 @@ class _AppDrawerState extends State<AppDrawer> {
             overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: 6.h),
+          // Staff ID
           Text(
             'Staff ID: ${widget.currentStaff.staffId}',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13.sp,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF6B7280),
+              color: AppTheme.textMutedColor,
             ),
           ),
         ],

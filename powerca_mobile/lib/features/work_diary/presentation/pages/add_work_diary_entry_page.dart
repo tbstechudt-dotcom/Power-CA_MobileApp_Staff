@@ -64,14 +64,34 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(
-            Icons.arrow_back,
-            color: AppTheme.textPrimaryColor,
-            size: 24.sp,
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EDF3),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFD1D9E6),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
+        leadingWidth: 58.w,
         title: Text(
           isEditing ? 'Edit Entry' : 'Add Entry',
           style: TextStyle(

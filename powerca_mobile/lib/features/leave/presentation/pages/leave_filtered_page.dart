@@ -133,19 +133,26 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
               ),
               child: Row(
                 children: [
-                  // Back Button
+                  // Back Button - circular design matching app header buttons
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      padding: EdgeInsets.all(8.w),
+                      width: 42.w,
+                      height: 42.h,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F9FC),
-                        borderRadius: BorderRadius.circular(8.r),
+                        color: const Color(0xFFE8EDF3),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFD1D9E6),
+                          width: 1,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18.sp,
-                        color: const Color(0xFF374151),
+                      child: Center(
+                        child: Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 18.sp,
+                          color: AppTheme.textSecondaryColor,
+                        ),
                       ),
                     ),
                   ),

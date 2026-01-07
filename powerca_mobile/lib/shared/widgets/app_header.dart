@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -167,37 +168,68 @@ class _AppHeaderState extends State<AppHeader> {
       padding: EdgeInsets.only(
         left: 16.w,
         right: 16.w,
-        top: MediaQuery.of(context).padding.top + 6.h,
-        bottom: 8.h,
+        top: MediaQuery.of(context).padding.top + 8.h,
+        bottom: 12.h,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
-          // Company Name and Location
+          // Hamburger Menu (Left)
+          GestureDetector(
+            onTap: widget.onMenuTap,
+            child: Container(
+              width: 40.w,
+              height: 40.h,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3F4F6),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/icons/powerca icons/hamburger menu.svg',
+                  width: 20.sp,
+                  height: 20.sp,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF4B5563),
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Company Name and Location (Center)
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   _isLoading ? 'Loading...' : _companyName,
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF2563EB),
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1F2937),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
                 if (_locationName.isNotEmpty || _isLoading)
+                  SizedBox(height: 2.h),
+                if (_locationName.isNotEmpty || _isLoading)
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.location_on_outlined,
@@ -205,13 +237,19 @@ class _AppHeaderState extends State<AppHeader> {
                         color: const Color(0xFF6B7280),
                       ),
                       SizedBox(width: 2.w),
-                      Text(
-                        _isLoading ? 'Loading...' : _locationName,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF6B7280),
+                      Flexible(
+                        child: Text(
+                          _isLoading ? 'Loading...' : _locationName.toUpperCase(),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF6B7280),
+                            letterSpacing: 0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ],
@@ -219,59 +257,43 @@ class _AppHeaderState extends State<AppHeader> {
               ],
             ),
           ),
-          // Notifications
+          // Notifications (Right)
           GestureDetector(
             onTap: _navigateToPinboard,
             child: Container(
               width: 40.w,
               height: 40.h,
               decoration: const BoxDecoration(
-                color: Color(0xFFe3f2fd),
+                color: Color(0xFFF3F4F6),
                 shape: BoxShape.circle,
               ),
               child: Stack(
                 children: [
                   Center(
-                    child: Icon(
-                      Icons.notifications_outlined,
-                      size: 22.sp,
-                      color: const Color(0xFF1A1A1A),
+                    child: SvgPicture.asset(
+                      'assets/icons/powerca icons/notification.svg',
+                      width: 20.sp,
+                      height: 20.sp,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF4B5563),
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                   if (_hasNewNotifications)
                     Positioned(
-                      right: 9.w,
-                      top: 9.h,
+                      right: 8.w,
+                      top: 8.h,
                       child: Container(
                         width: 8.w,
                         height: 8.h,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFDC2626),
+                          color: Color(0xFFEF4444),
                           shape: BoxShape.circle,
                         ),
                       ),
                     ),
                 ],
-              ),
-            ),
-          ),
-          SizedBox(width: 8.w),
-          // Menu
-          GestureDetector(
-            onTap: widget.onMenuTap,
-            child: Container(
-              width: 40.w,
-              height: 40.h,
-              decoration: const BoxDecoration(
-                color: Color(0xFFe3f2fd),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.menu,
-                  size: 22.sp,
-                  color: const Color(0xFF1A1A1A),
-                ),
               ),
             ),
           ),

@@ -43,10 +43,34 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
-          onPressed: () => Navigator.pop(context),
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EDF3),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFD1D9E6),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
+        leadingWidth: 58.w,
         title: Text(
           'Profile',
           style: TextStyle(
@@ -58,7 +82,12 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.only(
+          left: 16.w,
+          right: 16.w,
+          top: 16.w,
+          bottom: 16.w + MediaQuery.of(context).padding.bottom,
+        ),
         child: Column(
           children: [
             // Profile Header Section (without photo)
@@ -145,7 +174,7 @@ class _ProfilePageState extends State<ProfilePage> {
               fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFF6B7280),
+              color: AppTheme.textMutedColor,
             ),
           ),
           SizedBox(height: 8.h),
