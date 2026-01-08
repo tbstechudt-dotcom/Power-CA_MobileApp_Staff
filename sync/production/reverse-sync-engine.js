@@ -82,8 +82,10 @@ class ReverseSyncEngine {
 
       // Seed initial records for mobile-created tables only (using DESKTOP table names)
       const tables = [
-        'workdiary',   // Mobile time tracking
-        'learequest'   // Mobile leave requests
+        'workdiary',           // Mobile time tracking
+        'learequest',          // Mobile leave requests
+        'mbjobreviewnotes',    // NEW: Job Review Notes
+        'mbjobreviewresponse'  // NEW: Job Review Responses
       ];
 
       for (const table of tables) {
@@ -124,11 +126,13 @@ class ReverseSyncEngine {
     console.log('Tracking: Metadata-based (last_sync_timestamp per table)');
 
     try {
-      // ONLY sync mobile-created tables (workdiary and learequest)
+      // ONLY sync mobile-created tables (workdiary, learequest, and review tables)
       // All other tables sync forward only (Desktop -> Supabase)
       const mobileCreatedTables = [
-        'workdiary',     // Work diary entries (mobile time tracking)
-        'learequest',    // Leave requests (mobile leave applications)
+        'workdiary',           // Work diary entries (mobile time tracking)
+        'learequest',          // Leave requests (mobile leave applications)
+        'mbjobreviewnotes',    // NEW: Job Review Notes (mobile can add notes)
+        'mbjobreviewresponse', // NEW: Job Review Responses (mobile can add responses)
       ];
 
       console.log('\n--- Mobile-Created Tables (Reverse Sync) ---');
@@ -436,6 +440,8 @@ class ReverseSyncEngine {
       'mbreminder': 'rem_id',
       'mbremdetail': 'remd_id',
       'learequest': 'learequest_id',  // Desktop uses learequest_id, not lea_id
+      'mbjobreviewnotes': 'rn_id',    // NEW: Job Review Notes
+      'mbjobreviewresponse': 'res_id', // NEW: Job Review Responses
     };
 
     return primaryKeys[tableName];

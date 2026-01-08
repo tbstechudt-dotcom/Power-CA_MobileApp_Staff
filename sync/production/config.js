@@ -73,6 +73,8 @@ const config = {
     'jobshead': 'jobshead',
     'jobtasks': 'jobtasks',
     'taskchecklist': 'taskchecklist',
+    'mbjobreviewnotes': 'mbjobreviewnotes',      // NEW: Job Review Notes
+    'mbjobreviewresponse': 'mbjobreviewresponse', // NEW: Job Review Responses
     // 'workdiary': 'workdiary',      // EXCLUDED: Mobile-only table, use reverse sync
     // 'learequest': 'learequest',    // EXCLUDED: Mobile-only table, use reverse sync
   },
@@ -99,6 +101,8 @@ const config = {
     // 'workdiary',    // EXCLUDED: Mobile-only table, use reverse sync
     'mbreminder', // Desktop name
     'mbremdetail', // Desktop name
+    'mbjobreviewnotes',    // NEW: Job Review Notes
+    'mbjobreviewresponse', // NEW: Job Review Responses
     // 'learequest',   // EXCLUDED: Mobile-only table, use reverse sync
   ],
 
@@ -170,6 +174,26 @@ const config = {
     workdiary: {
       // SKIP wd_id - Mobile-only tracking column
       skipColumns: ['wd_id'],
+      addColumns: {
+        source: 'D',
+        created_at: () => new Date(),
+        updated_at: () => new Date(),
+      }
+    },
+
+    // mbjobreviewnotes: Job Review Notes (desktop to mobile sync)
+    mbjobreviewnotes: {
+      skipColumns: [],
+      addColumns: {
+        source: 'D',
+        created_at: () => new Date(),
+        updated_at: () => new Date(),
+      }
+    },
+
+    // mbjobreviewresponse: Job Review Responses (desktop to mobile sync)
+    mbjobreviewresponse: {
+      skipColumns: [],
       addColumns: {
         source: 'D',
         created_at: () => new Date(),

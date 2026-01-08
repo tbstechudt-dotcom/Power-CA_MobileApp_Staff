@@ -272,6 +272,8 @@ class StagingSyncEngine {
       'reminder': 'rem_id',
       'remdetail': 'remd_id',
       'learequest': 'lea_id',
+      'mbjobreviewnotes': 'rn_id',      // NEW: Job Review Notes
+      'mbjobreviewresponse': 'res_id',  // NEW: Job Review Responses
     };
     return primaryKeys[tableName];
   }
