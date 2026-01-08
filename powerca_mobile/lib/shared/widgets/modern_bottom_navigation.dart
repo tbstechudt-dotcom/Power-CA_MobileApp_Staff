@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../app/theme.dart';
 import '../../features/auth/domain/entities/staff.dart';
 
@@ -104,32 +105,32 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                 child: Row(
                   children: [
                     _buildNavItem(
-                      icon: Icons.home_outlined,
-                      selectedIcon: Icons.home_rounded,
+                      iconPath: 'assets/icons/powerca icons/home stroke.svg',
+                      selectedIconPath: 'assets/icons/powerca icons/home fill.svg',
                       label: 'Home',
                       index: 0,
                       animation: _animations[0],
                       onTap: () => _navigateTo(context, '/dashboard', 0),
                     ),
                     _buildNavItem(
-                      icon: Icons.work_outline_rounded,
-                      selectedIcon: Icons.work_rounded,
+                      iconPath: 'assets/icons/powerca icons/jobs stroke.svg',
+                      selectedIconPath: 'assets/icons/powerca icons/jobs fill.svg',
                       label: 'Jobs',
                       index: 1,
                       animation: _animations[1],
                       onTap: () => _navigateTo(context, '/jobs', 1),
                     ),
                     _buildNavItem(
-                      icon: Icons.calendar_month_outlined,
-                      selectedIcon: Icons.calendar_month_rounded,
+                      iconPath: 'assets/icons/powerca icons/leave stroke.svg',
+                      selectedIconPath: 'assets/icons/powerca icons/leave fill.svg',
                       label: 'Leave',
                       index: 2,
                       animation: _animations[2],
                       onTap: () => _navigateTo(context, '/leave', 2),
                     ),
                     _buildNavItem(
-                      icon: Icons.push_pin_outlined,
-                      selectedIcon: Icons.push_pin,
+                      iconPath: 'assets/icons/powerca icons/pinboard stroke.svg',
+                      selectedIconPath: 'assets/icons/powerca icons/Pinboard fill.svg',
                       label: 'Pinboard',
                       index: 3,
                       animation: _animations[3],
@@ -149,8 +150,8 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
   }
 
   Widget _buildNavItem({
-    required IconData icon,
-    required IconData selectedIcon,
+    required String iconPath,
+    required String selectedIconPath,
     required String label,
     required int index,
     required Animation<double> animation,
@@ -173,42 +174,34 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon - increased size
-                Icon(
-                  isSelected ? selectedIcon : icon,
-                  size: 22,
-                  color: isSelected
-                      ? AppTheme.primaryColor
-                      : const Color(0xFF9E9E9E),
+                // SVG Icon (no background)
+                SvgPicture.asset(
+                  isSelected ? selectedIconPath : iconPath,
+                  width: 20.sp,
+                  height: 20.sp,
+                  colorFilter: ColorFilter.mode(
+                    isSelected
+                        ? AppTheme.primaryColor
+                        : const Color(0xFF9CA3AF),
+                    BlendMode.srcIn,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                // Label - increased size
+                SizedBox(height: 4.h),
+                // Label
                 Text(
                   label,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12,
+                    fontSize: 10.sp,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     color: isSelected
                         ? AppTheme.primaryColor
-                        : const Color(0xFF9E9E9E),
+                        : const Color(0xFF9CA3AF),
                     height: 1.0,
                   ),
                   overflow: TextOverflow.clip,
                   maxLines: 1,
                 ),
-                // Active indicator - only show when selected
-                if (isSelected) ...[
-                  const SizedBox(height: 3),
-                  Container(
-                    width: 16,
-                    height: 3,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(1.5),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

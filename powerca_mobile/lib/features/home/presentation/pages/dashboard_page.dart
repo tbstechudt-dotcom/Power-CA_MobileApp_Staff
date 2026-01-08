@@ -27,19 +27,19 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final supabase = Supabase.instance.client;
 
+  double _hoursLoggedToday = 0.0;
   double _hoursLoggedThisWeek = 0.0;
-  int _entriesThisMonth = 0;
-  double _avgHoursPerDay = 0.0;
+  double _totalMonthHours = 0.0;
   int _daysActive = 0;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Set status bar style for white background with dark icons
+    // Set status bar style for white header with dark icons
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
+        statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
@@ -50,6 +50,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _fetchDashboardStats() async {
     try {
       final now = DateTime.now();
+      final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
       // Calculate start of this week (Monday)
       final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
@@ -61,6 +62,22 @@ class _DashboardPageState extends State<DashboardPage> {
       final startOfMonth = DateTime(now.year, now.month, 1);
       final startOfMonthStr = DateFormat('yyyy-MM-dd').format(startOfMonth);
 
+      // Fetch hours logged today
+      final todayResponse = await supabase
+          .from('workdiary')
+          .select('minutes')
+          .eq('staff_id', widget.currentStaff.staffId)
+          .eq('date', todayStr);
+
+      double todayHours = 0.0;
+      for (final entry in todayResponse) {
+        final minutes = entry['minutes'];
+        if (minutes != null) {
+          final minutesValue = minutes is int ? minutes.toDouble() : minutes as double;
+          todayHours += minutesValue / 60.0;
+        }
+      }
+
       // Fetch hours logged this week
       final weekResponse = await supabase
           .from('workdiary')
@@ -68,12 +85,12 @@ class _DashboardPageState extends State<DashboardPage> {
           .eq('staff_id', widget.currentStaff.staffId)
           .gte('date', startOfWeekStr);
 
-      double totalHours = 0.0;
+      double weekHours = 0.0;
       for (final entry in weekResponse) {
         final minutes = entry['minutes'];
         if (minutes != null) {
           final minutesValue = minutes is int ? minutes.toDouble() : minutes as double;
-          totalHours += minutesValue / 60.0; // Convert minutes to hours
+          weekHours += minutesValue / 60.0;
         }
       }
 
@@ -84,7 +101,7 @@ class _DashboardPageState extends State<DashboardPage> {
           .eq('staff_id', widget.currentStaff.staffId)
           .gte('date', startOfMonthStr);
 
-      // Calculate days active and average hours per day
+      // Calculate days active and total hours for the month
       final Set<String> uniqueDates = {};
       double totalMonthHours = 0.0;
 
@@ -102,15 +119,13 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       }
 
-      // Calculate average hours per day (only for days that have entries)
       final daysActive = uniqueDates.length;
-      final avgHoursPerDay = daysActive > 0 ? totalMonthHours / daysActive : 0.0;
 
       if (mounted) {
         setState(() {
-          _hoursLoggedThisWeek = totalHours;
-          _entriesThisMonth = monthResponse.length;
-          _avgHoursPerDay = avgHoursPerDay;
+          _hoursLoggedToday = todayHours;
+          _hoursLoggedThisWeek = weekHours;
+          _totalMonthHours = totalMonthHours;
           _daysActive = daysActive;
           _isLoading = false;
         });
@@ -140,62 +155,73 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(top: false,
-        child: Builder(
-          builder: (scaffoldContext) => Column(
-          children: [
-            // Modern Top App Bar
-            AppHeader(
-              currentStaff: widget.currentStaff,
-              onMenuTap: () {
-                Scaffold.of(scaffoldContext).openDrawer();
-              },
-            ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // Minimize the app instead of logging out
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        drawer: AppDrawer(currentStaff: widget.currentStaff),
+        body: SafeArea(
+          top: false,
+          child: Builder(
+            builder: (scaffoldContext) => Column(
+              children: [
+                // Modern Top App Bar
+                AppHeader(
+                  currentStaff: widget.currentStaff,
+                  onMenuTap: () {
+                    Scaffold.of(scaffoldContext).openDrawer();
+                  },
+                ),
 
-            // Content - Show static UI
-            Expanded(
-              child: Container(
-                color: const Color(0xFFF8F9FC),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    children: [
-                      // Main Content Area
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Staff Profile Card
-                            _buildStaffProfileCard(),
+                // Content - Show static UI
+                Expanded(
+                  child: Container(
+                    color: const Color(0xFFF1F5F9),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: [
+                          // Main Content Area
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Staff Profile Card
+                                _buildStaffProfileCard(),
 
-                            const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                            // Monthly Calendar (Moved to second section)
-                            _buildMonthlyCalendar(),
+                                // Monthly Calendar (Moved to second section)
+                                _buildMonthlyCalendar(),
 
-                            // Statistics Grid (4 cards in 2x2)
-                            _buildStatisticsGrid(),
+                                const SizedBox(height: 16),
 
-                            const SizedBox(height: 20),
-                          ],
-                        ),
+                                // Statistics Grid (4 cards in 2x2)
+                                _buildStatisticsGrid(),
+
+                                const SizedBox(height: 16),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
+        bottomNavigationBar: ModernBottomNavigation(
+          currentIndex: 0,
+          currentStaff: widget.currentStaff,
         ),
-      ),
-      bottomNavigationBar: ModernBottomNavigation(
-        currentIndex: 0,
-        currentStaff: widget.currentStaff,
       ),
     );
   }
@@ -222,21 +248,43 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
+          // Avatar
+          Container(
+            width: 52.w,
+            height: 52.h,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2563EB),
+              borderRadius: BorderRadius.circular(14.r),
+            ),
+            child: Center(
+              child: Text(
+                widget.currentStaff.name.isNotEmpty
+                    ? widget.currentStaff.name[0].toUpperCase()
+                    : 'U',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 22.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 14.w),
           // Staff Info
           Expanded(
             child: Column(
@@ -247,21 +295,28 @@ class _DashboardPageState extends State<DashboardPage> {
                   widget.currentStaff.name,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1A1A1A),
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimaryColor,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 2.h),
-                Text(
-                  staffRole,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF6B7280),
+                SizedBox(height: 4.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    staffRole,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textMutedColor,
+                    ),
                   ),
                 ),
               ],
@@ -269,19 +324,32 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           // Staff ID Badge
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F9FC),
-              borderRadius: BorderRadius.circular(6.r),
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10.r),
             ),
-            child: Text(
-              '#${widget.currentStaff.staffId}',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF4B5563),
-              ),
+            child: Column(
+              children: [
+                Text(
+                  'ID',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textMutedColor,
+                  ),
+                ),
+                Text(
+                  '#${widget.currentStaff.staffId}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimaryColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -293,6 +361,7 @@ class _DashboardPageState extends State<DashboardPage> {
     // Use the new ModernWorkCalendar widget with flutter_calendar_carousel
     return ModernWorkCalendar(
       staffId: widget.currentStaff.staffId,
+      onDataReloaded: _fetchDashboardStats,
     );
   }
 
@@ -301,37 +370,38 @@ class _DashboardPageState extends State<DashboardPage> {
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       mainAxisSpacing: 12.h,
       crossAxisSpacing: 12.w,
       childAspectRatio: 1.4,
       children: [
         _buildStatTile(
-          icon: Icons.timer_rounded,
+          icon: Icons.wb_sunny_rounded,
+          title: 'Today Hours',
+          value: _isLoading ? '...' : _formatHours(_hoursLoggedToday),
+          gradient: [const Color(0xFFFBBF24), const Color(0xFFF59E0B)],
+          trend: 'Today',
+        ),
+        _buildStatTile(
+          icon: Icons.date_range_rounded,
           title: 'Hours Logged',
           value: _isLoading ? '...' : _formatHours(_hoursLoggedThisWeek),
           gradient: [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
-          trend: 'This Week',
+          trend: 'Week',
         ),
         _buildStatTile(
-          icon: Icons.edit_note_rounded,
-          title: 'Diary Entries',
-          value: _isLoading ? '...' : '$_entriesThisMonth',
+          icon: Icons.calendar_month_rounded,
+          title: 'Total Hours',
+          value: _isLoading ? '...' : _formatHours(_totalMonthHours),
           gradient: [const Color(0xFF34D399), const Color(0xFF10B981)],
-          trend: 'This Month',
+          trend: 'Month',
         ),
         _buildStatTile(
-          icon: Icons.speed_rounded,
-          title: 'Avg Hours/Day',
-          value: _isLoading ? '...' : _formatHours(_avgHoursPerDay),
-          gradient: [const Color(0xFFFBBF24), const Color(0xFFF59E0B)],
-          trend: 'This Month',
-        ),
-        _buildStatTile(
-          icon: Icons.event_available_rounded,
+          icon: Icons.check_circle_rounded,
           title: 'Days Active',
           value: _isLoading ? '...' : '$_daysActive',
           gradient: [const Color(0xFFA78BFA), const Color(0xFF8B5CF6)],
-          trend: 'This Month',
+          trend: 'Month',
         ),
       ],
     );
@@ -381,6 +451,7 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       padding: EdgeInsets.all(10.w),
@@ -395,7 +466,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(8.r),
@@ -404,7 +475,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         trend,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 9.sp,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -429,7 +500,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       title,
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 11.sp,
+                        fontSize: 12.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.9),
                       ),

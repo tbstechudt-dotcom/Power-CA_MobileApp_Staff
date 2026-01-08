@@ -11,10 +11,12 @@ import '../pages/work_log_list_page.dart';
 /// Modern calendar widget with proper weekend coloring using flutter_calendar_carousel
 class ModernWorkCalendar extends StatefulWidget {
   final int staffId;
+  final VoidCallback? onDataReloaded;
 
   const ModernWorkCalendar({
     super.key,
     required this.staffId,
+    this.onDataReloaded,
   });
 
   @override
@@ -81,6 +83,9 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
         _markedDateMap = EventList<Event>(events: {});
         _isLoading = false;
       });
+
+      // Notify parent that data was reloaded
+      widget.onDataReloaded?.call();
     } catch (e) {
       setState(() {
         _errorMessage = 'Error loading data: $e';
@@ -134,61 +139,83 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 1),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: EdgeInsets.only(left: 12.w, right: 12.w, top: 12, bottom: 4),
+      padding: EdgeInsets.only(left: 16.w, right: 16.w, top: 16.h, bottom: 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Compact Header
           Row(
             children: [
-              Icon(
-                Icons.calendar_month_rounded,
-                color: const Color(0xFF2563EB),
-                size: 18.sp,
-              ),
-              SizedBox(width: 8.w),
-              Text(
-                'Work Log',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1A1A1A),
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10.r),
                 ),
+                child: Icon(
+                  Icons.calendar_month_rounded,
+                  color: const Color(0xFF2563EB),
+                  size: 20.sp,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Work Log',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimaryColor,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  if (_isLoading)
+                    Text(
+                      'Loading...',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w400,
+                        color: AppTheme.textMutedColor,
+                      ),
+                    )
+                  else
+                    Text(
+                      '${_workDays.length} days logged',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w400,
+                        color: AppTheme.textMutedColor,
+                      ),
+                    ),
+                ],
               ),
               const Spacer(),
               if (_isLoading)
                 SizedBox(
-                  width: 14.w,
-                  height: 14.h,
-                  child: CircularProgressIndicator(
+                  width: 20.w,
+                  height: 20.h,
+                  child: const CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
-                  ),
-                )
-              else
-                Text(
-                  '${_workDays.length} days logged',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF6B7280),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
                   ),
                 ),
             ],
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 16.h),
 
           // Error message (if any)
           if (_errorMessage != null)
@@ -383,9 +410,9 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             ),
             weekFormat: false,
             markedDatesMap: _markedDateMap,
-            height: 350.h,
+            height: 310.h,
             selectedDateTime: null,  // No selection
-            daysHaveCircularBorder: false,
+            daysHaveCircularBorder: true,
             showOnlyCurrentMonthDate: false,
             customGridViewPhysics: const NeverScrollableScrollPhysics(),
             markedDateShowIcon: false, // Disabled - using custom dots in customDayBuilder
@@ -432,7 +459,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               fontFamily: 'Inter',
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF1A1A1A),
+              color: AppTheme.textPrimaryColor,
             ),
             headerMargin: EdgeInsets.only(bottom: 12.h),
             childAspectRatio: 1.15,

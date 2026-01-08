@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,6 +13,11 @@ import 'features/auth/domain/entities/staff.dart';
 import 'features/auth/presentation/pages/select_concern_location_page.dart';
 import 'features/auth/presentation/pages/sign_in_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
+import 'features/device_security/presentation/bloc/device_security_bloc.dart';
+import 'features/device_security/domain/entities/device_info.dart';
+import 'features/device_security/presentation/pages/otp_verification_page.dart';
+import 'features/device_security/presentation/pages/phone_verification_page.dart';
+import 'features/device_security/presentation/pages/security_gate_page.dart';
 import 'features/home/presentation/pages/dashboard_page.dart';
 import 'features/jobs/presentation/pages/jobs_page.dart';
 import 'features/leave/presentation/pages/leave_page.dart';
@@ -42,9 +48,10 @@ void main() async {
         DeviceOrientation.portraitDown,
       ]);
 
-      // Show status bar
+      // Show status bar and navigation bar normally (not edge-to-edge)
       SystemChrome.setEnabledSystemUIMode(
-        SystemUiMode.edgeToEdge,
+        SystemUiMode.manual,
+        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
       );
 
       // Initialize Supabase with error handling
@@ -201,10 +208,12 @@ class PowerCAApp extends StatelessWidget {
           title: 'PowerCA - Auditor WorkLog',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          home: const SplashPage(),
+          home: const SecurityGatePage(),
           onGenerateRoute: (settings) {
             switch (settings.name) {
               case '/':
+              case '/security-gate':
+                return MaterialPageRoute(builder: (_) => const SecurityGatePage());
               case '/splash':
                 return MaterialPageRoute(builder: (_) => const SplashPage());
               case '/sign-in':
@@ -238,6 +247,27 @@ class PowerCAApp extends StatelessWidget {
                 final job = settings.arguments as Job;
                 return MaterialPageRoute(
                   builder: (_) => WorkDiaryListPage(job: job),
+                );
+              case '/phone-verification':
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (_) => PhoneVerificationPage(
+                    deviceInfo: args['deviceInfo'] as DeviceInfo,
+                    staffId: args['staffId'] as int?,
+                  ),
+                );
+              case '/otp-verification':
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => getIt<DeviceSecurityBloc>(),
+                    child: OtpVerificationPage(
+                      maskedPhone: args['maskedPhone'] as String,
+                      expiresInSeconds: args['expiresInSeconds'] as int,
+                      phoneNumber: args['phoneNumber'] as String?,
+                      fingerprint: args['fingerprint'] as String?,
+                    ),
+                  ),
                 );
               default:
                 return MaterialPageRoute(builder: (_) => const SplashPage());
@@ -443,18 +473,18 @@ class _AutoSplashScreenState extends State<AutoSplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App Logo/Icon
+            // App Logo
             Container(
-              width: 100,
-              height: 100,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
-                Icons.business_center_rounded,
-                size: 60,
-                color: AppTheme.primaryColor,
+              padding: const EdgeInsets.all(12),
+              child: Image.asset(
+                'assets/images/Logo/Power CA Logo Only-04.png',
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(height: 32),

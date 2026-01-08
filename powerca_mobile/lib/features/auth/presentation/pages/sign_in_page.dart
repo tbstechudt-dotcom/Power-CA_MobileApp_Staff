@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
+import '../../../device_security/domain/repositories/device_security_repository.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -57,25 +58,102 @@ class _SignInPageContentState extends State<_SignInPageContent> {
         );
   }
 
+  /// Check if logged-in staff matches the locally verified staff
+  /// This is the simplified staff ID-based verification
+  Future<void> _checkPhoneVerification(
+    BuildContext context,
+    Authenticated state,
+    DeviceSecurityRepository securityRepository,
+  ) async {
+    // Check if device has verified staff locally
+    final isVerified = await securityRepository.isDeviceVerifiedLocally();
+
+    // Debug: Log verification status
+    debugPrint('=== Staff Verification Check ===');
+    debugPrint('Device verified locally: $isVerified');
+    debugPrint('Logged in staff ID: ${state.staff.staffId}');
+    debugPrint('Logged in staff name: ${state.staff.name}');
+
+    if (!context.mounted) return;
+
+    if (!isVerified) {
+      // No staff verified on this device - redirect to security gate
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please verify your phone number first.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      Navigator.pushReplacementNamed(context, '/security-gate');
+      return;
+    }
+
+    // Get the verified staff ID and name from local storage
+    final verifiedStaffId = await securityRepository.getVerifiedStaffId();
+    final verifiedStaffName = await securityRepository.getVerifiedStaffName();
+
+    // Debug: Log verified staff info
+    debugPrint('Verified staff ID from storage: $verifiedStaffId');
+    debugPrint('Verified staff name from storage: $verifiedStaffName');
+
+    if (!context.mounted) return;
+
+    if (verifiedStaffId == null) {
+      // No verified staff stored - redirect to security gate
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please verify your phone number first.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      Navigator.pushReplacementNamed(context, '/security-gate');
+      return;
+    }
+
+    // Debug: Log comparison
+    debugPrint('Staff IDs match: ${state.staff.staffId == verifiedStaffId}');
+
+    // Compare staff IDs
+    if (state.staff.staffId == verifiedStaffId) {
+      // Staff ID matches - allow login
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Welcome, ${state.staff.name}!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+      Navigator.pushReplacementNamed(
+        context,
+        '/select-concern-location',
+        arguments: state.staff,
+      );
+    } else {
+      // Staff ID doesn't match - this device is verified for another staff
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'This device belongs to ${verifiedStaffName ?? 'another staff member'}. '
+            'Please login with that account\'s credentials, or contact admin to reassign this device.',
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      // Don't navigate - stay on login page
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is Authenticated) {
-          // Navigate to home/dashboard on successful authentication
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Welcome, ${state.staff.name}!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 1),
-            ),
-          );
-          // Navigate to concern & location selection page
-          Navigator.pushReplacementNamed(
-            context,
-            '/select-concern-location',
-            arguments: state.staff,
-          );
+          // Simplified phone-based verification (no fingerprint)
+          final securityRepository = getIt<DeviceSecurityRepository>();
+          await _checkPhoneVerification(context, state, securityRepository);
         } else if (state is AuthError) {
           // Show error message
           ScaffoldMessenger.of(context).showSnackBar(
@@ -102,7 +180,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                     children: [
                       // PowerCA Logo
                       Image.asset(
-                        'assets/images/splash/Power CA Logo Only-06.png',
+                        'assets/images/Logo/Power CA Logo Only-04.png',
                         width: 120.w,
                         height: 100.h,
                       ),
@@ -115,7 +193,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         style: GoogleFonts.inter(
                           fontSize: 24.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF263238),
+                          color: AppTheme.textPrimaryColor,
                         ),
                       ),
 
@@ -128,7 +206,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                         style: GoogleFonts.inter(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF8F8E90),
+                          color: AppTheme.textMutedColor,
                           height: 1.5,
                         ),
                       ),
@@ -143,7 +221,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                           style: GoogleFonts.inter(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF080E29),
+                            color: AppTheme.textPrimaryColor,
                           ),
                         ),
                       ),
@@ -158,34 +236,34 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                           hintStyle: GoogleFonts.inter(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF8F8E90),
+                            color: AppTheme.textMutedColor,
                           ),
                           prefixIcon: Icon(Icons.person_outline,
-                            color: Color(0xFF8F8E90),
+                            color: AppTheme.textMutedColor,
                             size: 22.sp,
                           ),
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.r),
+                            borderRadius: BorderRadius.circular(12.r),
                             borderSide: const BorderSide(
-                              color: Color(0xFF8F8E90),
+                              color: AppTheme.textMutedColor,
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.r),
+                            borderRadius: BorderRadius.circular(12.r),
                             borderSide: const BorderSide(
-                              color: Color(0xFF8F8E90),
+                              color: AppTheme.textMutedColor,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.r),
+                            borderRadius: BorderRadius.circular(12.r),
                             borderSide: const BorderSide(
                               color: AppTheme.primaryColor,
                               width: 2,
                             ),
                           ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 13.h),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 16.h),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -205,7 +283,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                           style: GoogleFonts.inter(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF080E29),
+                            color: AppTheme.textPrimaryColor,
                           ),
                         ),
                       ),
@@ -221,10 +299,10 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                           hintStyle: GoogleFonts.inter(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF8F8E90),
+                            color: AppTheme.textMutedColor,
                           ),
                           prefixIcon: Icon(Icons.lock_outline,
-                            color: Color(0xFF8F8E90),
+                            color: AppTheme.textMutedColor,
                             size: 22.sp,
                           ),
                           suffixIcon: IconButton(
@@ -232,7 +310,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                               _isPasswordVisible
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: const Color(0xFF8F8E90),
+                              color: AppTheme.textMutedColor,
                               size: 22.sp,
                             ),
                             onPressed: () {
@@ -244,25 +322,25 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.r),
+                            borderRadius: BorderRadius.circular(12.r),
                             borderSide: const BorderSide(
-                              color: Color(0xFF8F8E90),
+                              color: AppTheme.textMutedColor,
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.r),
+                            borderRadius: BorderRadius.circular(12.r),
                             borderSide: const BorderSide(
-                              color: Color(0xFF8F8E90),
+                              color: AppTheme.textMutedColor,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.r),
+                            borderRadius: BorderRadius.circular(12.r),
                             borderSide: const BorderSide(
                               color: AppTheme.primaryColor,
                               width: 2,
                             ),
                           ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 13.h),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 16.h),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -277,13 +355,13 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                       // Sign In button
                       SizedBox(
                         width: double.infinity,
-                        height: 48.h,
+                        height: 52.h,
                         child: ElevatedButton(
                           onPressed: isLoading ? null : _handleSignIn,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryColor,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.r),
+                              borderRadius: BorderRadius.circular(12.r),
                             ),
                             elevation: 0,
                           ),
