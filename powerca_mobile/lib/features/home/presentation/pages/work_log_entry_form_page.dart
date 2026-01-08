@@ -782,49 +782,260 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildClientDropdown() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE9F0F8)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          isExpanded: true,
-          value: _selectedClientId,
-          hint: Text(
-            'Select a client',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF8F8E90),
-            ),
-          ),
-          items: _clients.map((client) {
-            return DropdownMenuItem<int>(
-              value: client['client_id'] as int,
+    // Get selected client name for display
+    String? selectedClientName;
+    if (_selectedClientId != null) {
+      final selectedClient = _clients.firstWhere(
+        (c) => c['client_id'] == _selectedClientId,
+        orElse: () => {'clientname': null},
+      );
+      selectedClientName = selectedClient['clientname'] as String?;
+    }
+
+    return InkWell(
+      onTap: () => _showClientSearchDialog(),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: const Color(0xFFE9F0F8)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
               child: Text(
-                client['clientname'] ?? 'Unknown Client',
+                selectedClientName ?? 'Select a client',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
-                  color: const Color(0xFF080E29),
+                  color: selectedClientName != null
+                      ? const Color(0xFF080E29)
+                      : const Color(0xFF8F8E90),
                 ),
               ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedClientId = value;
-              // Filter jobs by selected client
-              _selectedJobId = null;
-            });
-          },
+            ),
+            Icon(
+              Icons.arrow_drop_down,
+              color: const Color(0xFF8F8E90),
+              size: 24.sp,
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  /// Show searchable client selection dialog
+  Future<void> _showClientSearchDialog() async {
+    String searchQuery = '';
+    final searchController = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            // Filter clients based on search query
+            var filteredClients = searchQuery.isEmpty
+                ? _clients
+                : _clients.where((client) {
+                    final clientName = (client['clientname'] ?? '').toString().toLowerCase();
+                    return clientName.contains(searchQuery.toLowerCase());
+                  }).toList();
+
+            // Sort alphabetically by client name
+            filteredClients = List.from(filteredClients)
+              ..sort((a, b) => (a['clientname'] ?? '').toString().toLowerCase()
+                  .compareTo((b['clientname'] ?? '').toString().toLowerCase()));
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.7,
+              minChildSize: 0.5,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    // Handle bar
+                    Container(
+                      margin: EdgeInsets.only(top: 8.h),
+                      width: 36.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Select Client',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF080E29),
+                            ),
+                          ),
+                          Text(
+                            '${filteredClients.length} clients',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF8F8E90),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Search Field
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 8.h),
+                      child: TextField(
+                        controller: searchController,
+                        autofocus: true,
+                        onChanged: (value) {
+                          setModalState(() {
+                            searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search client name...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14.sp,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            size: 20.sp,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setModalState(() {
+                                      searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: const Color(0xFFF8F9FC),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14.sp,
+                          color: const Color(0xFF1F2937),
+                        ),
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey[200]),
+                    // Client list
+                    Expanded(
+                      child: filteredClients.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.search_off,
+                                    size: 48.sp,
+                                    color: Colors.grey[300],
+                                  ),
+                                  SizedBox(height: 12.h),
+                                  Text(
+                                    'No clients found',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF8F8E90),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding: EdgeInsets.symmetric(vertical: 8.h),
+                              itemCount: filteredClients.length,
+                              itemBuilder: (context, index) {
+                                final client = filteredClients[index];
+                                final clientId = client['client_id'] as int;
+                                final clientName = client['clientname'] ?? 'Unknown Client';
+                                final isSelected = clientId == _selectedClientId;
+
+                                return InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedClientId = clientId;
+                                      _selectedJobId = null;
+                                      _selectedTaskId = null;
+                                      _tasks = [];
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
+                                      border: Border(
+                                        bottom: BorderSide(color: Colors.grey[100]!, width: 0.5),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            clientName,
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 14.sp,
+                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                              color: isSelected ? AppTheme.primaryColor : const Color(0xFF080E29),
+                                            ),
+                                          ),
+                                        ),
+                                        if (isSelected)
+                                          Icon(
+                                            Icons.check_circle,
+                                            color: AppTheme.primaryColor,
+                                            size: 20.sp,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -834,110 +1045,543 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         ? _jobsByClient[_selectedClientId]!.values.toList()
         : <Map<String, dynamic>>[];
 
-    // Debug logging
-    print('DEBUG: Selected client ID: $_selectedClientId');
-    print('DEBUG: Filtered jobs count: ${filteredJobs.length}');
-    if (filteredJobs.isNotEmpty) {
-      print('DEBUG: All filtered jobs for client $_selectedClientId:');
-      for (var i = 0; i < filteredJobs.length; i++) {
-        print('  ${i + 1}. job_id: ${filteredJobs[i]['job_id']}, work_desc: "${filteredJobs[i]['work_desc']}"');
+    // Get selected job name for display
+    String? selectedJobDisplay;
+    if (_selectedJobId != null && filteredJobs.isNotEmpty) {
+      final selectedJob = filteredJobs.firstWhere(
+        (j) => j['job_id'] == _selectedJobId,
+        orElse: () => {'work_desc': null, 'job_uid': null},
+      );
+      if (selectedJob['work_desc'] != null) {
+        selectedJobDisplay = '${selectedJob['job_uid'] ?? 'N/A'} - ${selectedJob['work_desc']}';
       }
     }
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE9F0F8)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          isExpanded: true,
-          value: _selectedJobId,
-          hint: Text(
-            filteredJobs.isEmpty
-                ? 'No jobs available'
-                : 'Select a job',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF8F8E90),
-            ),
-          ),
-          items: filteredJobs.map((job) {
-            return DropdownMenuItem<int>(
-              value: job['job_id'] as int,
+    return InkWell(
+      onTap: _selectedClientId == null || filteredJobs.isEmpty
+          ? null
+          : () => _showJobSearchDialog(filteredJobs),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: const Color(0xFFE9F0F8)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
               child: Text(
-                '${job['job_uid'] ?? 'N/A'} - ${job['work_desc'] ?? 'Unknown Job'}',
+                selectedJobDisplay ?? (filteredJobs.isEmpty ? 'No jobs available' : 'Select a job'),
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
-                  color: const Color(0xFF080E29),
+                  color: selectedJobDisplay != null
+                      ? const Color(0xFF080E29)
+                      : const Color(0xFF8F8E90),
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            );
-          }).toList(),
-          onChanged: filteredJobs.isEmpty
-              ? null
-              : (value) {
-                  setState(() => _selectedJobId = value);
-                  // Load tasks for the selected job
-                  if (value != null) {
-                    _loadTasksForJob(value);
-                  }
-                },
+            ),
+            Icon(
+              Icons.arrow_drop_down,
+              color: const Color(0xFF8F8E90),
+              size: 24.sp,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTaskDropdown() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE9F0F8)),
+  /// Show searchable job selection dialog
+  Future<void> _showJobSearchDialog(List<Map<String, dynamic>> jobs) async {
+    String searchQuery = '';
+    final searchController = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          isExpanded: true,
-          value: _selectedTaskId,
-          hint: Text(
-            _tasks.isEmpty
-                ? 'No tasks available'
-                : 'Select a task',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF8F8E90),
-            ),
-          ),
-          items: _tasks.map((task) {
-            return DropdownMenuItem<int>(
-              value: task['task_id'] as int, // Use task_id from jobtasks table (references taskmaster)
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            // Filter jobs based on search query
+            var filteredJobs = searchQuery.isEmpty
+                ? jobs
+                : jobs.where((job) {
+                    final jobDesc = (job['work_desc'] ?? '').toString().toLowerCase();
+                    final jobUid = (job['job_uid'] ?? '').toString().toLowerCase();
+                    final query = searchQuery.toLowerCase();
+                    return jobDesc.contains(query) || jobUid.contains(query);
+                  }).toList();
+
+            // Sort alphabetically by job description
+            filteredJobs = List.from(filteredJobs)
+              ..sort((a, b) => (a['work_desc'] ?? '').toString().toLowerCase()
+                  .compareTo((b['work_desc'] ?? '').toString().toLowerCase()));
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.7,
+              minChildSize: 0.5,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    // Handle bar
+                    Container(
+                      margin: EdgeInsets.only(top: 8.h),
+                      width: 36.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Select Job',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF080E29),
+                            ),
+                          ),
+                          Text(
+                            '${filteredJobs.length} jobs',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF8F8E90),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Search Field
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 8.h),
+                      child: TextField(
+                        controller: searchController,
+                        autofocus: true,
+                        onChanged: (value) {
+                          setModalState(() {
+                            searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search job name or ID...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14.sp,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            size: 20.sp,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setModalState(() {
+                                      searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: const Color(0xFFF8F9FC),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14.sp,
+                          color: const Color(0xFF1F2937),
+                        ),
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey[200]),
+                    // Job list
+                    Expanded(
+                      child: filteredJobs.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.search_off,
+                                    size: 48.sp,
+                                    color: Colors.grey[300],
+                                  ),
+                                  SizedBox(height: 12.h),
+                                  Text(
+                                    'No jobs found',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF8F8E90),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding: EdgeInsets.symmetric(vertical: 8.h),
+                              itemCount: filteredJobs.length,
+                              itemBuilder: (context, index) {
+                                final job = filteredJobs[index];
+                                final jobId = job['job_id'] as int;
+                                final jobUid = job['job_uid'] ?? 'N/A';
+                                final jobDesc = job['work_desc'] ?? 'Unknown Job';
+                                final isSelected = jobId == _selectedJobId;
+
+                                return InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedJobId = jobId;
+                                      _selectedTaskId = null;
+                                      _tasks = [];
+                                    });
+                                    Navigator.pop(context);
+                                    _loadTasksForJob(jobId);
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
+                                      border: Border(
+                                        bottom: BorderSide(color: Colors.grey[100]!, width: 0.5),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                jobDesc,
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 14.sp,
+                                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                                  color: isSelected ? AppTheme.primaryColor : const Color(0xFF080E29),
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              SizedBox(height: 2.h),
+                                              Text(
+                                                jobUid,
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 12.sp,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: const Color(0xFF8F8E90),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (isSelected)
+                                          Icon(
+                                            Icons.check_circle,
+                                            color: AppTheme.primaryColor,
+                                            size: 20.sp,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTaskDropdown() {
+    // Get selected task name for display
+    String? selectedTaskName;
+    if (_selectedTaskId != null && _tasks.isNotEmpty) {
+      final selectedTask = _tasks.firstWhere(
+        (t) => t['task_id'] == _selectedTaskId,
+        orElse: () => {'task_desc': null},
+      );
+      selectedTaskName = selectedTask['task_desc'] as String?;
+    }
+
+    return InkWell(
+      onTap: _selectedJobId == null || _tasks.isEmpty
+          ? null
+          : () => _showTaskSearchDialog(),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: const Color(0xFFE9F0F8)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
               child: Text(
-                task['task_desc'] ?? 'Unknown Task', // Column is 'task_desc' not 'task_name'
+                selectedTaskName ?? (_tasks.isEmpty ? 'No tasks available' : 'Select a task'),
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
-                  color: const Color(0xFF080E29),
+                  color: selectedTaskName != null
+                      ? const Color(0xFF080E29)
+                      : const Color(0xFF8F8E90),
                 ),
               ),
-            );
-          }).toList(),
-          onChanged: _tasks.isEmpty
-              ? null
-              : (value) {
-                  setState(() => _selectedTaskId = value);
-                },
+            ),
+            Icon(
+              Icons.arrow_drop_down,
+              color: const Color(0xFF8F8E90),
+              size: 24.sp,
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  /// Show searchable task selection dialog
+  Future<void> _showTaskSearchDialog() async {
+    String searchQuery = '';
+    final searchController = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            // Filter tasks based on search query
+            var filteredTasks = searchQuery.isEmpty
+                ? _tasks
+                : _tasks.where((task) {
+                    final taskDesc = (task['task_desc'] ?? '').toString().toLowerCase();
+                    return taskDesc.contains(searchQuery.toLowerCase());
+                  }).toList();
+
+            // Sort alphabetically by task description
+            filteredTasks = List.from(filteredTasks)
+              ..sort((a, b) => (a['task_desc'] ?? '').toString().toLowerCase()
+                  .compareTo((b['task_desc'] ?? '').toString().toLowerCase()));
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.7,
+              minChildSize: 0.5,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    // Handle bar
+                    Container(
+                      margin: EdgeInsets.only(top: 8.h),
+                      width: 36.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Select Task',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF080E29),
+                            ),
+                          ),
+                          Text(
+                            '${filteredTasks.length} tasks',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF8F8E90),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Search Field
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 8.h),
+                      child: TextField(
+                        controller: searchController,
+                        autofocus: true,
+                        onChanged: (value) {
+                          setModalState(() {
+                            searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search task name...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14.sp,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            size: 20.sp,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setModalState(() {
+                                      searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: const Color(0xFFF8F9FC),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14.sp,
+                          color: const Color(0xFF1F2937),
+                        ),
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey[200]),
+                    // Task list
+                    Expanded(
+                      child: filteredTasks.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.search_off,
+                                    size: 48.sp,
+                                    color: Colors.grey[300],
+                                  ),
+                                  SizedBox(height: 12.h),
+                                  Text(
+                                    'No tasks found',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF8F8E90),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding: EdgeInsets.symmetric(vertical: 8.h),
+                              itemCount: filteredTasks.length,
+                              itemBuilder: (context, index) {
+                                final task = filteredTasks[index];
+                                final taskId = task['task_id'] as int;
+                                final taskDesc = task['task_desc'] ?? 'Unknown Task';
+                                final isSelected = taskId == _selectedTaskId;
+
+                                return InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedTaskId = taskId;
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
+                                      border: Border(
+                                        bottom: BorderSide(color: Colors.grey[100]!, width: 0.5),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            taskDesc,
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 14.sp,
+                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                              color: isSelected ? AppTheme.primaryColor : const Color(0xFF080E29),
+                                            ),
+                                          ),
+                                        ),
+                                        if (isSelected)
+                                          Icon(
+                                            Icons.check_circle,
+                                            color: AppTheme.primaryColor,
+                                            size: 20.sp,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
