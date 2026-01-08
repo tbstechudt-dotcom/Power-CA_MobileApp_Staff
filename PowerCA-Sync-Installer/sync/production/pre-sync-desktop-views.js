@@ -68,7 +68,9 @@ async function preSyncDesktopViews() {
       'jobtasks',
       'taskchecklist',
       'mbreminder',
-      'mbremdetail'
+      'mbremdetail',
+      'mbjobreviewnotes',      // NEW: Job Review Notes
+      'mbjobreviewresponse'    // NEW: Job Review Responses
     ];
 
     for (const table of tables) {
