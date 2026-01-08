@@ -73,13 +73,20 @@ class PriorityService {
   /// Add a job to priority list
   static Future<void> addPriorityJob(int jobId) async {
     try {
-      // Update is_priority = true in jobshead table
+      final staffId = await _getCurrentStaffId();
+      if (staffId == null) {
+        debugPrint('PriorityService: No staff ID found, cannot add priority');
+        return;
+      }
+
+      // Update is_priority = true in jobshead table for THIS STAFF ONLY
       await _supabase
           .from('jobshead')
           .update({'is_priority': true})
-          .eq('job_id', jobId);
+          .eq('job_id', jobId)
+          .eq('sporg_id', staffId);  // Only affect current staff's record
 
-      debugPrint('PriorityService: Set is_priority=true for job $jobId');
+      debugPrint('PriorityService: Set is_priority=true for job $jobId (staff $staffId)');
 
       // Also save to local storage as backup
       final jobIds = await getPriorityJobIds();
@@ -101,13 +108,20 @@ class PriorityService {
   /// Remove a job from priority list
   static Future<void> removePriorityJob(int jobId) async {
     try {
-      // Update is_priority = false in jobshead table
+      final staffId = await _getCurrentStaffId();
+      if (staffId == null) {
+        debugPrint('PriorityService: No staff ID found, cannot remove priority');
+        return;
+      }
+
+      // Update is_priority = false in jobshead table for THIS STAFF ONLY
       await _supabase
           .from('jobshead')
           .update({'is_priority': false})
-          .eq('job_id', jobId);
+          .eq('job_id', jobId)
+          .eq('sporg_id', staffId);  // Only affect current staff's record
 
-      debugPrint('PriorityService: Set is_priority=false for job $jobId');
+      debugPrint('PriorityService: Set is_priority=false for job $jobId (staff $staffId)');
 
       // Also update local storage
       final jobIds = await getPriorityJobIds();
