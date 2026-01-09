@@ -1,0 +1,86 @@
+name: Sync Release to Supabase
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version name (e.g., 1.0.1)'
+        required: true
+      version_code:
+        description: 'Version code (e.g., 2)'
+        required: true
+      download_url:
+        description: 'APK download URL'
+        required: true
+      release_notes:
+        description: 'Release notes'
+        required: false
+        default: 'Bug fixes and improvements'
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set version info (from release)
+        if: github.event_name == 'release'
+        id: release_version
+        run: |
+          # Extract version from pubspec.yaml
+          VERSION=$(grep "^version:" powerca_mobile/pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          VERSION_CODE=$(grep "^version:" powerca_mobile/pubspec.yaml | sed 's/version: //' | cut -d'+' -f2)
+
+          # Get APK URL from release assets
+          APK_URL=$(echo '${{ toJson(github.event.release.assets) }}' | jq -r '.[] | select(.name | endswith(".apk")) | .browser_download_url' | head -1)
+
+          if [ -z "$APK_URL" ]; then
+            echo "No APK found in release assets!"
+            exit 1
+          fi
+
+          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "download_url=$APK_URL" >> $GITHUB_OUTPUT
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "${{ github.event.release.body }}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Set version info (manual)
+        if: github.event_name == 'workflow_dispatch'
+        id: manual_version
+        run: |
+          echo "version_name=${{ github.event.inputs.version_name }}" >> $GITHUB_OUTPUT
+          echo "version_code=${{ github.event.inputs.version_code }}" >> $GITHUB_OUTPUT
+          echo "download_url=${{ github.event.inputs.download_url }}" >> $GITHUB_OUTPUT
+          echo "release_notes=${{ github.event.inputs.release_notes }}" >> $GITHUB_OUTPUT
+
+      - name: Insert version to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          VERSION_NAME: ${{ steps.release_version.outputs.version_name || steps.manual_version.outputs.version_name }}
+          VERSION_CODE: ${{ steps.release_version.outputs.version_code || steps.manual_version.outputs.version_code }}
+          DOWNLOAD_URL: ${{ steps.release_version.outputs.download_url || steps.manual_version.outputs.download_url }}
+          RELEASE_NOTES: ${{ steps.release_version.outputs.release_notes || steps.manual_version.outputs.release_notes }}
+        run: |
+          echo "Syncing version $VERSION_NAME (code: $VERSION_CODE) to Supabase..."
+
+          curl -X POST "$SUPABASE_URL/rest/v1/app_versions" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{
+              \"version_name\": \"$VERSION_NAME\",
+              \"version_code\": $VERSION_CODE,
+              \"download_url\": \"$DOWNLOAD_URL\",
+              \"release_notes\": \"$RELEASE_NOTES\",
+              \"is_force_update\": false
+            }"
+
+          echo "Version $VERSION_NAME synced to Supabase!"

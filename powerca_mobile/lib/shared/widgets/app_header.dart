@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/providers/theme_provider.dart';
 import '../../features/auth/domain/entities/staff.dart';
 import '../../features/pinboard/presentation/pages/pinboard_page.dart';
 
@@ -164,6 +166,13 @@ class _AppHeaderState extends State<AppHeader> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final bgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final iconBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF3F4F6);
+    final iconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF4B5563);
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+
     return Container(
       padding: EdgeInsets.only(
         left: 16.w,
@@ -172,10 +181,10 @@ class _AppHeaderState extends State<AppHeader> {
         bottom: 12.h,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bgColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -189,8 +198,8 @@ class _AppHeaderState extends State<AppHeader> {
             child: Container(
               width: 40.w,
               height: 40.h,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F4F6),
+              decoration: BoxDecoration(
+                color: iconBgColor,
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -198,8 +207,8 @@ class _AppHeaderState extends State<AppHeader> {
                   'assets/icons/powerca icons/hamburger menu.svg',
                   width: 20.sp,
                   height: 20.sp,
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF4B5563),
+                  colorFilter: ColorFilter.mode(
+                    iconColor,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -218,7 +227,7 @@ class _AppHeaderState extends State<AppHeader> {
                     fontFamily: 'Inter',
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1F2937),
+                    color: titleColor,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -234,7 +243,7 @@ class _AppHeaderState extends State<AppHeader> {
                       Icon(
                         Icons.location_on_outlined,
                         size: 12.sp,
-                        color: const Color(0xFF6B7280),
+                        color: subtitleColor,
                       ),
                       SizedBox(width: 2.w),
                       Flexible(
@@ -244,7 +253,7 @@ class _AppHeaderState extends State<AppHeader> {
                             fontFamily: 'Inter',
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF6B7280),
+                            color: subtitleColor,
                             letterSpacing: 0.5,
                           ),
                           maxLines: 1,
@@ -263,8 +272,8 @@ class _AppHeaderState extends State<AppHeader> {
             child: Container(
               width: 40.w,
               height: 40.h,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F4F6),
+              decoration: BoxDecoration(
+                color: iconBgColor,
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -274,8 +283,8 @@ class _AppHeaderState extends State<AppHeader> {
                       'assets/icons/powerca icons/notification.svg',
                       width: 20.sp,
                       height: 20.sp,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFF4B5563),
+                      colorFilter: ColorFilter.mode(
+                        iconColor,
                         BlendMode.srcIn,
                       ),
                     ),

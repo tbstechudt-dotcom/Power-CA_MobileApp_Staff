@@ -5,9 +5,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import 'work_log_checklist_page.dart';
 
 /// Model to store attached file information
@@ -31,6 +33,8 @@ class WorkLogDetailPage extends StatefulWidget {
   final int entryIndex;
   final DateTime selectedDate;
   final int staffId;
+  final String? jobName;
+  final String? clientName;
 
   const WorkLogDetailPage({
     super.key,
@@ -38,6 +42,8 @@ class WorkLogDetailPage extends StatefulWidget {
     required this.entryIndex,
     required this.selectedDate,
     required this.staffId,
+    this.jobName,
+    this.clientName,
   });
 
   @override
@@ -58,8 +64,49 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
   @override
   void initState() {
     super.initState();
-    _loadAllNames();
+    // Use passed names if available, otherwise fetch from database
+    if (widget.jobName != null) {
+      _jobName = widget.jobName!;
+    }
+    if (widget.clientName != null) {
+      _clientName = widget.clientName!;
+    }
+    // If names are already provided, skip loading (except task which isn't passed)
+    if (widget.jobName != null && widget.clientName != null) {
+      _isLoadingNames = false;
+      _loadTaskName(); // Only load task name
+    } else {
+      _loadAllNames();
+    }
     _loadExistingAttachments();
+  }
+
+  /// Load only task name from database (when job and client names are already provided)
+  Future<void> _loadTaskName() async {
+    final jobId = widget.entry['job_id'];
+    final taskId = widget.entry['task_id'];
+
+    if (taskId != null && jobId != null) {
+      try {
+        final taskResponse = await _supabase
+            .from('jobtasks')
+            .select('task_desc')
+            .eq('job_id', jobId)
+            .eq('task_id', taskId)
+            .maybeSingle();
+
+        if (taskResponse != null && taskResponse['task_desc'] != null) {
+          final taskDesc = taskResponse['task_desc'].toString();
+          if (taskDesc.isNotEmpty && mounted) {
+            setState(() {
+              _taskName = taskDesc;
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint('Error loading task name: $e');
+      }
+    }
   }
 
   /// Load existing attachments from database (fetch fresh data)
@@ -138,15 +185,17 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
   Future<void> _loadAllNames() async {
     final jobId = widget.entry['job_id'];
     final clientId = widget.entry['client_id'];
+    final taskId = widget.entry['task_id'];
 
-    debugPrint('Loading names for job_id: $jobId, client_id: $clientId');
+    debugPrint('Loading names for job_id: $jobId, client_id: $clientId, task_id: $taskId');
+    debugPrint('Full entry data: ${widget.entry}');
 
     try {
-      // Load job name
+      // Load job name from jobshead
       if (jobId != null) {
         final jobResponse = await _supabase
             .from('jobshead')
-            .select('work_desc')
+            .select('work_desc, client_id')
             .eq('job_id', jobId)
             .maybeSingle();
 
@@ -156,9 +205,30 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
           _jobName = jobResponse['work_desc'].toString();
           debugPrint('Job name loaded: $_jobName');
         }
+      }
 
-        // Get task description from jobtasks
-        // Note: taskmaster table is empty, so we get task_desc from jobtasks
+      // Load task description from jobtasks using task_id
+      // Note: taskmaster table is empty, so we get task_desc from jobtasks
+      if (taskId != null && jobId != null) {
+        // Query jobtasks by both job_id and task_id to get the specific task
+        final taskResponse = await _supabase
+            .from('jobtasks')
+            .select('task_desc, task_id, jt_id')
+            .eq('job_id', jobId)
+            .eq('task_id', taskId)
+            .maybeSingle();
+
+        debugPrint('Task response (by task_id): $taskResponse');
+
+        if (taskResponse != null && taskResponse['task_desc'] != null) {
+          final taskDesc = taskResponse['task_desc'].toString();
+          if (taskDesc.isNotEmpty) {
+            _taskName = taskDesc;
+            debugPrint('Task name loaded: $_taskName');
+          }
+        }
+      } else if (jobId != null) {
+        // Fallback: If no task_id, try to get first task for the job
         final taskResponse = await _supabase
             .from('jobtasks')
             .select('task_desc, task_id')
@@ -166,18 +236,18 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             .limit(1)
             .maybeSingle();
 
-        debugPrint('Task response: $taskResponse');
+        debugPrint('Task response (fallback): $taskResponse');
 
-        if (taskResponse != null) {
-          // Use task_desc from jobtasks if available
-          if (taskResponse['task_desc'] != null && taskResponse['task_desc'].toString().isNotEmpty) {
-            _taskName = taskResponse['task_desc'].toString();
-            debugPrint('Task name from jobtasks: $_taskName');
+        if (taskResponse != null && taskResponse['task_desc'] != null) {
+          final taskDesc = taskResponse['task_desc'].toString();
+          if (taskDesc.isNotEmpty) {
+            _taskName = taskDesc;
+            debugPrint('Task name from fallback: $_taskName');
           }
         }
       }
 
-      // Load client name
+      // Load client name from climaster
       if (clientId != null) {
         final clientResponse = await _supabase
             .from('climaster')
@@ -199,8 +269,9 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         });
         debugPrint('Names loaded - Job: $_jobName, Client: $_clientName, Task: $_taskName');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error loading names: $e');
+      debugPrint('Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _isLoadingNames = false;
@@ -211,6 +282,15 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+
     final tasknotes = widget.entry['tasknotes'] ?? 'No description';
     final minutes = widget.entry['minutes'] ?? 0;
     final hours = _formatMinutesToHours(minutes);
@@ -231,17 +311,17 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         : (_taskName.isNotEmpty ? _taskName : 'No task assigned');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
+      backgroundColor: scaffoldBgColor,
       body: Column(
         children: [
           // White status bar area with custom header
           Container(
-            color: Colors.white,
+            color: headerBgColor,
             child: SafeArea(
               bottom: false,
               child: Container(
                 padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-                color: Colors.white,
+                color: headerBgColor,
                 child: Row(
                   children: [
                     GestureDetector(
@@ -250,10 +330,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                         width: 42.w,
                         height: 42.h,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE8EDF3),
+                          color: backButtonBgColor,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: const Color(0xFFD1D9E6),
+                            color: backButtonBorderColor,
                             width: 1,
                           ),
                         ),
@@ -261,7 +341,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                           child: Icon(
                             Icons.arrow_back_ios_new,
                             size: 18.sp,
-                            color: AppTheme.textSecondaryColor,
+                            color: textSecondaryColor,
                           ),
                         ),
                       ),
@@ -277,7 +357,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                               fontFamily: 'Inter',
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F172A),
+                              color: textPrimaryColor,
                             ),
                           ),
                           SizedBox(height: 2.h),
@@ -287,7 +367,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                               fontFamily: 'Inter',
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w400,
-                              color: AppTheme.textMutedColor,
+                              color: textSecondaryColor,
                             ),
                           ),
                         ],
@@ -311,112 +391,184 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-            // Entry Header Card
+            // Entry Summary Header Card
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(16.w),
+              padding: EdgeInsets.all(20.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(12.r),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Left side: Entry Title and Time Range
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Entry Title
+                        Text(
+                          'Entry #${widget.entryIndex}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimaryColor,
+                          ),
+                        ),
+                        if (timeFrom.isNotEmpty && timeTo.isNotEmpty) ...[
+                          SizedBox(height: 4.h),
+                          // Time Range
+                          Text(
+                            '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w400,
+                              color: textSecondaryColor,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  // Right side: Duration Badge
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 16.sp,
+                          color: const Color(0xFF10B981),
+                        ),
+                        SizedBox(width: 6.w),
+                        Text(
+                          hours,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF10B981),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16.h),
+
+            // Work Details Card
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(12.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Entry number and time badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          'Entry #${widget.entryIndex}',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                  // Header
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? const Color(0xFF6366F1).withValues(alpha: 0.2) : const Color(0xFFEEF2FF),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.work_rounded,
+                              size: 20.sp,
+                              color: const Color(0xFF6366F1),
+                            ),
                           ),
                         ),
-                      ),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4CAF50),
-                          borderRadius: BorderRadius.circular(8.r),
+                        SizedBox(width: 12.w),
+                        Text(
+                          'Work Details',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                            color: textPrimaryColor,
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              size: 14.sp,
-                              color: Colors.white,
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              hours,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 16.h),
-
-                  // Time range
-                  if (timeFrom.isNotEmpty && timeTo.isNotEmpty) ...[
-                    _buildDetailRow(
-                      icon: Icons.schedule,
-                      label: 'Time',
-                      value: '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                  ),
+                  // Details
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Column(
+                      children: [
+                        // Job
+                        if (jobId != null)
+                          _buildDetailItem(
+                            icon: Icons.folder_rounded,
+                            iconBgColor: isDarkMode ? const Color(0xFF0EA5E9).withValues(alpha: 0.2) : const Color(0xFFF0F9FF),
+                            iconColor: const Color(0xFF0EA5E9),
+                            label: 'Job',
+                            value: jobDisplay,
+                            showDivider: clientId != null || (_taskName.isNotEmpty || _isLoadingNames),
+                            isDarkMode: isDarkMode,
+                          ),
+                        // Client
+                        if (clientId != null)
+                          _buildDetailItem(
+                            icon: Icons.business_rounded,
+                            iconBgColor: isDarkMode ? const Color(0xFFF59E0B).withValues(alpha: 0.2) : const Color(0xFFFEF3C7),
+                            iconColor: const Color(0xFFF59E0B),
+                            label: 'Client',
+                            value: clientDisplay,
+                            showDivider: _taskName.isNotEmpty || _isLoadingNames,
+                            isDarkMode: isDarkMode,
+                          ),
+                        // Task
+                        if (_taskName.isNotEmpty || _isLoadingNames)
+                          _buildDetailItem(
+                            icon: Icons.task_alt_rounded,
+                            iconBgColor: isDarkMode ? const Color(0xFF10B981).withValues(alpha: 0.2) : const Color(0xFFD1FAE5),
+                            iconColor: const Color(0xFF10B981),
+                            label: 'Task',
+                            value: taskDisplay,
+                            showDivider: false,
+                            isDarkMode: isDarkMode,
+                          ),
+                      ],
                     ),
-                    SizedBox(height: 12.h),
-                  ],
-
-                  // Job Name
-                  if (jobId != null) ...[
-                    _buildDetailRow(
-                      icon: Icons.work_outline,
-                      label: 'Job',
-                      value: jobDisplay,
-                    ),
-                    SizedBox(height: 12.h),
-                  ],
-
-                  // Client Name
-                  if (clientId != null) ...[
-                    _buildDetailRow(
-                      icon: Icons.business_outlined,
-                      label: 'Client',
-                      value: clientDisplay,
-                    ),
-                    SizedBox(height: 12.h),
-                  ],
-
-                  // Task Name
-                  if (_taskName.isNotEmpty || _isLoadingNames) ...[
-                    _buildDetailRow(
-                      icon: Icons.task_outlined,
-                      label: 'Task',
-                      value: taskDisplay,
-                    ),
-                  ],
+                  ),
                 ],
               ),
             ),
@@ -425,49 +577,70 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             // Description Card
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(12.r),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.description_outlined,
-                        size: 18.sp,
-                        color: const Color(0xFF6B7280),
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Description',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF6B7280),
+                  // Header
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? const Color(0xFFA855F7).withValues(alpha: 0.2) : const Color(0xFFFDF4FF),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.description_rounded,
+                              size: 20.sp,
+                              color: const Color(0xFFA855F7),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 12.w),
+                        Text(
+                          'Description',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                            color: textPrimaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    tasknotes,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF1F2937),
-                      height: 1.6,
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                  ),
+                  // Content
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Text(
+                      tasknotes,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w400,
+                        color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                        height: 1.6,
+                      ),
                     ),
                   ),
                 ],
@@ -479,99 +652,169 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             if (_attachedFiles.isNotEmpty) ...[
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(12.r),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.attach_file,
-                          size: 18.sp,
-                          color: const Color(0xFF6B7280),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Attached Files (${_attachedFiles.length})',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF6B7280),
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.all(16.w),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40.w,
+                            height: 40.w,
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? const Color(0xFFEF4444).withValues(alpha: 0.2) : const Color(0xFFFEE2E2),
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.attach_file_rounded,
+                                size: 20.sp,
+                                color: const Color(0xFFEF4444),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 12.w),
+                          Text(
+                            'Attachments',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                              color: textPrimaryColor,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Text(
+                              '${_attachedFiles.length}',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFEF4444),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    SizedBox(height: 12.h),
-                    ...List.generate(_attachedFiles.length, (index) {
-                      final file = _attachedFiles[index];
-                      return Container(
-                        margin: EdgeInsets.only(bottom: index < _attachedFiles.length - 1 ? 8.h : 0),
-                        padding: EdgeInsets.all(10.w),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8F9FC),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36.w,
-                              height: 36.w,
-                              decoration: BoxDecoration(
-                                color: file.type == 'image'
-                                    ? const Color(0xFF6366F1).withValues(alpha: 0.1)
-                                    : const Color(0xFF10B981).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                              child: Icon(
-                                file.type == 'image' ? Icons.image : Icons.insert_drive_file,
-                                size: 18.sp,
-                                color: file.type == 'image'
-                                    ? const Color(0xFF6366F1)
-                                    : const Color(0xFF10B981),
-                              ),
-                            ),
-                            SizedBox(width: 10.w),
-                            Expanded(
-                              child: Text(
-                                file.name,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF1F2937),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                    ),
+                    // Files List
+                    Padding(
+                      padding: EdgeInsets.all(16.w),
+                      child: Column(
+                        children: List.generate(_attachedFiles.length, (index) {
+                          final file = _attachedFiles[index];
+                          final isImage = file.type == 'image';
+                          return Column(
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 10.h),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 40.w,
+                                      height: 40.w,
+                                      decoration: BoxDecoration(
+                                        color: isImage
+                                            ? const Color(0xFF6366F1).withValues(alpha: isDarkMode ? 0.2 : 0.1)
+                                            : const Color(0xFF10B981).withValues(alpha: isDarkMode ? 0.2 : 0.1),
+                                        borderRadius: BorderRadius.circular(10.r),
+                                      ),
+                                      child: Icon(
+                                        isImage ? Icons.image_rounded : Icons.insert_drive_file_rounded,
+                                        size: 20.sp,
+                                        color: isImage
+                                            ? const Color(0xFF6366F1)
+                                            : const Color(0xFF10B981),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            file.name,
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w500,
+                                              color: textPrimaryColor,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          SizedBox(height: 2.h),
+                                          Text(
+                                            isImage ? 'Image file' : 'Document',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 12.sp,
+                                              fontWeight: FontWeight.w400,
+                                              color: textSecondaryColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _attachedFiles.removeAt(index);
+                                        });
+                                      },
+                                      child: Container(
+                                        width: 32.w,
+                                        height: 32.w,
+                                        decoration: BoxDecoration(
+                                          color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(8.r),
+                                        ),
+                                        child: Icon(
+                                          Icons.close_rounded,
+                                          size: 16.sp,
+                                          color: textSecondaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _attachedFiles.removeAt(index);
-                                });
-                              },
-                              child: Icon(
-                                Icons.close,
-                                size: 18.sp,
-                                color: const Color(0xFF9CA3AF),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
+                              if (index < _attachedFiles.length - 1)
+                                Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                                  indent: 52.w,
+                                ),
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -588,12 +831,12 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                     child: Container(
                       padding: EdgeInsets.symmetric(vertical: 14.h),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
                         borderRadius: BorderRadius.circular(12.r),
                         border: Border.all(color: const Color(0xFF6366F1)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
+                            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -695,58 +938,96 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
     );
   }
 
-  Widget _buildDetailRow({
+  Widget _buildDetailItem({
     required IconData icon,
+    required Color iconBgColor,
+    required Color iconColor,
     required String label,
     required String value,
+    bool showDivider = true,
+    bool isDarkMode = false,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8);
+    final valueColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+
+    return Column(
       children: [
-        Icon(
-          icon,
-          size: 18.sp,
-          color: const Color(0xFF6B7280),
-        ),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 10.h),
+          child: Row(
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFF9CA3AF),
+              Container(
+                width: 40.w,
+                height: 40.w,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: 20.sp,
+                    color: iconColor,
+                  ),
                 ),
               ),
-              SizedBox(height: 2.h),
-              Text(
-                value,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF1F2937),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w400,
+                        color: labelColor,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                        color: valueColor,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
+        if (showDivider)
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: dividerColor,
+            indent: 52.w,
+          ),
       ],
     );
   }
 
   void _showAttachFileDialog(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final handleColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFE5E7EB);
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: sheetBgColor,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(20.r),
             topRight: Radius.circular(20.r),
@@ -759,7 +1040,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
               width: 40.w,
               height: 4.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFE5E7EB),
+                color: handleColor,
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -770,7 +1051,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                 fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF1F2937),
+                color: titleColor,
               ),
             ),
             SizedBox(height: 20.h),
@@ -778,6 +1059,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
               context,
               icon: Icons.camera_alt_outlined,
               label: 'Take Photo',
+              isDarkMode: isDarkMode,
               onTap: () async {
                 Navigator.pop(context);
                 await _pickImageFromCamera(context);
@@ -788,6 +1070,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
               context,
               icon: Icons.photo_library_outlined,
               label: 'Choose from Gallery',
+              isDarkMode: isDarkMode,
               onTap: () async {
                 Navigator.pop(context);
                 await _pickImageFromGallery(context);
@@ -798,6 +1081,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
               context,
               icon: Icons.insert_drive_file_outlined,
               label: 'Choose Document',
+              isDarkMode: isDarkMode,
               onTap: () async {
                 Navigator.pop(context);
                 await _pickDocument(context);
@@ -947,14 +1231,19 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    bool isDarkMode = false,
   }) {
+    final bgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final iconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 16.w),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FC),
+          color: bgColor,
           borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
@@ -962,7 +1251,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
             Icon(
               icon,
               size: 22.sp,
-              color: const Color(0xFF6B7280),
+              color: iconColor,
             ),
             SizedBox(width: 12.w),
             Text(
@@ -971,7 +1260,7 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
                 fontFamily: 'Inter',
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF1F2937),
+                color: textColor,
               ),
             ),
           ],

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import 'work_log_entry_form_page.dart';
 import 'work_log_detail_page.dart';
 
@@ -88,6 +90,10 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if dark mode is enabled
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -95,12 +101,12 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
         Navigator.pop(context, true);
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FC),
+        backgroundColor: scaffoldBgColor,
         body: Column(
           children: [
-            // White status bar area
+            // Status bar area
             Container(
-              color: Colors.white,
+              color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
               child: SafeArea(
                 bottom: false,
                 child: _buildHeader(),
@@ -145,16 +151,39 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                               const SizedBox(height: 16),
 
                               // Section Title
-                              Text(
-                                'Work Entries',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.textSecondaryColor,
-                                ),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 4.w,
+                                    height: 18.h,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryColor,
+                                      borderRadius: BorderRadius.circular(2.r),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10.w),
+                                  Text(
+                                    'Work Entries',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '${_entries.length} ${_entries.length == 1 ? 'entry' : 'entries'}',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 14.h),
 
                               // Entries List
                               ListView.builder(
@@ -180,9 +209,16 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
   }
 
   Widget _buildHeader() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final backBtnBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backBtnBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+
     return Container(
       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-      color: Colors.white,
+      color: headerBgColor,
       child: Row(
         children: [
           GestureDetector(
@@ -191,10 +227,10 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
               width: 42.w,
               height: 42.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8EDF3),
+                color: backBtnBgColor,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFFD1D9E6),
+                  color: backBtnBorderColor,
                   width: 1,
                 ),
               ),
@@ -202,7 +238,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                 child: Icon(
                   Icons.arrow_back_ios_new,
                   size: 18.sp,
-                  color: AppTheme.textSecondaryColor,
+                  color: isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor,
                 ),
               ),
             ),
@@ -218,7 +254,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                     fontFamily: 'Inter',
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
+                    color: titleColor,
                   ),
                 ),
                 SizedBox(height: 2.h),
@@ -228,7 +264,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                     fontFamily: 'Inter',
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w400,
-                    color: AppTheme.textMutedColor,
+                    color: subtitleColor,
                   ),
                 ),
               ],
@@ -245,14 +281,19 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
     required IconData icon,
     required Color color,
   }) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final valueColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.08),
+            color: color.withValues(alpha: isDarkMode ? 0.15 : 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -267,7 +308,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
               Container(
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withValues(alpha: isDarkMode ? 0.2 : 0.1),
                   borderRadius: BorderRadius.circular(10.r),
                 ),
                 child: Icon(
@@ -290,7 +331,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
               fontFamily: 'Inter',
               fontSize: 24.sp,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
+              color: valueColor,
             ),
           ),
           SizedBox(height: 2.h),
@@ -300,7 +341,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
               fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
-              color: AppTheme.textMutedColor,
+              color: labelColor,
             ),
           ),
         ],
@@ -309,6 +350,10 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
   }
 
   Widget _buildEmptyState() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+
     return Center(
       child: Padding(
         padding: EdgeInsets.all(32.w),
@@ -318,7 +363,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
             Container(
               padding: EdgeInsets.all(24.w),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                color: AppTheme.primaryColor.withValues(alpha: isDarkMode ? 0.2 : 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -334,7 +379,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                 fontFamily: 'Inter',
                 fontSize: 20.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
+                color: titleColor,
               ),
             ),
             SizedBox(height: 8.h),
@@ -344,7 +389,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
                 fontFamily: 'Inter',
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w400,
-                color: AppTheme.textMutedColor,
+                color: subtitleColor,
               ),
             ),
             SizedBox(height: 24.h),
@@ -399,10 +444,36 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
     final clientId = entry['client_id'];
     final timeFrom = entry['timefrom'];
     final timeTo = entry['timeto'];
+    final date = entry['date'];
 
     final clientName = clientId != null ? _clientNames[clientId] : null;
     final jobName = jobId != null ? _jobNames[jobId] : null;
     final hasTimeRange = timeFrom != null && timeTo != null;
+
+    // Format date for display
+    String formattedDate = '';
+    if (date != null) {
+      try {
+        final dateObj = DateTime.parse(date.toString());
+        formattedDate = DateFormat('yyyy-MM-dd').format(dateObj);
+      } catch (e) {
+        formattedDate = date.toString();
+      }
+    }
+
+    // Check if dark mode is enabled
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    // Theme-aware colors
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
+    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final iconBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+    final timeBgColor = isDarkMode ? const Color(0xFF1E3A5F) : const Color(0xFFEFF6FF);
+    final timeTextColor = isDarkMode ? const Color(0xFFE2E8F0) : const Color(0xFF334155);
+    final chevronColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1);
 
     return GestureDetector(
       onTap: () {
@@ -414,202 +485,193 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
               entryIndex: index,
               selectedDate: widget.selectedDate,
               staffId: widget.staffId,
+              jobName: jobName,
+              clientName: clientName,
             ),
           ),
         );
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: 10.h),
+        margin: EdgeInsets.only(bottom: 12.h),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: cardBgColor,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: borderColor,
+            width: 1,
+          ),
         ),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              // Left accent bar
-              Container(
-                width: 4.w,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(14.r),
-                    bottomLeft: Radius.circular(14.r),
-                  ),
-                ),
-              ),
-              // Main content
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.all(14.w),
-                  child: Column(
+        child: Column(
+          children: [
+            // Main Content
+            Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row - Job name and duration badge
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Top row - Job name and duration
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _isLoadingNames
-                                      ? 'Loading...'
-                                      : (jobName ?? 'Job #$jobId'),
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF1E293B),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                SizedBox(height: 3.h),
-                                Row(
-                                  children: [
-                                    if (clientId != null) ...[
-                                      Icon(
-                                        Icons.business_rounded,
-                                        size: 12.sp,
-                                        color: AppTheme.textDisabledColor,
-                                      ),
-                                      SizedBox(width: 4.w),
-                                      Flexible(
-                                        child: Text(
-                                          _isLoadingNames
-                                              ? 'Loading...'
-                                              : (clientName ?? 'Client #$clientId'),
-                                          style: TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 12.sp,
-                                            fontWeight: FontWeight.w400,
-                                            color: AppTheme.textMutedColor,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          // Duration display
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.primaryColor,
-                                  AppTheme.primaryColor.withValues(alpha: 0.85),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
-                            child: Text(
-                              hours,
+                      // Job info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _isLoadingNames
+                                  ? 'Loading...'
+                                  : (jobName ?? 'Job #$jobId'),
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 12.sp,
+                                fontSize: 15.sp,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: titleColor,
+                                height: 1.3,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
-                      ),
-                      // Time range and notes
-                      if (hasTimeRange || tasknotes.isNotEmpty) ...[
-                        SizedBox(height: 10.h),
-                        Container(
-                          padding: EdgeInsets.all(10.w),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F9FC),
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (hasTimeRange)
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.schedule_rounded,
-                                      size: 14.sp,
-                                      color: AppTheme.primaryColor,
+                            if (clientId != null) ...[
+                              SizedBox(height: 6.h),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(4.w),
+                                    decoration: BoxDecoration(
+                                      color: iconBgColor,
+                                      borderRadius: BorderRadius.circular(4.r),
                                     ),
-                                    SizedBox(width: 6.w),
-                                    Text(
-                                      '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
+                                    child: Icon(
+                                      Icons.business_rounded,
+                                      size: 12.sp,
+                                      color: subtitleColor,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Flexible(
+                                    child: Text(
+                                      _isLoadingNames
+                                          ? 'Loading...'
+                                          : (clientName ?? 'Client #$clientId'),
                                       style: TextStyle(
                                         fontFamily: 'Inter',
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF475569),
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w400,
+                                        color: subtitleColor,
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ],
-                                ),
-                              if (hasTimeRange && tasknotes.isNotEmpty)
-                                SizedBox(height: 8.h),
-                              if (tasknotes.isNotEmpty)
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(
-                                      Icons.notes_rounded,
-                                      size: 14.sp,
-                                      color: AppTheme.textDisabledColor,
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Expanded(
-                                      child: Text(
-                                        tasknotes,
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.w400,
-                                          color: AppTheme.textMutedColor,
-                                          height: 1.3,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
+                              ),
                             ],
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                      // Duration badge
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Text(
+                          hours,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Divider
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: Container(
+                      height: 1,
+                      color: dividerColor,
+                    ),
+                  ),
+
+                  // Details Section
+                  Row(
+                    children: [
+                      // Time range
+                      if (hasTimeRange) ...[
+                        Container(
+                          padding: EdgeInsets.all(6.w),
+                          decoration: BoxDecoration(
+                            color: timeBgColor,
+                            borderRadius: BorderRadius.circular(6.r),
+                          ),
+                          child: Icon(
+                            Icons.schedule_rounded,
+                            size: 14.sp,
+                            color: const Color(0xFF3B82F6),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w500,
+                            color: timeTextColor,
+                          ),
+                        ),
+                        SizedBox(width: 16.w),
+                      ],
+                      // Date with notes
+                      if (formattedDate.isNotEmpty || tasknotes.isNotEmpty) ...[
+                        Container(
+                          padding: EdgeInsets.all(6.w),
+                          decoration: BoxDecoration(
+                            color: iconBgColor,
+                            borderRadius: BorderRadius.circular(6.r),
+                          ),
+                          child: Icon(
+                            Icons.event_note_rounded,
+                            size: 14.sp,
+                            color: subtitleColor,
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: Text(
+                            tasknotes.isNotEmpty
+                                ? '$formattedDate - $tasknotes'
+                                : formattedDate,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w400,
+                              color: subtitleColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
+                      // Chevron
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20.sp,
+                        color: chevronColor,
+                      ),
                     ],
                   ),
-                ),
+                ],
               ),
-              // Right chevron
-              Padding(
-                padding: EdgeInsets.only(right: 12.w),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20.sp,
-                  color: const Color(0xFFCBD5E1),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
@@ -90,12 +92,15 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
   @override
   void initState() {
     super.initState();
-    // Set status bar style for white background with dark icons
+  }
+
+  /// Update status bar style based on theme
+  void _updateStatusBarStyle(bool isDarkMode) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
       ),
     );
   }
@@ -108,29 +113,45 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : Colors.white;
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final backBtnBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backBtnBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final backBtnIconColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor;
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+
+    // Update status bar style based on theme
+    _updateStatusBarStyle(isDarkMode);
+
     final statusColor = _getStatusColor();
     final statusIcon = _getStatusIcon();
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.white,
+      backgroundColor: scaffoldBgColor,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header with Back Button
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+      body: Column(
+        children: [
+          // Custom Header with Back Button - extends into status bar area
+          Container(
+            padding: EdgeInsets.only(
+              left: 16.w,
+              right: 16.w,
+              top: MediaQuery.of(context).padding.top + 12.h,
+              bottom: 12.h,
+            ),
+            decoration: BoxDecoration(
+              color: headerBgColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
               child: Row(
                 children: [
                   // Back Button - circular design matching app header buttons
@@ -140,10 +161,10 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                       width: 42.w,
                       height: 42.h,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8EDF3),
+                        color: backBtnBgColor,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: const Color(0xFFD1D9E6),
+                          color: backBtnBorderColor,
                           width: 1,
                         ),
                       ),
@@ -151,7 +172,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                         child: Icon(
                           Icons.arrow_back_ios_new,
                           size: 18.sp,
-                          color: AppTheme.textSecondaryColor,
+                          color: backBtnIconColor,
                         ),
                       ),
                     ),
@@ -181,7 +202,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1F2937),
+                            color: titleColor,
                           ),
                         ),
                         Text(
@@ -190,7 +211,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w400,
-                            color: const Color(0xFF6B7280),
+                            color: subtitleColor,
                           ),
                         ),
                       ],
@@ -203,7 +224,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
             // Search Bar
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-              color: Colors.white,
+              color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
               child: TextField(
                 controller: _searchController,
                 onChanged: (value) {
@@ -216,16 +237,16 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                   hintStyle: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13.sp,
-                    color: const Color(0xFF9CA3AF),
+                    color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF),
                   ),
                   prefixIcon: Icon(
                     Icons.search,
                     size: 20.sp,
-                    color: const Color(0xFF9CA3AF),
+                    color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF),
                   ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                          icon: Icon(Icons.clear, size: 18.sp, color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF)),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {
@@ -235,7 +256,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFFF8F9FC),
+                  fillColor: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.r),
@@ -245,7 +266,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 13.sp,
-                  color: const Color(0xFF1F2937),
+                  color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937),
                 ),
               ),
             ),
@@ -253,22 +274,21 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
             // Leave List
             Expanded(
               child: Container(
-                color: const Color(0xFFF8F9FC),
+                color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC),
                 child: _filteredLeaves.isEmpty
-                    ? _buildEmptyState()
+                    ? _buildEmptyState(context)
                     : ListView.builder(
                         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                         itemCount: _filteredLeaves.length,
                         itemBuilder: (context, index) {
                           final leave = _filteredLeaves[index];
-                          return _buildLeaveCard(leave);
+                          return _buildLeaveCard(context, leave);
                         },
                       ),
               ),
             ),
           ],
         ),
-      ),
       bottomNavigationBar: ModernBottomNavigation(
         currentIndex: 2,
         currentStaff: widget.currentStaff,
@@ -276,7 +296,13 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final emptyBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF8F9FC);
+    final iconColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+    final titleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final subtitleColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -285,13 +311,13 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
             width: 80.w,
             height: 80.h,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F9FC),
+              color: emptyBgColor,
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: Icon(
               _getStatusIcon(),
               size: 40.sp,
-              color: const Color(0xFF9CA3AF),
+              color: iconColor,
             ),
           ),
           SizedBox(height: 16.h),
@@ -301,7 +327,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
               fontFamily: 'Inter',
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF6B7280),
+              color: titleColor,
             ),
           ),
           SizedBox(height: 8.h),
@@ -311,7 +337,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
               fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFF9CA3AF),
+              color: subtitleColor,
             ),
           ),
         ],
@@ -319,7 +345,15 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
     );
   }
 
-  Widget _buildLeaveCard(Map<String, dynamic> leave) {
+  Widget _buildLeaveCard(BuildContext context, Map<String, dynamic> leave) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final textMutedColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+
     final statusColor = leave['statusColor'] as Color;
     final fromDate = leave['fromDate'] as DateTime;
     final toDate = leave['toDate'] as DateTime;
@@ -331,15 +365,15 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
       child: Container(
         margin: EdgeInsets.only(bottom: 8.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBgColor,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: const Color(0xFFE5E7EB),
+            color: borderColor,
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.08),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -351,7 +385,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
             Container(
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.06),
+                color: statusColor.withValues(alpha: isDarkMode ? 0.15 : 0.06),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(11.r),
                   topRight: Radius.circular(11.r),
@@ -364,7 +398,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                     width: 36.w,
                     height: 36.h,
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
+                      color: statusColor.withValues(alpha: isDarkMode ? 0.2 : 0.12),
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Icon(
@@ -385,7 +419,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 11.sp,
                             fontWeight: FontWeight.w400,
-                            color: const Color(0xFF6B7280),
+                            color: textSecondaryColor,
                           ),
                         ),
                         Text(
@@ -437,7 +471,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                       Icon(
                         Icons.calendar_today_rounded,
                         size: 14.sp,
-                        color: const Color(0xFF6B7280),
+                        color: textSecondaryColor,
                       ),
                       SizedBox(width: 6.w),
                       Expanded(
@@ -449,7 +483,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1F2937),
+                            color: textPrimaryColor,
                           ),
                         ),
                       ),
@@ -464,7 +498,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                       Icon(
                         Icons.notes_rounded,
                         size: 14.sp,
-                        color: const Color(0xFF9CA3AF),
+                        color: textMutedColor,
                       ),
                       SizedBox(width: 6.w),
                       Expanded(
@@ -474,7 +508,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 11.sp,
                             fontWeight: FontWeight.w400,
-                            color: const Color(0xFF6B7280),
+                            color: textSecondaryColor,
                             height: 1.3,
                           ),
                           maxLines: 1,
@@ -486,7 +520,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                   SizedBox(height: 6.h),
 
                   // Divider
-                  const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                  Divider(height: 1, color: dividerColor),
                   SizedBox(height: 6.h),
 
                   // Applied Date
@@ -495,7 +529,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                       Icon(
                         Icons.access_time_rounded,
                         size: 14.sp,
-                        color: const Color(0xFF9CA3AF),
+                        color: textMutedColor,
                       ),
                       SizedBox(width: 4.w),
                       Text(
@@ -504,7 +538,7 @@ class _LeaveFilteredPageState extends State<LeaveFilteredPage> {
                           fontFamily: 'Inter',
                           fontSize: 10.sp,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF374151),
+                          color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF374151),
                         ),
                       ),
                     ],

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../auth/domain/entities/staff.dart';
 import '../../../home/presentation/pages/work_log_entry_form_page.dart';
 
@@ -234,12 +236,19 @@ class _JobDetailPageState extends State<JobDetailPage>
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF5F5F5);
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+
     final dateFormat = DateFormat('dd MMM yyyy');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: scaffoldBgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: headerBgColor,
         elevation: 0,
         leading: Padding(
           padding: EdgeInsets.only(left: 8.w),
@@ -250,10 +259,10 @@ class _JobDetailPageState extends State<JobDetailPage>
                 width: 42.w,
                 height: 42.h,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8EDF3),
+                  color: backButtonBgColor,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFFD1D9E6),
+                    color: backButtonBorderColor,
                     width: 1,
                   ),
                 ),
@@ -261,7 +270,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                   child: Icon(
                     Icons.arrow_back_ios_new,
                     size: 18.sp,
-                    color: AppTheme.textSecondaryColor,
+                    color: textSecondaryColor,
                   ),
                 ),
               ),
@@ -273,22 +282,26 @@ class _JobDetailPageState extends State<JobDetailPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.job['jobNo'] ?? 'Job Details',
+              widget.job['job'] ?? 'Job Details',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF2563EB),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
-              widget.job['company'] ?? '',
+              '${widget.job['jobNo'] ?? ''} • ${widget.job['company'] ?? ''}',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 11.sp,
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFF6B7280),
+                color: textSecondaryColor,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -297,11 +310,11 @@ class _JobDetailPageState extends State<JobDetailPage>
         children: [
           // Tab Bar
           Container(
-            color: Colors.white,
+            color: headerBgColor,
             child: TabBar(
               controller: _tabController,
               labelColor: AppTheme.primaryColor,
-              unselectedLabelColor: const Color(0xFF6B7280),
+              unselectedLabelColor: textSecondaryColor,
               indicatorColor: AppTheme.primaryColor,
               indicatorWeight: 3,
               dividerColor: Colors.transparent,
@@ -346,9 +359,9 @@ class _JobDetailPageState extends State<JobDetailPage>
               controller: _tabController,
               children: [
                 // Task Summary Tab
-                _buildTaskSummaryTab(dateFormat),
+                _buildTaskSummaryTab(context, dateFormat),
                 // Day Summary Tab
-                _buildDaySummaryTab(dateFormat),
+                _buildDaySummaryTab(context, dateFormat),
               ],
             ),
           ),
@@ -363,7 +376,14 @@ class _JobDetailPageState extends State<JobDetailPage>
     return '$h:${m.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildTaskSummaryTab(DateFormat dateFormat) {
+  Widget _buildTaskSummaryTab(BuildContext context, DateFormat dateFormat) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final headerBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final emptyStateBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF8F9FC);
+
     if (_isLoadingTasks) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -381,7 +401,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                 fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF6B7280),
+                color: textSecondaryColor,
               ),
             ),
             SizedBox(height: 8.h),
@@ -404,13 +424,13 @@ class _JobDetailPageState extends State<JobDetailPage>
               width: 80.w,
               height: 80.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FC),
+                color: emptyStateBgColor,
                 borderRadius: BorderRadius.circular(20.r),
               ),
               child: Icon(
                 Icons.task_alt,
                 size: 40.sp,
-                color: const Color(0xFF9CA3AF),
+                color: textSecondaryColor,
               ),
             ),
             SizedBox(height: 16.h),
@@ -420,7 +440,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                 fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF6B7280),
+                color: textSecondaryColor,
               ),
             ),
             SizedBox(height: 8.h),
@@ -430,7 +450,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                 fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFF9CA3AF),
+                color: textSecondaryColor,
               ),
             ),
           ],
@@ -445,11 +465,11 @@ class _JobDetailPageState extends State<JobDetailPage>
         padding: EdgeInsets.all(12.w),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardBgColor,
             borderRadius: BorderRadius.circular(12.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -461,7 +481,7 @@ class _JobDetailPageState extends State<JobDetailPage>
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FC),
+                  color: headerBgColor,
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(12.r),
                     topRight: Radius.circular(12.r),
@@ -477,7 +497,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: textPrimaryColor,
                         ),
                       ),
                     ),
@@ -490,7 +510,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: textPrimaryColor,
                         ),
                       ),
                     ),
@@ -503,7 +523,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: textPrimaryColor,
                         ),
                       ),
                     ),
@@ -516,7 +536,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: textPrimaryColor,
                         ),
                       ),
                     ),
@@ -529,7 +549,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: textPrimaryColor,
                         ),
                       ),
                     ),
@@ -559,7 +579,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                 separatorBuilder: (context, index) => Divider(
                   height: 1,
                   thickness: 1,
-                  color: const Color(0xFFE5E7EB),
+                  color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB),
                 ),
                 itemBuilder: (context, index) {
                   final task = _tasks[index];
@@ -581,7 +601,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               fontFamily: 'Inter',
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF1F2937),
+                              color: textPrimaryColor,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -597,7 +617,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               fontFamily: 'Inter',
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF6B7280),
+                              color: textSecondaryColor,
                             ),
                           ),
                         ),
@@ -625,7 +645,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               fontFamily: 'Inter',
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF6B7280),
+                              color: textSecondaryColor,
                             ),
                           ),
                         ),
@@ -639,7 +659,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               fontFamily: 'Inter',
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w600,
-                              color: actHours > 0 ? const Color(0xFF10B981) : const Color(0xFF6B7280),
+                              color: actHours > 0 ? const Color(0xFF10B981) : textSecondaryColor,
                             ),
                           ),
                         ),
@@ -700,7 +720,13 @@ class _JobDetailPageState extends State<JobDetailPage>
     );
   }
 
-  Widget _buildDaySummaryTab(DateFormat dateFormat) {
+  Widget _buildDaySummaryTab(BuildContext context, DateFormat dateFormat) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final headerBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final emptyStateBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF8F9FC);
+
     if (_isLoadingDiary) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -718,7 +744,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                 fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF6B7280),
+                color: textSecondaryColor,
               ),
             ),
             SizedBox(height: 8.h),
@@ -741,13 +767,13 @@ class _JobDetailPageState extends State<JobDetailPage>
               width: 80.w,
               height: 80.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FC),
+                color: emptyStateBgColor,
                 borderRadius: BorderRadius.circular(20.r),
               ),
               child: Icon(
                 Icons.calendar_month,
                 size: 40.sp,
-                color: const Color(0xFF9CA3AF),
+                color: textSecondaryColor,
               ),
             ),
             SizedBox(height: 16.h),
@@ -757,7 +783,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                 fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF6B7280),
+                color: textSecondaryColor,
               ),
             ),
             SizedBox(height: 8.h),
@@ -767,7 +793,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                 fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFF9CA3AF),
+                color: textSecondaryColor,
               ),
             ),
           ],
@@ -791,11 +817,11 @@ class _JobDetailPageState extends State<JobDetailPage>
         padding: EdgeInsets.all(12.w),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardBgColor,
             borderRadius: BorderRadius.circular(12.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -807,7 +833,7 @@ class _JobDetailPageState extends State<JobDetailPage>
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FC),
+                  color: headerBgColor,
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(12.r),
                     topRight: Radius.circular(12.r),
@@ -823,7 +849,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 9.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
                         ),
                       ),
                     ),
@@ -835,7 +861,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 9.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
                         ),
                       ),
                     ),
@@ -847,7 +873,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 9.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
                         ),
                       ),
                     ),
@@ -860,7 +886,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                           fontFamily: 'Inter',
                           fontSize: 9.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF374151),
+                          color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
                         ),
                       ),
                     ),
@@ -876,7 +902,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                 separatorBuilder: (context, index) => Divider(
                   height: 1,
                   thickness: 1,
-                  color: const Color(0xFFE5E7EB),
+                  color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB),
                 ),
                 itemBuilder: (context, index) {
                 final entry = _workDiaryEntries[index];
@@ -898,7 +924,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                             fontFamily: 'Inter',
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF374151),
+                            color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
                           ),
                         ),
                       ),
@@ -911,7 +937,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                             fontFamily: 'Inter',
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF374151),
+                            color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -928,7 +954,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                               fontFamily: 'Inter',
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w400,
-                              color: const Color(0xFF6B7280),
+                              color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -958,10 +984,10 @@ class _JobDetailPageState extends State<JobDetailPage>
             Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F9FC),
-              border: const Border(
+              color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC),
+              border: Border(
                 top: BorderSide(
-                  color: Color(0xFFD1D5DB),
+                  color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D5DB),
                   width: 1,
                 ),
               ),
@@ -980,7 +1006,7 @@ class _JobDetailPageState extends State<JobDetailPage>
                       fontFamily: 'Inter',
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF374151),
+                      color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
                     ),
                   ),
                 ),

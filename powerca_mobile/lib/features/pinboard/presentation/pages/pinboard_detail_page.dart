@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../auth/domain/entities/staff.dart';
 
 class PinboardDetailPage extends StatelessWidget {
@@ -15,14 +17,26 @@ class PinboardDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF5F5F5);
+    final appBarBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final backBtnBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backBtnBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final backBtnIconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final textMutedColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[300];
+
     final dateFormat = DateFormat('dd MMM yyyy');
     final remdate = reminder['remdate'] as DateTime?;
     final remduedate = reminder['remduedate'] as DateTime?;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: scaffoldBgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: appBarBgColor,
         elevation: 0,
         leading: Padding(
           padding: EdgeInsets.only(left: 8.w),
@@ -33,10 +47,10 @@ class PinboardDetailPage extends StatelessWidget {
                 width: 42.w,
                 height: 42.h,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8EDF3),
+                  color: backBtnBgColor,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFFD1D9E6),
+                    color: backBtnBorderColor,
                     width: 1,
                   ),
                 ),
@@ -44,7 +58,7 @@ class PinboardDetailPage extends StatelessWidget {
                   child: Icon(
                     Icons.arrow_back_ios_new,
                     size: 18.sp,
-                    color: const Color(0xFF6B7280),
+                    color: backBtnIconColor,
                   ),
                 ),
               ),
@@ -58,7 +72,7 @@ class PinboardDetailPage extends StatelessWidget {
             fontFamily: 'Inter',
             fontSize: 16.sp,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF2563EB),
+            color: const Color(0xFF2563EB),
           ),
         ),
       ),
@@ -72,11 +86,11 @@ class PinboardDetailPage extends StatelessWidget {
               width: double.infinity,
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(12.r),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -91,14 +105,20 @@ class PinboardDetailPage extends StatelessWidget {
                     label: 'Title',
                     value: reminder['remtitle'] as String,
                     isTitle: true,
+                    iconColor: textSecondaryColor,
+                    labelColor: textMutedColor,
+                    valueColor: textPrimaryColor,
                   ),
-                  const Divider(height: 24),
+                  Divider(height: 24, color: dividerColor),
 
                   // Type
                   _buildDetailRow(
                     icon: Icons.category_outlined,
                     label: 'Type',
                     value: reminder['remtype'] as String,
+                    iconColor: textSecondaryColor,
+                    labelColor: textMutedColor,
+                    valueColor: textPrimaryColor,
                   ),
                   SizedBox(height: 12.h),
 
@@ -107,6 +127,9 @@ class PinboardDetailPage extends StatelessWidget {
                     icon: Icons.business_outlined,
                     label: 'Client',
                     value: reminder['clientName'] as String,
+                    iconColor: textSecondaryColor,
+                    labelColor: textMutedColor,
+                    valueColor: textPrimaryColor,
                   ),
                   SizedBox(height: 12.h),
 
@@ -116,6 +139,9 @@ class PinboardDetailPage extends StatelessWidget {
                       icon: Icons.calendar_today_outlined,
                       label: 'Created Date',
                       value: dateFormat.format(remdate),
+                      iconColor: textSecondaryColor,
+                      labelColor: textMutedColor,
+                      valueColor: textPrimaryColor,
                     ),
                     SizedBox(height: 12.h),
                   ],
@@ -126,6 +152,8 @@ class PinboardDetailPage extends StatelessWidget {
                       icon: Icons.event_outlined,
                       label: 'Due Date',
                       value: dateFormat.format(remduedate),
+                      iconColor: textSecondaryColor,
+                      labelColor: textMutedColor,
                       valueColor: const Color(0xFFDC2626),
                     ),
                     SizedBox(height: 12.h),
@@ -137,6 +165,9 @@ class PinboardDetailPage extends StatelessWidget {
                       icon: Icons.access_time_outlined,
                       label: 'Time',
                       value: reminder['remtime'] as String,
+                      iconColor: textSecondaryColor,
+                      labelColor: textMutedColor,
+                      valueColor: textPrimaryColor,
                     ),
                     SizedBox(height: 12.h),
                   ],
@@ -150,11 +181,11 @@ class PinboardDetailPage extends StatelessWidget {
               width: double.infinity,
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(12.r),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -168,7 +199,7 @@ class PinboardDetailPage extends StatelessWidget {
                       Icon(
                         Icons.notes_outlined,
                         size: 18.sp,
-                        color: Color(0xFF6B7280),
+                        color: textSecondaryColor,
                       ),
                       SizedBox(width: 8.w),
                       Text(
@@ -177,7 +208,7 @@ class PinboardDetailPage extends StatelessWidget {
                           fontFamily: 'Inter',
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF6B7280),
+                          color: textSecondaryColor,
                         ),
                       ),
                     ],
@@ -189,7 +220,7 @@ class PinboardDetailPage extends StatelessWidget {
                       fontFamily: 'Inter',
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w400,
-                      color: Color(0xFF1F2937),
+                      color: textPrimaryColor,
                       height: 1.5,
                     ),
                   ),
@@ -207,7 +238,9 @@ class PinboardDetailPage extends StatelessWidget {
     required String label,
     required String value,
     bool isTitle = false,
-    Color? valueColor,
+    required Color iconColor,
+    required Color labelColor,
+    required Color valueColor,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,7 +248,7 @@ class PinboardDetailPage extends StatelessWidget {
         Icon(
           icon,
           size: 18.sp,
-          color: const Color(0xFF6B7280),
+          color: iconColor,
         ),
         SizedBox(width: 8.w),
         Expanded(
@@ -228,7 +261,7 @@ class PinboardDetailPage extends StatelessWidget {
                   fontFamily: 'Inter',
                   fontSize: 11.sp,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF9CA3AF),
+                  color: labelColor,
                 ),
               ),
               SizedBox(height: 2.h),
@@ -238,7 +271,7 @@ class PinboardDetailPage extends StatelessWidget {
                   fontFamily: 'Inter',
                   fontSize: isTitle ? 16.sp : 13.sp,
                   fontWeight: isTitle ? FontWeight.w600 : FontWeight.w500,
-                  color: valueColor ?? const Color(0xFF1F2937),
+                  color: valueColor,
                 ),
               ),
             ],
