@@ -56,13 +56,13 @@ class PermissionFailure extends Failure {
 /// Invalid Credentials Failure
 /// When username or password is incorrect
 class InvalidCredentialsFailure extends AuthenticationFailure {
-  const InvalidCredentialsFailure() : super('Invalid username or password');
+  const InvalidCredentialsFailure() : super('Incorrect username or password. Please check your credentials and try again.');
 }
 
 /// User Not Found Failure
 /// When the user doesn't exist in the system
 class UserNotFoundFailure extends AuthenticationFailure {
-  const UserNotFoundFailure() : super('User not found');
+  const UserNotFoundFailure() : super('Username not found. Please check your username and try again.');
 }
 
 /// Inactive User Failure

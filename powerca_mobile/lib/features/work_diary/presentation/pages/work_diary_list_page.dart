@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
-import '../../../jobs/domain/entities/job.dart';
+import '../../domain/entities/job.dart';
 import '../bloc/work_diary_bloc.dart';
 import '../bloc/work_diary_event.dart';
 import '../bloc/work_diary_state.dart';
@@ -25,7 +25,7 @@ class WorkDiaryListPage extends StatelessWidget {
       create: (context) => getIt<WorkDiaryBloc>()
         ..add(LoadEntriesEvent(jobId: job.jobId)),
       child: Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
         body: BlocConsumer<WorkDiaryBloc, WorkDiaryState>(
           listener: (context, state) {
@@ -170,21 +170,41 @@ class WorkDiaryListPage extends StatelessWidget {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
-      leading: IconButton(
-        onPressed: () => Navigator.pop(context),
-        icon: Icon(
-          Icons.arrow_back,
-          color: AppTheme.textPrimaryColor,
-          size: 24.sp,
+      leading: Padding(
+        padding: EdgeInsets.only(left: 8.w),
+        child: Center(
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 42.w,
+              height: 42.h,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8EDF3),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFD1D9E6),
+                  width: 1,
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 18.sp,
+                  color: AppTheme.textSecondaryColor,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
+      leadingWidth: 58.w,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Task Entries List',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimaryColor,
@@ -193,7 +213,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             job.jobName,
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w400,
               color: AppTheme.textSecondaryColor,
@@ -230,7 +250,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             'Total Hours Logged',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -239,7 +259,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             formattedHours,
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
               color: AppTheme.primaryColor,
@@ -264,7 +284,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             'No entries yet',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 16.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -274,7 +294,7 @@ class WorkDiaryListPage extends StatelessWidget {
           Text(
             'Tap + to add your first entry',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               color: AppTheme.textSecondaryColor,
             ),

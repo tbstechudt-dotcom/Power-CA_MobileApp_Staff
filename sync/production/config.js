@@ -73,8 +73,10 @@ const config = {
     'jobshead': 'jobshead',
     'jobtasks': 'jobtasks',
     'taskchecklist': 'taskchecklist',
-    'workdiary': 'workdiary',
-    'learequest': 'learequest',
+    'mbjobreviewnotes': 'mbjobreviewnotes',      // NEW: Job Review Notes
+    'mbjobreviewresponse': 'mbjobreviewresponse', // NEW: Job Review Responses
+    // 'workdiary': 'workdiary',      // EXCLUDED: Mobile-only table, use reverse sync
+    // 'learequest': 'learequest',    // EXCLUDED: Mobile-only table, use reverse sync
   },
 
   // Master Tables - Full Sync (replace all data)
@@ -96,10 +98,12 @@ const config = {
     'jobshead',
     'jobtasks',
     'taskchecklist',
-    'workdiary',
+    // 'workdiary',    // EXCLUDED: Mobile-only table, use reverse sync
     'mbreminder', // Desktop name
     'mbremdetail', // Desktop name
-    'learequest',
+    'mbjobreviewnotes',    // NEW: Job Review Notes
+    'mbjobreviewresponse', // NEW: Job Review Responses
+    // 'learequest',   // EXCLUDED: Mobile-only table, use reverse sync
   ],
 
   // Column Mappings for Tables with Differences
@@ -107,7 +111,7 @@ const config = {
     // jobshead: Desktop has extra columns that mobile doesn't need
     jobshead: {
       // Columns to skip from desktop (not in mobile schema)
-      skipColumns: ['job_uid', 'sporg_id', 'jctincharge', 'jt_id', 'tc_id'],
+      skipColumns: ['jctincharge', 'jt_id', 'tc_id'],  // sporg_id now in Supabase, job_uid also syncing
       // Columns to add for mobile (with default values if not in desktop)
       addColumns: {
         source: 'D', // Track data origin
@@ -170,6 +174,26 @@ const config = {
     workdiary: {
       // SKIP wd_id - Mobile-only tracking column
       skipColumns: ['wd_id'],
+      addColumns: {
+        source: 'D',
+        created_at: () => new Date(),
+        updated_at: () => new Date(),
+      }
+    },
+
+    // mbjobreviewnotes: Job Review Notes (desktop to mobile sync)
+    mbjobreviewnotes: {
+      skipColumns: [],
+      addColumns: {
+        source: 'D',
+        created_at: () => new Date(),
+        updated_at: () => new Date(),
+      }
+    },
+
+    // mbjobreviewresponse: Job Review Responses (desktop to mobile sync)
+    mbjobreviewresponse: {
+      skipColumns: [],
       addColumns: {
         source: 'D',
         created_at: () => new Date(),

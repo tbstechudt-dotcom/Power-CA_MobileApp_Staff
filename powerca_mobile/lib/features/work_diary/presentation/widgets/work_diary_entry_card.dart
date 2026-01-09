@@ -56,7 +56,7 @@ class WorkDiaryEntryCard extends StatelessWidget {
                     Text(
                       entry.formattedDate,
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w400,
                         color: AppTheme.textSecondaryColor,
@@ -79,7 +79,7 @@ class WorkDiaryEntryCard extends StatelessWidget {
                       child: Text(
                         'Act. Hrs: ${entry.formattedHours}',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
+                          fontFamily: 'Inter',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.primaryColor,
@@ -110,7 +110,7 @@ class WorkDiaryEntryCard extends StatelessWidget {
               Text(
                 entry.notes!,
                 style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
                   color: AppTheme.textPrimaryColor,
@@ -135,7 +135,7 @@ class WorkDiaryEntryCard extends StatelessWidget {
                     child: Text(
                       entry.taskName!,
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w400,
                         color: AppTheme.textSecondaryColor,

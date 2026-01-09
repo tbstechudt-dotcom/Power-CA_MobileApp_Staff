@@ -254,6 +254,8 @@ class StagingSyncEngine {
    * Get primary key column for table
    */
   getPrimaryKey(tableName) {
+    // NOTE: Some tables use composite primary keys
+    // For composite keys, return comma-separated column names
     const primaryKeys = {
       'orgmaster': 'org_id',
       'locmaster': 'loc_id',
@@ -263,13 +265,15 @@ class StagingSyncEngine {
       'taskmaster': 'task_id',
       'jobmaster': 'job_id',
       'cliunimaster': 'cliu_id',
-      'jobshead': 'job_id',
+      'jobshead': 'job_id, sporg_id',  // Composite key: same job can be assigned to multiple staff/orgs
       'jobtasks': 'jt_id',
       'taskchecklist': 'tc_id',
       'workdiary': 'wd_id',
       'reminder': 'rem_id',
       'remdetail': 'remd_id',
       'learequest': 'lea_id',
+      'mbjobreviewnotes': 'rn_id',      // NEW: Job Review Notes
+      'mbjobreviewresponse': 'res_id',  // NEW: Job Review Responses
     };
     return primaryKeys[tableName];
   }
@@ -288,7 +292,11 @@ class StagingSyncEngine {
    * 2. Have duplicate PK values in desktop (UPSERT would fail)
    */
   hasMobileOnlyPK(tableName) {
-    const deleteInsertTables = ['jobshead', 'jobtasks', 'taskchecklist', 'workdiary'];
+    // Tables that must use DELETE+INSERT pattern (no unique PK in Supabase):
+    // - jobshead: No primary key in Supabase (same job_id assigned to multiple staff/orgs)
+    // - jobtasks, taskchecklist, workdiary: Mobile-generated PKs only
+    // - remdetail: remd_id column doesn't exist in Supabase
+    const deleteInsertTables = ['jobshead', 'jobtasks', 'taskchecklist', 'workdiary', 'remdetail'];
     return deleteInsertTables.includes(tableName);
   }
 
@@ -308,6 +316,16 @@ class StagingSyncEngine {
       console.error(`  - [WARN]  Error checking for source column:`, error.message);
       return false; // Assume no source column if check fails
     }
+  }
+
+  /**
+   * Tables that need deduplication during extraction
+   * (Source has duplicate PKs that violate UPSERT constraints)
+   */
+  needsDeduplication(tableName) {
+    // jobshead source (v_jobshead view) has duplicate job_id values
+    // We need to deduplicate to keep only the most recent record per job_id
+    return tableName === 'jobshead';
   }
 
   /**
@@ -594,7 +612,18 @@ class StagingSyncEngine {
         }
       } else {
         // Full sync - get all records
-        sourceData = await this.sourcePool.query(`SELECT * FROM ${sourceTableName}`);
+        // CRITICAL FIX: Deduplicate if source table has duplicate PKs
+        if (this.needsDeduplication(targetTableName)) {
+          const pkColumn = this.getPrimaryKey(targetTableName);
+          console.log(`  - [INFO] Deduplicating source records by ${pkColumn} (keeps most recent)`);
+          sourceData = await this.sourcePool.query(`
+            SELECT DISTINCT ON (${pkColumn}) *
+            FROM ${sourceTableName}
+            ORDER BY ${pkColumn}, updated_at DESC NULLS LAST, created_at DESC NULLS LAST
+          `);
+        } else {
+          sourceData = await this.sourcePool.query(`SELECT * FROM ${sourceTableName}`);
+        }
         console.log(`  - Extracted ${sourceData.rows.length} records (full sync)`);
       }
 

@@ -1,0 +1,58 @@
+name: Sync Release to Supabase
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version info
+        id: version
+        run: |
+          # Extract version from pubspec.yaml
+          VERSION=$(grep "^version:" powerca_mobile/pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          VERSION_CODE=$(grep "^version:" powerca_mobile/pubspec.yaml | sed 's/version: //' | cut -d'+' -f2)
+
+          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION (code: $VERSION_CODE)"
+
+      - name: Get APK download URL
+        id: apk_url
+        run: |
+          # Find APK asset in release
+          APK_URL=$(echo '${{ toJson(github.event.release.assets) }}' | jq -r '.[] | select(.name | endswith(".apk")) | .browser_download_url' | head -1)
+
+          if [ -z "$APK_URL" ]; then
+            echo "No APK found in release assets!"
+            exit 1
+          fi
+
+          echo "download_url=$APK_URL" >> $GITHUB_OUTPUT
+          echo "APK URL: $APK_URL"
+
+      - name: Insert version to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          curl -X POST "$SUPABASE_URL/rest/v1/app_versions" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d '{
+              "version_name": "${{ steps.version.outputs.version_name }}",
+              "version_code": ${{ steps.version.outputs.version_code }},
+              "download_url": "${{ steps.apk_url.outputs.download_url }}",
+              "release_notes": "${{ github.event.release.body }}",
+              "is_force_update": false
+            }'
+
+          echo "Version ${{ steps.version.outputs.version_name }} synced to Supabase!"

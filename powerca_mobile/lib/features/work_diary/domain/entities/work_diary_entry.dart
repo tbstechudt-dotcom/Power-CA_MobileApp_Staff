@@ -25,11 +25,22 @@ class WorkDiaryEntry extends Equatable {
     this.updatedAt,
   });
 
-  /// Format hours as "HH:MM Hrs"
+  /// Format hours as "Xh Ym"
   String get formattedHours {
-    final hours = hoursWorked.floor();
-    final minutes = ((hoursWorked - hours) * 60).round();
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')} Hrs';
+    final totalMinutes = (hoursWorked * 60).round();
+
+    if (totalMinutes == 0) return '0m';
+
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+
+    if (hours == 0) {
+      return '${minutes}m';
+    } else if (minutes == 0) {
+      return '${hours}h';
+    } else {
+      return '${hours}h ${minutes}m';
+    }
   }
 
   /// Format date as "DD MMM YYYY"

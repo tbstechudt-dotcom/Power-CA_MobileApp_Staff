@@ -3,12 +3,19 @@ import '../models/staff_model.dart';
 
 /// Authentication Remote Data Source
 ///
-/// Handles authentication via Supabase Edge Function (server-side)
-/// Encryption key never leaves the backend!
+/// Handles authentication against mbstaff table using PGP symmetric encryption.
+/// Password validation is done server-side using PostgreSQL's pgp_sym_decrypt():
+/// - User enters plain text password
+/// - Supabase RPC function decrypts stored password and compares
+/// - Passphrase 'tbstech25' is kept secure on server side
 abstract class AuthRemoteDataSource {
   /// Authenticate user with username and password
   ///
-  /// Calls backend Edge Function which handles password decryption securely
+  /// [username] - The app_username from mbstaff table
+  /// [password] - Plain text password entered by user
+  ///
+  /// Returns StaffModel if authentication succeeds
+  /// Throws Exception if user not found, inactive, or password mismatch
   Future<StaffModel> signIn({
     required String username,
     required String password,
@@ -26,38 +33,50 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
   }) async {
     try {
-      // Call Supabase Edge Function for server-side authentication
-      // Password decryption happens on backend with secure encryption key
-      final response = await supabaseClient.functions.invoke(
-        'auth-login',
-        body: {
-          'username': username,
-          'password': password,
-        },
-      );
+      // Use Supabase RPC function for secure server-side authentication
+      // The function uses PGP_SYM_DECRYPT with passphrase 'tbstech25'
+      final response = await supabaseClient
+          .rpc(
+            'authenticate_staff',
+            params: {
+              'p_username': username,
+              'p_password': password,
+            },
+          )
+          .maybeSingle();
 
-      // Check for error response
-      if (response.status != 200) {
-        final error = response.data['error'] ?? 'Authentication failed';
-        throw Exception(error);
+      if (response == null) {
+        throw Exception('Invalid username or password');
       }
 
-      // Parse successful response
-      final data = response.data;
+      // Authentication successful - fetch complete staff data including phone number
+      // The RPC function may not return all fields, so we fetch from mbstaff directly
+      final staffId = response['staff_id'];
+      if (staffId != null) {
+        final completeStaffData = await supabaseClient
+            .from('mbstaff')
+            .select('staff_id, name, app_username, org_id, loc_id, con_id, email, phonumber, dob, stafftype, active_status')
+            .eq('staff_id', staffId)
+            .maybeSingle();
 
-      if (data['success'] != true) {
-        throw Exception(data['error'] ?? 'Authentication failed');
+        if (completeStaffData != null) {
+          return StaffModel.fromJson(completeStaffData);
+        }
       }
 
-      // Extract staff data from response
-      final staffData = data['staff'] as Map<String, dynamic>;
-
-      // Create and return staff model
-      return StaffModel.fromJson(staffData);
-    } on FunctionException catch (e) {
-      throw Exception('Backend error: ${e.details}');
+      // Fallback to RPC response if direct query fails
+      return StaffModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      // Handle specific database errors
+      if (e.message.contains('Wrong key') || e.message.contains('decrypt')) {
+        throw Exception('Invalid username or password');
+      }
+      throw Exception('Authentication failed: ${e.message}');
     } catch (e) {
-      rethrow;
+      if (e.toString().contains('Invalid username')) {
+        rethrow;
+      }
+      throw Exception('Authentication failed. Please try again.');
     }
   }
 }

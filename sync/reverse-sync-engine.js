@@ -80,10 +80,10 @@ class ReverseSyncEngine {
       `);
       console.log('[OK] Created _reverse_sync_metadata table');
 
-      // Seed initial records for all reverse sync tables (using DESKTOP table names)
+      // Seed initial records for mobile-created tables only (using DESKTOP table names)
       const tables = [
-        'orgmaster', 'locmaster', 'conmaster', 'climaster', 'mbstaff', 'taskmaster',
-        'jobshead', 'mbreminder', 'learequest'  // Note: mbreminder (desktop) not reminder (Supabase)
+        'workdiary',   // Mobile time tracking
+        'learequest'   // Mobile leave requests
       ];
 
       for (const table of tables) {
@@ -124,37 +124,15 @@ class ReverseSyncEngine {
     console.log('Tracking: Metadata-based (last_sync_timestamp per table)');
 
     try {
-      // Sync ALL tables in correct dependency order
-      // Master tables first (reference data)
-      const masterTables = [
-        'orgmaster',     // Organizations
-        'locmaster',     // Locations
-        'conmaster',     // Contacts
-        'climaster',     // Clients
-        'mbstaff',       // Staff members
-        'taskmaster',    // Task templates (optional)
-        'jobmaster',     // Job templates (optional)
-        'cliunimaster',  // Client units (optional)
+      // ONLY sync mobile-created tables (workdiary and learequest)
+      // All other tables sync forward only (Desktop -> Supabase)
+      const mobileCreatedTables = [
+        'workdiary',     // Work diary entries (mobile time tracking)
+        'learequest',    // Leave requests (mobile leave applications)
       ];
 
-      // Transactional tables (depend on master tables)
-      const transactionalTables = [
-        'jobshead',      // Job headers
-        'jobtasks',      // Job tasks
-        'taskchecklist', // Task checklists
-        'workdiary',     // Work diary entries
-        'reminder',      // Reminders
-        'remdetail',     // Reminder details
-        'learequest',    // Leave requests
-      ];
-
-      console.log('\n--- Master Tables ---');
-      for (const tableName of masterTables) {
-        await this.syncTable(tableName);
-      }
-
-      console.log('\n--- Transactional Tables ---');
-      for (const tableName of transactionalTables) {
+      console.log('\n--- Mobile-Created Tables (Reverse Sync) ---');
+      for (const tableName of mobileCreatedTables) {
         await this.syncTable(tableName);
       }
 
@@ -348,10 +326,11 @@ class ReverseSyncEngine {
     }
 
     // Remove mobile-specific columns that don't exist in desktop schema
+    // NOTE: Keep 'source' column - desktop should track record origin (M=mobile, D=desktop)
     const desktopRecord = { ...record };
     delete desktopRecord.created_at;
     delete desktopRecord.updated_at;
-    delete desktopRecord.source;
+    // Don't delete source - let column filtering handle it based on desktop schema
 
     // CRITICAL FIX: Only include columns that exist in desktop table
     // Filter out columns that exist in Supabase but not in desktop
@@ -361,6 +340,9 @@ class ReverseSyncEngine {
         filteredRecord[key] = value;
       }
     }
+
+    // Transform data types to match desktop schema
+    this.transformRecordForDesktop(tableName, filteredRecord);
 
     const pkColumn = this.getPrimaryKeyColumn(tableName);
 
@@ -390,6 +372,48 @@ class ReverseSyncEngine {
   }
 
   /**
+   * Transform record data types to match desktop schema
+   * Handles type mismatches between Supabase and Desktop PostgreSQL
+   */
+  transformRecordForDesktop(tableName, record) {
+    // Workdiary-specific transformations
+    if (tableName === 'workdiary') {
+      // Convert TIME to TIMESTAMP by combining with date
+      // Supabase: timefrom/timeto are TIME (e.g., "09:50:00")
+      // Desktop: timefrom/timeto are TIMESTAMP (e.g., "2025-12-27 09:50:00")
+      if (record.date) {
+        const dateStr = record.date instanceof Date
+          ? record.date.toISOString().split('T')[0]
+          : String(record.date).split('T')[0];
+
+        if (record.timefrom && typeof record.timefrom === 'string') {
+          // Combine date + time into full timestamp
+          record.timefrom = `${dateStr} ${record.timefrom}`;
+        }
+        if (record.timeto && typeof record.timeto === 'string') {
+          // Combine date + time into full timestamp
+          record.timeto = `${dateStr} ${record.timeto}`;
+        }
+      }
+
+      // Truncate tasknotes to 50 chars (desktop varchar(50))
+      if (record.tasknotes && record.tasknotes.length > 50) {
+        record.tasknotes = record.tasknotes.substring(0, 50);
+      }
+
+      // Truncate doc_ref to 15 chars (desktop varchar(15))
+      if (record.doc_ref && record.doc_ref.length > 15) {
+        record.doc_ref = record.doc_ref.substring(0, 15);
+      }
+    }
+
+    // Learequest-specific transformations (if needed)
+    if (tableName === 'learequest') {
+      // Add any learequest-specific transformations here
+    }
+  }
+
+  /**
    * Get primary key column for a table
    */
   getPrimaryKeyColumn(tableName) {
@@ -411,7 +435,7 @@ class ReverseSyncEngine {
       'workdiary': 'wd_id',
       'mbreminder': 'rem_id',
       'mbremdetail': 'remd_id',
-      'learequest': 'lea_id',
+      'learequest': 'learequest_id',  // Desktop uses learequest_id, not lea_id
     };
 
     return primaryKeys[tableName];

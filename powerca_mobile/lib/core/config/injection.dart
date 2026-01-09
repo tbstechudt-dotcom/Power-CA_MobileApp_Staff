@@ -24,15 +24,6 @@ import '../../features/home/domain/usecases/get_dashboard_stats_usecase.dart';
 import '../../features/home/domain/usecases/get_recent_activities_usecase.dart';
 import '../../features/home/presentation/bloc/home_bloc.dart';
 
-// Jobs
-import '../../features/jobs/data/datasources/job_remote_datasource.dart';
-import '../../features/jobs/data/repositories/job_repository_impl.dart';
-import '../../features/jobs/domain/repositories/job_repository.dart';
-import '../../features/jobs/domain/usecases/get_jobs_usecase.dart';
-import '../../features/jobs/domain/usecases/get_job_by_id_usecase.dart';
-import '../../features/jobs/domain/usecases/get_jobs_count_by_status_usecase.dart';
-import '../../features/jobs/presentation/bloc/jobs_bloc.dart';
-
 // Work Diary
 import '../../features/work_diary/data/datasources/work_diary_remote_datasource.dart';
 import '../../features/work_diary/data/repositories/work_diary_repository_impl.dart';
@@ -45,15 +36,18 @@ import '../../features/work_diary/domain/usecases/delete_entry_usecase.dart';
 import '../../features/work_diary/domain/usecases/get_total_hours_by_job_usecase.dart';
 import '../../features/work_diary/presentation/bloc/work_diary_bloc.dart';
 
-// Leave Requests
-import '../../features/leave_requests/data/datasources/leave_request_remote_datasource.dart';
-import '../../features/leave_requests/data/repositories/leave_request_repository_impl.dart';
-import '../../features/leave_requests/domain/repositories/leave_request_repository.dart';
-import '../../features/leave_requests/domain/usecases/get_leave_requests_usecase.dart';
-import '../../features/leave_requests/domain/usecases/create_leave_request_usecase.dart';
-import '../../features/leave_requests/domain/usecases/cancel_leave_request_usecase.dart';
-import '../../features/leave_requests/domain/usecases/get_leave_balance_usecase.dart';
-import '../../features/leave_requests/presentation/bloc/leave_request_bloc.dart';
+// Device Security
+import '../../features/device_security/data/datasources/device_security_local_datasource.dart';
+import '../../features/device_security/data/datasources/device_security_remote_datasource.dart';
+import '../../features/device_security/data/repositories/device_security_repository_impl.dart';
+import '../../features/device_security/domain/repositories/device_security_repository.dart';
+import '../../features/device_security/domain/usecases/check_device_status_usecase.dart';
+import '../../features/device_security/domain/usecases/get_device_info_usecase.dart';
+import '../../features/device_security/domain/usecases/send_otp_usecase.dart';
+import '../../features/device_security/domain/usecases/send_otp_with_phone_usecase.dart';
+import '../../features/device_security/domain/usecases/verify_otp_usecase.dart';
+import '../../features/device_security/domain/usecases/verify_otp_with_phone_usecase.dart';
+import '../../features/device_security/presentation/bloc/device_security_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -161,45 +155,6 @@ Future<void> configureDependencies() async {
   );
 
   // ========================================
-  // JOBS FEATURE
-  // ========================================
-
-  // Data Sources
-  getIt.registerLazySingleton<JobRemoteDataSource>(
-    () => JobRemoteDataSourceImpl(
-      supabaseClient: getIt<SupabaseClient>(),
-    ),
-  );
-
-  // Repository
-  getIt.registerLazySingleton<JobRepository>(
-    () => JobRepositoryImpl(
-      remoteDataSource: getIt<JobRemoteDataSource>(),
-    ),
-  );
-
-  // Use Cases
-  getIt.registerLazySingleton<GetJobsUseCase>(
-    () => GetJobsUseCase(getIt<JobRepository>()),
-  );
-
-  getIt.registerLazySingleton<GetJobByIdUseCase>(
-    () => GetJobByIdUseCase(getIt<JobRepository>()),
-  );
-
-  getIt.registerLazySingleton<GetJobsCountByStatusUseCase>(
-    () => GetJobsCountByStatusUseCase(getIt<JobRepository>()),
-  );
-
-  // BLoC
-  getIt.registerFactory<JobsBloc>(
-    () => JobsBloc(
-      getJobs: getIt<GetJobsUseCase>(),
-      getJobsCountByStatus: getIt<GetJobsCountByStatusUseCase>(),
-    ),
-  );
-
-  // ========================================
   // WORK DIARY FEATURE
   // ========================================
 
@@ -254,49 +209,67 @@ Future<void> configureDependencies() async {
   );
 
   // ========================================
-  // LEAVE REQUESTS FEATURE
+  // DEVICE SECURITY FEATURE
   // ========================================
 
   // Data Sources
-  getIt.registerLazySingleton<LeaveRequestRemoteDataSource>(
-    () => LeaveRequestRemoteDataSourceImpl(
+  getIt.registerLazySingleton<DeviceSecurityRemoteDataSource>(
+    () => DeviceSecurityRemoteDataSourceImpl(
       supabaseClient: getIt<SupabaseClient>(),
     ),
   );
 
+  getIt.registerLazySingleton<DeviceSecurityLocalDataSource>(
+    () => DeviceSecurityLocalDataSourceImpl(
+      secureStorage: getIt<FlutterSecureStorage>(),
+    ),
+  );
+
   // Repository
-  getIt.registerLazySingleton<LeaveRequestRepository>(
-    () => LeaveRequestRepositoryImpl(
-      remoteDataSource: getIt<LeaveRequestRemoteDataSource>(),
+  getIt.registerLazySingleton<DeviceSecurityRepository>(
+    () => DeviceSecurityRepositoryImpl(
+      remoteDataSource: getIt<DeviceSecurityRemoteDataSource>(),
+      localDataSource: getIt<DeviceSecurityLocalDataSource>(),
     ),
   );
 
   // Use Cases
-  getIt.registerLazySingleton<GetLeaveRequestsUseCase>(
-    () => GetLeaveRequestsUseCase(getIt<LeaveRequestRepository>()),
+  getIt.registerLazySingleton<CheckDeviceStatusUseCase>(
+    () => CheckDeviceStatusUseCase(getIt<DeviceSecurityRepository>()),
   );
 
-  getIt.registerLazySingleton<CreateLeaveRequestUseCase>(
-    () => CreateLeaveRequestUseCase(getIt<LeaveRequestRepository>()),
+  getIt.registerLazySingleton<GetDeviceInfoUseCase>(
+    () => GetDeviceInfoUseCase(getIt<DeviceSecurityRepository>()),
   );
 
-  getIt.registerLazySingleton<CancelLeaveRequestUseCase>(
-    () => CancelLeaveRequestUseCase(getIt<LeaveRequestRepository>()),
+  getIt.registerLazySingleton<SendOtpUseCase>(
+    () => SendOtpUseCase(getIt<DeviceSecurityRepository>()),
   );
 
-  getIt.registerLazySingleton<GetLeaveBalanceUseCase>(
-    () => GetLeaveBalanceUseCase(getIt<LeaveRequestRepository>()),
+  getIt.registerLazySingleton<SendOtpWithPhoneUseCase>(
+    () => SendOtpWithPhoneUseCase(getIt<DeviceSecurityRepository>()),
+  );
+
+  getIt.registerLazySingleton<VerifyOtpUseCase>(
+    () => VerifyOtpUseCase(getIt<DeviceSecurityRepository>()),
+  );
+
+  getIt.registerLazySingleton<VerifyOtpWithPhoneUseCase>(
+    () => VerifyOtpWithPhoneUseCase(getIt<DeviceSecurityRepository>()),
   );
 
   // BLoC
-  getIt.registerFactory<LeaveRequestBloc>(
-    () => LeaveRequestBloc(
-      getLeaveRequests: getIt<GetLeaveRequestsUseCase>(),
-      createLeaveRequest: getIt<CreateLeaveRequestUseCase>(),
-      cancelLeaveRequest: getIt<CancelLeaveRequestUseCase>(),
-      getLeaveBalance: getIt<GetLeaveBalanceUseCase>(),
+  getIt.registerFactory<DeviceSecurityBloc>(
+    () => DeviceSecurityBloc(
+      checkDeviceStatus: getIt<CheckDeviceStatusUseCase>(),
+      getDeviceInfo: getIt<GetDeviceInfoUseCase>(),
+      sendOtp: getIt<SendOtpUseCase>(),
+      sendOtpWithPhone: getIt<SendOtpWithPhoneUseCase>(),
+      verifyOtp: getIt<VerifyOtpUseCase>(),
+      verifyOtpWithPhone: getIt<VerifyOtpWithPhoneUseCase>(),
     ),
   );
+
 }
 
 /// Reset all dependencies (useful for testing)

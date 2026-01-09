@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/theme.dart';
 import '../../../auth/domain/entities/staff.dart';
-import '../../../jobs/domain/entities/job.dart';
+import '../../domain/entities/job.dart';
 import '../../domain/entities/work_diary_entry.dart';
 import '../bloc/work_diary_bloc.dart';
 import '../bloc/work_diary_event.dart';
@@ -60,22 +60,42 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
     final isEditing = widget.entry != null;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(
-            Icons.arrow_back,
-            color: AppTheme.textPrimaryColor,
-            size: 24.sp,
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EDF3),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFD1D9E6),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
+        leadingWidth: 58.w,
         title: Text(
           isEditing ? 'Edit Entry' : 'Add Entry',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
             color: AppTheme.textPrimaryColor,
@@ -135,7 +155,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             'Job',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w400,
               color: AppTheme.textSecondaryColor,
@@ -145,7 +165,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             widget.job.jobName,
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimaryColor,
@@ -153,9 +173,9 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           ),
           SizedBox(height: 8.h),
           Text(
-            widget.job.clientName,
+            widget.job.clientName ?? 'No Client',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 13.sp,
               fontWeight: FontWeight.w400,
               color: AppTheme.textPrimaryColor,
@@ -183,7 +203,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             'Date',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -192,11 +212,15 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           SizedBox(height: 12.h),
           InkWell(
             onTap: () async {
+              // Get current date at midnight (00:00:00) for firstDate
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+
               final pickedDate = await showDatePicker(
                 context: context,
-                initialDate: _selectedDate,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
+                initialDate: _selectedDate.isBefore(today) ? today : _selectedDate,
+                firstDate: today, // Only allow current date and future dates
+                lastDate: DateTime(2030),
               );
               if (pickedDate != null) {
                 setState(() {
@@ -219,7 +243,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
                   Text(
                     _formatDate(_selectedDate),
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: 'Inter',
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w400,
                       color: AppTheme.textPrimaryColor,
@@ -256,7 +280,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             'Actual Hours',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -336,7 +360,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
           Text(
             'Notes',
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimaryColor,
@@ -377,7 +401,7 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
       child: Text(
         isEditing ? 'Update Entry' : 'Save Entry',
         style: TextStyle(
-          fontFamily: 'Poppins',
+          fontFamily: 'Inter',
           fontSize: 16.sp,
           fontWeight: FontWeight.w600,
           color: Colors.white,

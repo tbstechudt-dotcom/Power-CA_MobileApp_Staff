@@ -1,0 +1,129 @@
++===============================================================+
+|      PowerCA Mobile - Sync Service Installation              |
++===============================================================+
+
+IMPORTANT: Read all steps before proceeding.
+
+---------------------------------------------------------------
+STEP 1: Install Node.js (If not already installed)
+---------------------------------------------------------------
+
+1. Download Node.js 18 LTS from: https://nodejs.org/
+   Direct link: https://nodejs.org/dist/v18.20.0/node-v18.20.0-x64.msi
+
+2. Run installer with default settings
+
+3. Verify installation:
+   - Open Command Prompt
+   - Run: node --version
+   - Should show: v18.x.x
+
+---------------------------------------------------------------
+STEP 2: Copy Files to Installation Directory
+---------------------------------------------------------------
+
+1. Copy this entire folder to: C:\PowerCA-Sync\
+
+2. Verify folder structure:
+   C:\PowerCA-Sync\
+   +- sync\
+   +- node_modules\
+   +- .env
+   +- package.json
+
+---------------------------------------------------------------
+STEP 3: Configure Database Connection
+---------------------------------------------------------------
+
+1. Open: C:\PowerCA-Sync\.env
+
+2. Fill in YOUR database details (2 lines to change):
+
+   DESKTOP_DB_NAME=___YOUR_DATABASE_NAME___
+   Change to your actual database name
+   Examples: tbsca, enterprise_db, powerca_db, etc.
+
+   DESKTOP_DB_PASSWORD=___YOUR_POSTGRES_PASSWORD___
+   Change to your actual PostgreSQL password
+
+3. Verify other settings (usually don't need changes):
+   - DESKTOP_DB_HOST=localhost (OK if DB is on same PC)
+   - DESKTOP_DB_PORT=5433 (OK if using default port)
+   - DESKTOP_DB_USER=postgres (OK if using default user)
+
+4. Save and close
+
+---------------------------------------------------------------
+STEP 4: Test Sync (Before Installing Service)
+---------------------------------------------------------------
+
+1. Open Command Prompt
+
+2. Navigate to installation:
+   cd C:\PowerCA-Sync
+
+3. Run test sync:
+   node sync\full-sync.js --mode=incremental
+
+4. Should see:
+   [OK] Connected to Desktop PostgreSQL
+   [OK] Connected to Supabase Cloud
+   [OK] Syncing tables...
+
+5. If errors, check:
+   - Desktop PostgreSQL is running
+   - Password in .env is correct
+   - Internet connection is working
+
+---------------------------------------------------------------
+STEP 5: Install Windows Service
+---------------------------------------------------------------
+
+1. Open Command Prompt AS ADMINISTRATOR
+
+2. Navigate to scheduler:
+   cd C:\PowerCA-Sync\sync\scheduler
+
+3. Run installer:
+   install-service.bat
+
+4. Select option 1 (Install service)
+
+5. Configure auto-start:
+   sc config "PowerCA Sync Scheduler" start=auto
+
+6. Start service (option 3 in install-service.bat)
+
+---------------------------------------------------------------
+STEP 6: Verify Service is Running
+---------------------------------------------------------------
+
+1. Open Services: services.msc
+
+2. Find "PowerCA Sync Scheduler"
+
+3. Verify:
+   - Status: Running
+   - Startup Type: Automatic
+
+4. Check logs:
+   C:\PowerCA-Sync\sync\scheduler\logs\combined.log
+
+---------------------------------------------------------------
+SYNC SCHEDULE
+---------------------------------------------------------------
+
+The service will automatically sync:
+- DAILY: Incremental sync at 2:00 AM
+- WEEKLY: Full sync on Sunday at 3:00 AM
+
+No manual intervention required!
+
+---------------------------------------------------------------
+SUPPORT
+---------------------------------------------------------------
+
+Contact: support@powerca.com
+Website: https://powerca.com/support
+
+---------------------------------------------------------------
