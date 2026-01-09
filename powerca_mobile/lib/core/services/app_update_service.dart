@@ -135,7 +135,18 @@ class AppUpdateService {
   /// Install the downloaded APK
   Future<bool> installApk(String filePath) async {
     try {
-      final result = await OpenFilex.open(filePath);
+      debugPrint('Opening APK for installation: $filePath');
+
+      // Use specific MIME type for APK files
+      final result = await OpenFilex.open(
+        filePath,
+        type: 'application/vnd.android.package-archive',
+      );
+
+      debugPrint('OpenFilex result: ${result.type} - ${result.message}');
+
+      // ResultType.done means the file was opened successfully
+      // The actual installation is handled by Android's package installer
       return result.type == ResultType.done;
     } catch (e) {
       debugPrint('Error installing APK: $e');
