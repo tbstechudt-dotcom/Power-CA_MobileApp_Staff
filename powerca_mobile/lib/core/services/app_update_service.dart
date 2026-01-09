@@ -49,7 +49,7 @@ class AppUpdateService {
   final _dio = Dio();
 
   // Current app version - UPDATE THIS when releasing new versions
-  static const String currentVersionName = '1.0.1';
+  static const String currentVersionName = '1.0.1+2';
   static const int currentVersionCode = 2;
 
   /// Check if a new version is available
