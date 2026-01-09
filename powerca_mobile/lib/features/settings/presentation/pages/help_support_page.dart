@@ -170,17 +170,6 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Getting Started Banner
-              _buildGettingStartedBanner(
-                isDark: isDark,
-                cardColor: cardColor,
-                borderColor: borderColor,
-                titleColor: titleColor,
-                subtitleColor: subtitleColor,
-              ),
-
-              SizedBox(height: 24.h),
-
               // Quick Actions Section
               _buildSectionHeader('Quick Actions', titleColor),
               SizedBox(height: 12.h),
@@ -270,96 +259,6 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     );
   }
 
-  Widget _buildGettingStartedBanner({
-    required bool isDark,
-    required Color cardColor,
-    required Color borderColor,
-    required Color titleColor,
-    required Color subtitleColor,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [const Color(0xFF1E3A5F), const Color(0xFF172554)]
-              : [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)],
-        ),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48.w,
-                height: 48.h,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  Icons.lightbulb_outline_rounded,
-                  size: 28.sp,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(width: 16.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome to PowerCA',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'Your auditor worklog companion',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'Track your work, manage jobs, apply for leave, and stay connected with your team - all in one app.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.9),
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildQuickActionsCard({
     required bool isDark,
     required Color cardColor,
@@ -380,8 +279,8 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             icon: Icons.email_outlined,
             iconColor: const Color(0xFF3B82F6),
             title: 'Email Support',
-            subtitle: 'support@tbstech.in',
-            onTap: () => _launchEmail('support@tbstech.in'),
+            subtitle: 'contact@powerca.in',
+            onTap: () => _launchEmail('contact@powerca.in'),
             showDivider: true,
             dividerColor: borderColor,
             titleColor: titleColor,
@@ -391,8 +290,8 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             icon: Icons.phone_outlined,
             iconColor: const Color(0xFF10B981),
             title: 'Call Support',
-            subtitle: '+91 98765 43210',
-            onTap: () => _launchPhone('+919876543210'),
+            subtitle: '+91 98422 24635',
+            onTap: () => _launchPhone('+919842224635'),
             showDivider: true,
             dividerColor: borderColor,
             titleColor: titleColor,
@@ -402,8 +301,8 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             icon: Icons.language_rounded,
             iconColor: const Color(0xFF8B5CF6),
             title: 'Visit Website',
-            subtitle: 'www.tbstech.in',
-            onTap: () => _launchUrl('https://www.tbstech.in'),
+            subtitle: 'www.powerca.in',
+            onTap: () => _launchUrl('https://www.powerca.in'),
             showDivider: false,
             dividerColor: borderColor,
             titleColor: titleColor,
@@ -823,14 +722,8 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           ),
           SizedBox(height: 8.h),
           _buildSupportHoursRow(
-            'Monday - Friday',
-            '9:00 AM - 6:00 PM IST',
-            subtitleColor,
-          ),
-          SizedBox(height: 4.h),
-          _buildSupportHoursRow(
-            'Saturday',
-            '10:00 AM - 2:00 PM IST',
+            'Monday - Saturday',
+            '9:30 AM - 6:00 PM IST',
             subtitleColor,
           ),
           SizedBox(height: 4.h),
