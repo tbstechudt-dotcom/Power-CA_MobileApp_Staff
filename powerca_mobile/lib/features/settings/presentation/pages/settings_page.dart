@@ -49,9 +49,10 @@ class SettingsPage extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: Container(
-        color: surfaceColor,
-        child: SingleChildScrollView(
+      body: SizedBox.expand(
+        child: Container(
+          color: surfaceColor,
+          child: SingleChildScrollView(
           padding: EdgeInsets.all(16.w),
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +110,7 @@ class SettingsPage extends StatelessWidget {
                       // Leave Updates Toggle
                       _buildSettingItem(
                         icon: Icons.event_available_rounded,
-                        iconColor: notificationProvider.leaveNotificationsEnabled
+                        iconColor: notificationProvider.leaveNotificationsToggle
                             ? const Color(0xFF10B981)
                             : iconColor,
                         title: 'Leave Updates',
@@ -117,7 +118,7 @@ class SettingsPage extends StatelessWidget {
                         titleColor: titleColor,
                         subtitleColor: subtitleColor,
                         trailing: Switch.adaptive(
-                          value: notificationProvider.leaveNotificationsEnabled,
+                          value: notificationProvider.leaveNotificationsToggle,
                           onChanged: (value) {
                             notificationProvider.setLeaveNotificationsEnabled(value);
                           },
@@ -130,7 +131,7 @@ class SettingsPage extends StatelessWidget {
                       // Pinboard Reminders Toggle
                       _buildSettingItem(
                         icon: Icons.push_pin_rounded,
-                        iconColor: notificationProvider.pinboardNotificationsEnabled
+                        iconColor: notificationProvider.pinboardNotificationsToggle
                             ? const Color(0xFFF59E0B)
                             : iconColor,
                         title: 'Pinboard Reminders',
@@ -138,7 +139,7 @@ class SettingsPage extends StatelessWidget {
                         titleColor: titleColor,
                         subtitleColor: subtitleColor,
                         trailing: Switch.adaptive(
-                          value: notificationProvider.pinboardNotificationsEnabled,
+                          value: notificationProvider.pinboardNotificationsToggle,
                           onChanged: (value) {
                             notificationProvider.setPinboardNotificationsEnabled(value);
                           },
@@ -192,6 +193,7 @@ class SettingsPage extends StatelessWidget {
             ),
 
           ],
+        ),
         ),
         ),
       ),
