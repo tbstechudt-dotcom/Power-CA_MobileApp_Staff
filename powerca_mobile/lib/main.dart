@@ -28,6 +28,8 @@ import 'features/leave/presentation/pages/leave_page.dart';
 import 'features/pinboard/presentation/pages/pinboard_page.dart';
 import 'features/work_diary/domain/entities/job.dart';
 import 'features/work_diary/presentation/pages/work_diary_list_page.dart';
+import 'features/settings/presentation/pages/settings_page.dart';
+import 'features/settings/presentation/pages/help_support_page.dart';
 
 // Global error message for display
 String? _initializationError;
@@ -292,6 +294,14 @@ class PowerCAApp extends StatelessWidget {
                             fingerprint: args['fingerprint'] as String?,
                           ),
                         ),
+                      );
+                    case '/settings':
+                      return MaterialPageRoute(
+                        builder: (_) => const SettingsPage(),
+                      );
+                    case '/help-support':
+                      return MaterialPageRoute(
+                        builder: (_) => const HelpSupportPage(),
                       );
                     default:
                       return MaterialPageRoute(builder: (_) => const SplashPage());
