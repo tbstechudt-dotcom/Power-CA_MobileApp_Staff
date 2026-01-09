@@ -185,6 +185,42 @@ class SettingsPage extends StatelessWidget {
 
             SizedBox(height: 24.h),
 
+            // Help & Support Section
+            _buildSectionHeader('Support', titleColor),
+            SizedBox(height: 12.h),
+
+            Container(
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: borderColor, width: 1),
+              ),
+              child: Column(
+                children: [
+                  _buildSettingItem(
+                    icon: Icons.help_outline_rounded,
+                    iconColor: AppTheme.primaryColor,
+                    title: 'Help & Support',
+                    subtitle: 'FAQs, guides, and contact support',
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    showDivider: false,
+                    dividerColor: borderColor,
+                    trailing: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16.sp,
+                      color: subtitleColor,
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/help-support');
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 24.h),
+
             // App Info Section
             _buildSectionHeader('About', titleColor),
             SizedBox(height: 12.h),
@@ -201,7 +237,7 @@ class SettingsPage extends StatelessWidget {
                     icon: Icons.info_outline_rounded,
                     iconColor: iconColor,
                     title: 'Version',
-                    subtitle: '1.0.0',
+                    subtitle: '1.0.3',
                     titleColor: titleColor,
                     subtitleColor: subtitleColor,
                     showDivider: true,
