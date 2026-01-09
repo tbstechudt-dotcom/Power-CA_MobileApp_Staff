@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/services/app_update_service.dart';
 
 /// Settings page with app preferences
 class SettingsPage extends StatelessWidget {
@@ -237,7 +238,7 @@ class SettingsPage extends StatelessWidget {
                     icon: Icons.info_outline_rounded,
                     iconColor: iconColor,
                     title: 'Version',
-                    subtitle: '1.0.3',
+                    subtitle: AppUpdateService.currentVersionName,
                     titleColor: titleColor,
                     subtitleColor: subtitleColor,
                     showDivider: true,
