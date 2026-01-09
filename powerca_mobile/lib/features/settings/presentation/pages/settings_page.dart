@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/services/app_update_service.dart';
 
 /// Settings page with app preferences
 class SettingsPage extends StatelessWidget {
@@ -48,9 +49,10 @@ class SettingsPage extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: Container(
-        color: surfaceColor,
-        child: SingleChildScrollView(
+      body: SizedBox.expand(
+        child: Container(
+          color: surfaceColor,
+          child: SingleChildScrollView(
           padding: EdgeInsets.all(16.w),
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,48 +107,21 @@ class SettingsPage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      // Global Notifications Toggle (Master Switch)
-                      _buildSettingItem(
-                        icon: Icons.notifications_rounded,
-                        iconColor: notificationProvider.notificationsEnabled
-                            ? AppTheme.primaryColor
-                            : iconColor,
-                        title: 'Notifications',
-                        subtitle: notificationProvider.notificationsEnabled
-                            ? 'All notifications enabled'
-                            : 'All notifications disabled',
-                        titleColor: titleColor,
-                        subtitleColor: subtitleColor,
-                        trailing: Switch.adaptive(
-                          value: notificationProvider.notificationsEnabled,
-                          onChanged: (value) {
-                            notificationProvider.setNotificationsEnabled(value);
-                          },
-                          activeTrackColor: AppTheme.primaryColor,
-                        ),
-                        showDivider: true,
-                        dividerColor: borderColor,
-                      ),
-
                       // Leave Updates Toggle
                       _buildSettingItem(
                         icon: Icons.event_available_rounded,
-                        iconColor: notificationProvider.leaveNotificationsEnabled
+                        iconColor: notificationProvider.leaveNotificationsToggle
                             ? const Color(0xFF10B981)
                             : iconColor,
                         title: 'Leave Updates',
                         subtitle: 'Approved or rejected leave notifications',
-                        titleColor: notificationProvider.notificationsEnabled
-                            ? titleColor
-                            : titleColor.withValues(alpha: 0.5),
+                        titleColor: titleColor,
                         subtitleColor: subtitleColor,
                         trailing: Switch.adaptive(
                           value: notificationProvider.leaveNotificationsToggle,
-                          onChanged: notificationProvider.notificationsEnabled
-                              ? (value) {
-                                  notificationProvider.setLeaveNotificationsEnabled(value);
-                                }
-                              : null,
+                          onChanged: (value) {
+                            notificationProvider.setLeaveNotificationsEnabled(value);
+                          },
                           activeTrackColor: const Color(0xFF10B981),
                         ),
                         showDivider: true,
@@ -156,22 +131,18 @@ class SettingsPage extends StatelessWidget {
                       // Pinboard Reminders Toggle
                       _buildSettingItem(
                         icon: Icons.push_pin_rounded,
-                        iconColor: notificationProvider.pinboardNotificationsEnabled
+                        iconColor: notificationProvider.pinboardNotificationsToggle
                             ? const Color(0xFFF59E0B)
                             : iconColor,
                         title: 'Pinboard Reminders',
                         subtitle: 'New reminder assignment notifications',
-                        titleColor: notificationProvider.notificationsEnabled
-                            ? titleColor
-                            : titleColor.withValues(alpha: 0.5),
+                        titleColor: titleColor,
                         subtitleColor: subtitleColor,
                         trailing: Switch.adaptive(
                           value: notificationProvider.pinboardNotificationsToggle,
-                          onChanged: notificationProvider.notificationsEnabled
-                              ? (value) {
-                                  notificationProvider.setPinboardNotificationsEnabled(value);
-                                }
-                              : null,
+                          onChanged: (value) {
+                            notificationProvider.setPinboardNotificationsEnabled(value);
+                          },
                           activeTrackColor: const Color(0xFFF59E0B),
                         ),
                         showDivider: false,
@@ -181,42 +152,6 @@ class SettingsPage extends StatelessWidget {
                   ),
                 );
               },
-            ),
-
-            SizedBox(height: 24.h),
-
-            // Help & Support Section
-            _buildSectionHeader('Support', titleColor),
-            SizedBox(height: 12.h),
-
-            Container(
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: borderColor, width: 1),
-              ),
-              child: Column(
-                children: [
-                  _buildSettingItem(
-                    icon: Icons.help_outline_rounded,
-                    iconColor: AppTheme.primaryColor,
-                    title: 'Help & Support',
-                    subtitle: 'FAQs, guides, and contact support',
-                    titleColor: titleColor,
-                    subtitleColor: subtitleColor,
-                    showDivider: false,
-                    dividerColor: borderColor,
-                    trailing: Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 16.sp,
-                      color: subtitleColor,
-                    ),
-                    onTap: () {
-                      Navigator.pushNamed(context, '/help-support');
-                    },
-                  ),
-                ],
-              ),
             ),
 
             SizedBox(height: 24.h),
@@ -237,7 +172,7 @@ class SettingsPage extends StatelessWidget {
                     icon: Icons.info_outline_rounded,
                     iconColor: iconColor,
                     title: 'Version',
-                    subtitle: '1.0.3',
+                    subtitle: AppUpdateService.currentVersionName,
                     titleColor: titleColor,
                     subtitleColor: subtitleColor,
                     showDivider: true,
@@ -257,11 +192,8 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
 
-            SizedBox(height: 32.h),
-
-            // Theme Preview Card
-            _buildThemePreviewCard(isDark, cardColor, borderColor, titleColor, subtitleColor),
           ],
+        ),
         ),
         ),
       ),
@@ -358,66 +290,6 @@ class SettingsPage extends StatelessWidget {
             indent: 70.w,
           ),
       ],
-    );
-  }
-
-  Widget _buildThemePreviewCard(
-    bool isDark,
-    Color cardColor,
-    Color borderColor,
-    Color titleColor,
-    Color subtitleColor,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        gradient: isDark
-            ? const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-              )
-            : const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
-              ),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            isDark ? Icons.nights_stay_rounded : Icons.wb_sunny_rounded,
-            size: 48.sp,
-            color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF59E0B),
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            isDark ? 'Dark Mode Active' : 'Light Mode Active',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-              color: titleColor,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            isDark
-                ? 'Easy on the eyes in low light'
-                : 'Clean and bright appearance',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w400,
-              color: subtitleColor,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 }
