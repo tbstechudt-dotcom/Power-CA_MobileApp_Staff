@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import '../../app/theme.dart';
+import '../../core/providers/theme_provider.dart';
 import '../../features/auth/domain/entities/staff.dart';
 
 /// Modern Bottom Navigation Bar - Fully Responsive
@@ -73,6 +75,8 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final bgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     // Increased height for better visibility
     const double navContentHeight = 64.0;
@@ -82,14 +86,14 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
       child: Container(
         height: totalHeight,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: bgColor,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(16.r),
             topRight: Radius.circular(16.r),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.06),
               blurRadius: 12,
               offset: const Offset(0, -2),
             ),
@@ -105,6 +109,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                 child: Row(
                   children: [
                     _buildNavItem(
+                      context: context,
                       iconPath: 'assets/icons/powerca icons/home stroke.svg',
                       selectedIconPath: 'assets/icons/powerca icons/home fill.svg',
                       label: 'Home',
@@ -113,6 +118,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                       onTap: () => _navigateTo(context, '/dashboard', 0),
                     ),
                     _buildNavItem(
+                      context: context,
                       iconPath: 'assets/icons/powerca icons/jobs stroke.svg',
                       selectedIconPath: 'assets/icons/powerca icons/jobs fill.svg',
                       label: 'Jobs',
@@ -121,6 +127,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                       onTap: () => _navigateTo(context, '/jobs', 1),
                     ),
                     _buildNavItem(
+                      context: context,
                       iconPath: 'assets/icons/powerca icons/leave stroke.svg',
                       selectedIconPath: 'assets/icons/powerca icons/leave fill.svg',
                       label: 'Leave',
@@ -129,6 +136,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                       onTap: () => _navigateTo(context, '/leave', 2),
                     ),
                     _buildNavItem(
+                      context: context,
                       iconPath: 'assets/icons/powerca icons/pinboard stroke.svg',
                       selectedIconPath: 'assets/icons/powerca icons/Pinboard fill.svg',
                       label: 'Pinboard',
@@ -150,6 +158,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
   }
 
   Widget _buildNavItem({
+    required BuildContext context,
     required String iconPath,
     required String selectedIconPath,
     required String label,
@@ -157,7 +166,9 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
     required Animation<double> animation,
     required VoidCallback onTap,
   }) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     final isSelected = widget.currentIndex == index;
+    final unselectedColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
 
     return Expanded(
       child: Material(
@@ -182,7 +193,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                   colorFilter: ColorFilter.mode(
                     isSelected
                         ? AppTheme.primaryColor
-                        : const Color(0xFF9CA3AF),
+                        : unselectedColor,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -196,7 +207,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     color: isSelected
                         ? AppTheme.primaryColor
-                        : const Color(0xFF9CA3AF),
+                        : unselectedColor,
                     height: 1.0,
                   ),
                   overflow: TextOverflow.clip,

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 
 /// Page to display and manage checklist items for a staff member's tasks
 class WorkLogChecklistPage extends StatefulWidget {
@@ -116,6 +118,10 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
   }
 
   Future<void> _saveChecklist() async {
+    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+    final dialogBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
+
     // Show saving indicator
     showDialog(
       context: context,
@@ -124,7 +130,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
         child: Container(
           padding: EdgeInsets.all(20.w),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: dialogBgColor,
             borderRadius: BorderRadius.circular(12.r),
           ),
           child: Column(
@@ -138,6 +144,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
+                  color: textColor,
                 ),
               ),
             ],
@@ -200,62 +207,80 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom header
-            _buildHeader(),
-            // Content
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _errorMessage != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 64.sp,
-                                color: Colors.red,
+      backgroundColor: scaffoldBgColor,
+      body: Column(
+        children: [
+          // Custom header
+          _buildHeader(context),
+          // Content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _errorMessage != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64.sp,
+                              color: Colors.red,
+                            ),
+                            SizedBox(height: 16.h),
+                            Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14.sp,
+                                color: textSecondaryColor,
                               ),
-                              SizedBox(height: 16.h),
-                              Text(
-                                _errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF6B7280),
-                                ),
-                              ),
-                              SizedBox(height: 16.h),
-                              ElevatedButton.icon(
-                                onPressed: _loadTasks,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _tasks.isEmpty
-                          ? _buildEmptyState()
-                          : _buildTaskList(),
+                            ),
+                            SizedBox(height: 16.h),
+                            ElevatedButton.icon(
+                              onPressed: _loadTasks,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _tasks.isEmpty
+                        ? _buildEmptyState(context)
+                        : _buildTaskList(context),
+          ),
+          // Bottom save button
+          if (_tasks.isNotEmpty)
+            SafeArea(
+              top: false,
+              child: _buildBottomSaveButton(context),
             ),
-            // Bottom save button
-            if (_tasks.isNotEmpty) _buildBottomSaveButton(),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+
     return Container(
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-      color: Colors.white,
+      padding: EdgeInsets.fromLTRB(
+        16.w,
+        MediaQuery.of(context).padding.top + 12.h,
+        16.w,
+        16.h,
+      ),
+      color: headerBgColor,
       child: Row(
         children: [
           GestureDetector(
@@ -264,10 +289,10 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
               width: 42.w,
               height: 42.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8EDF3),
+                color: backButtonBgColor,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFFD1D9E6),
+                  color: backButtonBorderColor,
                   width: 1,
                 ),
               ),
@@ -275,7 +300,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                 child: Icon(
                   Icons.arrow_back_ios_new,
                   size: 18.sp,
-                  color: const Color(0xFF6B7280),
+                  color: textSecondaryColor,
                 ),
               ),
             ),
@@ -291,7 +316,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                     fontFamily: 'Inter',
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
+                    color: textPrimaryColor,
                   ),
                 ),
                 SizedBox(height: 2.h),
@@ -301,7 +326,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                     fontFamily: 'Inter',
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w400,
-                    color: const Color(0xFF64748B),
+                    color: textSecondaryColor,
                   ),
                 ),
               ],
@@ -312,14 +337,17 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     );
   }
 
-  Widget _buildBottomSaveButton() {
+  Widget _buildBottomSaveButton(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final containerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: containerBgColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -376,7 +404,12 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final iconColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFE5E7EB);
+    final textPrimaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -384,7 +417,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
           Icon(
             Icons.checklist_outlined,
             size: 80.sp,
-            color: const Color(0xFFE5E7EB),
+            color: iconColor,
           ),
           SizedBox(height: 16.h),
           Text(
@@ -393,7 +426,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
               fontFamily: 'Inter',
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF6B7280),
+              color: textPrimaryColor,
             ),
           ),
           SizedBox(height: 8.h),
@@ -403,7 +436,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
               fontFamily: 'Inter',
               fontSize: 13.sp,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFF9CA3AF),
+              color: textSecondaryColor,
             ),
             textAlign: TextAlign.center,
           ),
@@ -412,7 +445,14 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     );
   }
 
-  Widget _buildTaskList() {
+  Widget _buildTaskList(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final sectionTitleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF334155);
+    final progressBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
     // Count completed tasks
     final completedCount = _checkedTasks.values.where((v) => v).length;
     final totalCount = _tasks.length;
@@ -431,11 +471,11 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
             Container(
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(16.r),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                    color: AppTheme.primaryColor.withValues(alpha: isDarkMode ? 0.15 : 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -470,7 +510,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                                   fontFamily: 'Inter',
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF1E293B),
+                                  color: textPrimaryColor,
                                 ),
                               ),
                               Text(
@@ -479,7 +519,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                                   fontFamily: 'Inter',
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w400,
-                                  color: const Color(0xFF64748B),
+                                  color: textSecondaryColor,
                                 ),
                               ),
                             ],
@@ -513,7 +553,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                     borderRadius: BorderRadius.circular(6.r),
                     child: LinearProgressIndicator(
                       value: totalCount > 0 ? completedCount / totalCount : 0,
-                      backgroundColor: const Color(0xFFE2E8F0),
+                      backgroundColor: progressBgColor,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         completedCount == totalCount
                             ? const Color(0xFF10B981)
@@ -534,7 +574,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                 fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF334155),
+                color: sectionTitleColor,
               ),
             ),
             SizedBox(height: 12.h),
@@ -546,7 +586,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
               itemCount: _tasks.length,
               itemBuilder: (context, index) {
                 final task = _tasks[index];
-                return _buildTaskCard(task, index + 1);
+                return _buildTaskCard(context, task, index + 1);
               },
             ),
           ],
@@ -555,7 +595,16 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     );
   }
 
-  Widget _buildTaskCard(Map<String, dynamic> task, int index) {
+  Widget _buildTaskCard(BuildContext context, Map<String, dynamic> task, int index) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final checkboxBgColor = isDarkMode ? const Color(0xFF334155) : Colors.white;
+    final checkboxBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1);
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8);
+    final pendingStatusBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+    final pendingStatusTextColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
     final jtId = task['jt_id'] as int;
     final isChecked = _checkedTasks[jtId] ?? false;
     final taskname = task['taskname'] as String;
@@ -565,11 +614,11 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
       child: Container(
         margin: EdgeInsets.only(bottom: 10.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBgColor,
           borderRadius: BorderRadius.circular(14.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -604,12 +653,12 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                           decoration: BoxDecoration(
                             color: isChecked
                                 ? const Color(0xFF10B981)
-                                : Colors.white,
+                                : checkboxBgColor,
                             borderRadius: BorderRadius.circular(8.r),
                             border: Border.all(
                               color: isChecked
                                   ? const Color(0xFF10B981)
-                                  : const Color(0xFFCBD5E1),
+                                  : checkboxBorderColor,
                               width: 2,
                             ),
                           ),
@@ -636,12 +685,12 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w500,
                                 color: isChecked
-                                    ? const Color(0xFF94A3B8)
-                                    : const Color(0xFF1E293B),
+                                    ? textSecondaryColor
+                                    : textPrimaryColor,
                                 decoration: isChecked
                                     ? TextDecoration.lineThrough
                                     : null,
-                                decorationColor: const Color(0xFF94A3B8),
+                                decorationColor: textSecondaryColor,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -652,7 +701,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                                 Icon(
                                   Icons.tag_rounded,
                                   size: 12.sp,
-                                  color: const Color(0xFF94A3B8),
+                                  color: textSecondaryColor,
                                 ),
                                 SizedBox(width: 4.w),
                                 Text(
@@ -661,7 +710,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                                     fontFamily: 'Inter',
                                     fontSize: 11.sp,
                                     fontWeight: FontWeight.w400,
-                                    color: const Color(0xFF94A3B8),
+                                    color: textSecondaryColor,
                                   ),
                                 ),
                               ],
@@ -675,7 +724,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                         decoration: BoxDecoration(
                           color: isChecked
                               ? const Color(0xFF10B981).withValues(alpha: 0.1)
-                              : const Color(0xFFF1F5F9),
+                              : pendingStatusBgColor,
                           borderRadius: BorderRadius.circular(6.r),
                         ),
                         child: Text(
@@ -686,7 +735,7 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
                             fontWeight: FontWeight.w600,
                             color: isChecked
                                 ? const Color(0xFF10B981)
-                                : const Color(0xFF64748B),
+                                : pendingStatusTextColor,
                           ),
                         ),
                       ),

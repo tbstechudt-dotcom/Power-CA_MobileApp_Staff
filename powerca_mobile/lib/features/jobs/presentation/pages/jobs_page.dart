@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
@@ -79,12 +81,15 @@ class _JobsPageState extends State<JobsPage> {
   void initState() {
     super.initState();
     _initializeAndLoad();
-    // Set status bar style for white background with dark icons
+  }
+
+  /// Update status bar style based on theme
+  void _updateStatusBarStyle(bool isDarkMode) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
       ),
     );
   }
@@ -323,15 +328,28 @@ class _JobsPageState extends State<JobsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textSecondaryColor;
+    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final searchBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textPrimaryColor;
+    final searchHintColor = isDarkMode ? const Color(0xFF64748B) : AppTheme.textDisabledColor;
+    final searchIconColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+
+    // Update status bar style based on theme
+    _updateStatusBarStyle(isDarkMode);
+
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF8F9FC),
+      backgroundColor: scaffoldBgColor,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
       body: Column(
         children: [
-          // White status bar area
+          // Status bar area
           Container(
-            color: Colors.white,
+            color: headerBgColor,
             child: SafeArea(
               bottom: false,
               child: AppHeader(
@@ -361,7 +379,7 @@ class _JobsPageState extends State<JobsPage> {
                                 fontFamily: 'Inter',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.textSecondaryColor,
+                                color: titleColor,
                               ),
                             ),
                             SizedBox(height: 4.h),
@@ -371,7 +389,7 @@ class _JobsPageState extends State<JobsPage> {
                                 fontFamily: 'Inter',
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w400,
-                                color: AppTheme.textMutedColor,
+                                color: subtitleColor,
                               ),
                             ),
                             SizedBox(height: 20.h),
@@ -381,6 +399,7 @@ class _JobsPageState extends State<JobsPage> {
                               children: [
                                 Expanded(
                                   child: _buildSummaryCard(
+                                    context: context,
                                     title: 'Total',
                                     count: _activeJobs.length,
                                     icon: Icons.work_rounded,
@@ -390,6 +409,7 @@ class _JobsPageState extends State<JobsPage> {
                                 SizedBox(width: 12.w),
                                 Expanded(
                                   child: _buildSummaryCard(
+                                    context: context,
                                     title: 'Active',
                                     count: _getJobCountByStatus('Progress') + _getJobCountByStatus('Planning'),
                                     icon: Icons.pending_actions_rounded,
@@ -403,11 +423,11 @@ class _JobsPageState extends State<JobsPage> {
                             // Client Search Field
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: searchBgColor,
                                 borderRadius: BorderRadius.circular(12.r),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
+                                    color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -425,7 +445,7 @@ class _JobsPageState extends State<JobsPage> {
                                   fontFamily: 'Inter',
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
-                                  color: AppTheme.textPrimaryColor,
+                                  color: searchTextColor,
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'Search by client name...',
@@ -433,11 +453,11 @@ class _JobsPageState extends State<JobsPage> {
                                     fontFamily: 'Inter',
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.w400,
-                                    color: AppTheme.textDisabledColor,
+                                    color: searchHintColor,
                                   ),
                                   prefixIcon: Icon(
                                     Icons.search_rounded,
-                                    color: AppTheme.textMutedColor,
+                                    color: searchIconColor,
                                     size: 22.sp,
                                   ),
                                   suffixIcon: _searchQuery.isNotEmpty
@@ -450,7 +470,7 @@ class _JobsPageState extends State<JobsPage> {
                                           },
                                           icon: Icon(
                                             Icons.close_rounded,
-                                            color: const Color(0xFF64748B),
+                                            color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                             size: 20.sp,
                                           ),
                                         )
@@ -478,7 +498,7 @@ class _JobsPageState extends State<JobsPage> {
                                     ),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.white,
+                                  fillColor: searchBgColor,
                                   contentPadding: EdgeInsets.symmetric(
                                     horizontal: 16.w,
                                     vertical: 14.h,
@@ -495,7 +515,7 @@ class _JobsPageState extends State<JobsPage> {
                                 fontFamily: 'Inter',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.textSecondaryColor,
+                                color: titleColor,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -546,19 +566,25 @@ class _JobsPageState extends State<JobsPage> {
   }
 
   Widget _buildSummaryCard({
+    required BuildContext context,
     required String title,
     required int count,
     required IconData icon,
     required Color color,
   }) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final countColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.08),
+            color: color.withValues(alpha: isDarkMode ? 0.15 : 0.08),
             blurRadius: 16,
             offset: const Offset(0, 2),
           ),
@@ -596,7 +622,7 @@ class _JobsPageState extends State<JobsPage> {
               fontFamily: 'Inter',
               fontSize: 28.sp,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
+              color: countColor,
             ),
           ),
           SizedBox(height: 2.h),
@@ -606,7 +632,7 @@ class _JobsPageState extends State<JobsPage> {
               fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
+              color: labelColor,
             ),
           ),
         ],

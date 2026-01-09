@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
@@ -43,12 +45,15 @@ class _PinboardPageState extends State<PinboardPage> {
     super.initState();
     // Mark pinboard as visited when this page opens
     _markPinboardAsVisited();
-    // Set status bar style for white background with dark icons
+  }
+
+  /// Update status bar style based on theme
+  void _updateStatusBarStyle(bool isDarkMode) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
       ),
     );
   }
@@ -68,6 +73,13 @@ class _PinboardPageState extends State<PinboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+
+    // Update status bar style based on theme
+    _updateStatusBarStyle(isDarkMode);
+
     // Get Supabase client
     final supabaseClient = Supabase.instance.client;
 
@@ -99,13 +111,13 @@ class _PinboardPageState extends State<PinboardPage> {
       ),
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: const Color(0xFFF8F9FC),
+        backgroundColor: scaffoldBgColor,
         drawer: AppDrawer(currentStaff: widget.currentStaff),
         body: Column(
           children: [
-            // White status bar area
+            // Status bar area
             Container(
-              color: Colors.white,
+              color: headerBgColor,
               child: SafeArea(
                 bottom: false,
                 child: AppHeader(

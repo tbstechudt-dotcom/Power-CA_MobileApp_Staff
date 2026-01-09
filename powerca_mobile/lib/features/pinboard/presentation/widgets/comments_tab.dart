@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../domain/entities/comment.dart';
 import '../bloc/pinboard_bloc.dart';
 import '../bloc/pinboard_event.dart';
@@ -50,6 +52,16 @@ class _CommentsTabState extends State<CommentsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final emptyIconColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[400];
+    final emptyTextColor = isDarkMode ? const Color(0xFF94A3B8) : Colors.grey[600];
+    final emptySubtextColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[500];
+    final inputContainerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final inputFieldBgColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[100];
+    final inputTextColor = isDarkMode ? const Color(0xFFF1F5F9) : Colors.black;
+    final inputHintColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[600];
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[300];
+
     return Column(
       children: [
         // Comments List
@@ -66,14 +78,14 @@ class _CommentsTabState extends State<CommentsTab> {
                           Icon(
                             Icons.comment_outlined,
                             size: 64.sp,
-                            color: Colors.grey[400],
+                            color: emptyIconColor,
                           ),
                           SizedBox(height: 16.h),
                           Text(
                             'No comments yet',
                             style: TextStyle(
                               fontSize: 16.sp,
-                              color: Colors.grey[600],
+                              color: emptyTextColor,
                             ),
                           ),
                           SizedBox(height: 8.h),
@@ -81,7 +93,7 @@ class _CommentsTabState extends State<CommentsTab> {
                             'Be the first to comment!',
                             style: TextStyle(
                               fontSize: 14.sp,
-                              color: Colors.grey[500],
+                              color: emptySubtextColor,
                             ),
                           ),
                         ],
@@ -91,10 +103,10 @@ class _CommentsTabState extends State<CommentsTab> {
                       padding: EdgeInsets.all(16.w),
                       itemCount: widget.comments.length,
                       separatorBuilder: (context, index) =>
-                          Divider(height: 24.h),
+                          Divider(height: 24.h, color: dividerColor),
                       itemBuilder: (context, index) {
                         final comment = widget.comments[index];
-                        return _CommentItem(comment: comment);
+                        return _CommentItem(comment: comment, isDarkMode: isDarkMode);
                       },
                     ),
         ),
@@ -102,10 +114,10 @@ class _CommentsTabState extends State<CommentsTab> {
         // Comment Input
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: inputContainerBgColor,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -120,10 +132,12 @@ class _CommentsTabState extends State<CommentsTab> {
                     child: TextField(
                       controller: _commentController,
                       focusNode: _commentFocusNode,
+                      style: TextStyle(color: inputTextColor),
                       decoration: InputDecoration(
                         hintText: 'Write a comment...',
+                        hintStyle: TextStyle(color: inputHintColor),
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        fillColor: inputFieldBgColor,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24.r),
                           borderSide: BorderSide.none,
@@ -161,12 +175,17 @@ class _CommentsTabState extends State<CommentsTab> {
 
 class _CommentItem extends StatelessWidget {
   final Comment comment;
+  final bool isDarkMode;
 
-  const _CommentItem({required this.comment});
+  const _CommentItem({required this.comment, required this.isDarkMode});
 
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
+    final authorNameColor = isDarkMode ? const Color(0xFFF1F5F9) : Colors.black;
+    final dateColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[600];
+    final contentColor = isDarkMode ? const Color(0xFFCBD5E1) : Colors.grey[800];
+    final editedColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[500];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,6 +204,7 @@ class _CommentItem extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14.sp,
+                        color: authorNameColor,
                       ),
                     ),
                   ),
@@ -192,7 +212,7 @@ class _CommentItem extends StatelessWidget {
                     dateFormat.format(comment.createdAt),
                     style: TextStyle(
                       fontSize: 12.sp,
-                      color: Colors.grey[600],
+                      color: dateColor,
                     ),
                   ),
                 ],
@@ -206,7 +226,7 @@ class _CommentItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14.sp,
                   height: 1.4,
-                  color: Colors.grey[800],
+                  color: contentColor,
                 ),
               ),
 
@@ -218,7 +238,7 @@ class _CommentItem extends StatelessWidget {
                   'Edited',
                   style: TextStyle(
                     fontSize: 11.sp,
-                    color: Colors.grey[500],
+                    color: editedColor,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
