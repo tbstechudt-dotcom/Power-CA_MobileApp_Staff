@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../core/config/injection.dart';
 import '../../core/providers/theme_provider.dart';
+import '../../core/services/app_update_service.dart';
 import '../../features/auth/domain/entities/staff.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/settings/presentation/pages/app_update_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 
 /// Professional drawer menu that slides from left to right
@@ -90,6 +92,12 @@ class _AppDrawerState extends State<AppDrawer> {
                   ),
                   _buildMenuItem(
                     context,
+                    icon: Icons.system_update_outlined,
+                    title: 'App Update',
+                    onTap: () => _handleMenuTap(context, 'AppUpdate'),
+                  ),
+                  _buildMenuItem(
+                    context,
                     icon: Icons.help_outline_rounded,
                     title: 'Help & Support',
                     onTap: () {},
@@ -120,7 +128,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 SizedBox(height: 12.h),
                 // Version Info
                 Text(
-                  'PowerCA Staff v1.0.0',
+                  'PowerCA Staff v${AppUpdateService.currentVersionName}',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11.sp,
@@ -363,6 +371,14 @@ class _AppDrawerState extends State<AppDrawer> {
         context,
         MaterialPageRoute(
           builder: (context) => const SettingsPage(),
+        ),
+      );
+    } else if (title == 'AppUpdate') {
+      // Navigate to App Update page
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AppUpdatePage(),
         ),
       );
     }
