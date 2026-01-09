@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/services/app_update_service.dart';
+import '../../../../shared/widgets/update_dialog.dart';
 import '../../../auth/domain/entities/staff.dart';
 import '../widgets/modern_work_calendar.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
@@ -36,15 +40,42 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    // Set status bar style for white header with dark icons
+    _fetchDashboardStats();
+    _checkForAppUpdate();
+  }
+
+  /// Check for app updates on dashboard load
+  Future<void> _checkForAppUpdate() async {
+    debugPrint('Dashboard: Starting update check...');
+    // Delay slightly to ensure context is ready
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) {
+      debugPrint('Dashboard: Widget not mounted, skipping update check');
+      return;
+    }
+
+    final updateService = AppUpdateService();
+    final updateInfo = await updateService.checkForUpdate();
+
+    debugPrint('Dashboard: Update info received: $updateInfo');
+
+    if (updateInfo != null && mounted) {
+      debugPrint('Dashboard: Showing update dialog...');
+      await UpdateDialog.show(context, updateInfo);
+    } else {
+      debugPrint('Dashboard: No update to show');
+    }
+  }
+
+  /// Update status bar style based on theme
+  void _updateStatusBarStyle(bool isDarkMode) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
+      SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+        statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
       ),
     );
-    _fetchDashboardStats();
   }
 
   Future<void> _fetchDashboardStats() async {
@@ -155,6 +186,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : Colors.white;
+    final contentBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
+
+    // Update status bar style based on theme
+    _updateStatusBarStyle(isDarkMode);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -163,7 +201,7 @@ class _DashboardPageState extends State<DashboardPage> {
         SystemNavigator.pop();
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: scaffoldBgColor,
         drawer: AppDrawer(currentStaff: widget.currentStaff),
         body: SafeArea(
           top: false,
@@ -181,7 +219,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 // Content - Show static UI
                 Expanded(
                   child: Container(
-                    color: const Color(0xFFF1F5F9),
+                    color: contentBgColor,
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: Column(
@@ -244,17 +282,22 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildStaffProfileCard() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textPrimaryColor;
+    final textMutedColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final badgeBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
     final staffRole = _getStaffRole(widget.currentStaff.staffType);
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.06),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -297,7 +340,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     fontFamily: 'Inter',
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimaryColor,
+                    color: textPrimaryColor,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -306,7 +349,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: badgeBgColor,
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Text(
@@ -315,7 +358,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       fontFamily: 'Inter',
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w500,
-                      color: AppTheme.textMutedColor,
+                      color: textMutedColor,
                     ),
                   ),
                 ),
@@ -326,7 +369,7 @@ class _DashboardPageState extends State<DashboardPage> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: badgeBgColor,
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Column(
@@ -337,7 +380,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     fontFamily: 'Inter',
                     fontSize: 10.sp,
                     fontWeight: FontWeight.w500,
-                    color: AppTheme.textMutedColor,
+                    color: textMutedColor,
                   ),
                 ),
                 Text(
@@ -346,7 +389,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     fontFamily: 'Inter',
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimaryColor,
+                    color: textPrimaryColor,
                   ),
                 ),
               ],

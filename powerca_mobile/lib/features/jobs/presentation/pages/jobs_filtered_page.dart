@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_drawer.dart';
 import '../../../../core/services/priority_service.dart';
@@ -36,12 +38,15 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
   void initState() {
     super.initState();
     _loadPriorityJobs();
-    // Set status bar style for white background with dark icons
+  }
+
+  /// Update status bar style based on theme
+  void _updateStatusBarStyle(bool isDarkMode) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
       ),
     );
   }
@@ -145,24 +150,42 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : Colors.white;
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final searchFillColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final listBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+
+    // Update status bar style based on theme
+    _updateStatusBarStyle(isDarkMode);
+
     final statusColor = _getStatusColor(widget.statusFilter);
     final statusIcon = _getStatusIcon(widget.statusFilter);
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.white,
+      backgroundColor: scaffoldBgColor,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header with Back Button
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      body: Column(
+        children: [
+          // Custom Header with Back Button - extends into status bar area
+          Container(
+            padding: EdgeInsets.only(
+              left: 16.w,
+              right: 16.w,
+              top: MediaQuery.of(context).padding.top + 12.h,
+              bottom: 12.h,
+            ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: headerBgColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -177,10 +200,10 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                       width: 42.w,
                       height: 42.h,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8EDF3),
+                        color: backButtonBgColor,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: const Color(0xFFD1D9E6),
+                          color: backButtonBorderColor,
                           width: 1,
                         ),
                       ),
@@ -188,7 +211,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                         child: Icon(
                           Icons.arrow_back_ios_new,
                           size: 18.sp,
-                          color: AppTheme.textSecondaryColor,
+                          color: textSecondaryColor,
                         ),
                       ),
                     ),
@@ -218,7 +241,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1F2937),
+                            color: textPrimaryColor,
                           ),
                         ),
                         Text(
@@ -227,7 +250,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w400,
-                            color: AppTheme.textMutedColor,
+                            color: textSecondaryColor,
                           ),
                         ),
                       ],
@@ -240,7 +263,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
             // Search Bar
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-              color: Colors.white,
+              color: headerBgColor,
               child: TextField(
                 controller: _searchController,
                 onChanged: (value) {
@@ -253,16 +276,16 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                   hintStyle: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13.sp,
-                    color: const Color(0xFF9CA3AF),
+                    color: textSecondaryColor,
                   ),
                   prefixIcon: Icon(
                     Icons.search,
                     size: 20.sp,
-                    color: const Color(0xFF9CA3AF),
+                    color: textSecondaryColor,
                   ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                          icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {
@@ -272,7 +295,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFFF8F9FC),
+                  fillColor: searchFillColor,
                   contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.r),
@@ -282,7 +305,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 13.sp,
-                  color: const Color(0xFF1F2937),
+                  color: textPrimaryColor,
                 ),
               ),
             ),
@@ -290,22 +313,21 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
             // Jobs List
             Expanded(
               child: Container(
-                color: const Color(0xFFF8F9FC),
+                color: listBgColor,
                 child: _filteredJobs.isEmpty
-                    ? _buildEmptyState()
+                    ? _buildEmptyState(context)
                     : ListView.builder(
                         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                         itemCount: _filteredJobs.length,
                         itemBuilder: (context, index) {
                           final job = _filteredJobs[index];
-                          return _buildJobCard(job);
+                          return _buildJobCard(job, context);
                         },
                       ),
               ),
             ),
           ],
         ),
-      ),
       bottomNavigationBar: ModernBottomNavigation(
         currentIndex: 1,
         currentStaff: widget.currentStaff,
@@ -313,7 +335,11 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final emptyStateBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF8F9FC);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF9CA3AF);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -322,13 +348,13 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
             width: 80.w,
             height: 80.h,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F9FC),
+              color: emptyStateBgColor,
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: Icon(
               Icons.work_outline,
               size: 40.sp,
-              color: const Color(0xFF9CA3AF),
+              color: textSecondaryColor,
             ),
           ),
           SizedBox(height: 16.h),
@@ -338,7 +364,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
               fontFamily: 'Inter',
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
-              color: AppTheme.textMutedColor,
+              color: textSecondaryColor,
             ),
           ),
           SizedBox(height: 8.h),
@@ -348,7 +374,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
               fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFF9CA3AF),
+              color: textSecondaryColor,
             ),
           ),
         ],
@@ -356,7 +382,14 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
     );
   }
 
-  Widget _buildJobCard(Map<String, dynamic> job) {
+  Widget _buildJobCard(Map<String, dynamic> job, BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final borderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+
     final statusColor = _getStatusColor(job['status'] as String);
     final statusIcon = _getStatusIcon(job['status'] as String);
     final jobId = job['job_id'] as int;
@@ -377,19 +410,19 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
       child: Container(
         margin: EdgeInsets.only(bottom: 8.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBgColor,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color: isPriority
                 ? const Color(0xFFEF4444)
-                : const Color(0xFFE5E7EB),
+                : borderColor,
             width: isPriority ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isPriority
                   ? const Color(0xFFEF4444).withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.08),
+                  : Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.08),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -435,7 +468,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 11.sp,
                             fontWeight: FontWeight.w400,
-                            color: AppTheme.textMutedColor,
+                            color: textSecondaryColor,
                           ),
                         ),
                         Text(
@@ -481,12 +514,12 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                         decoration: BoxDecoration(
                           color: isPriority
                               ? const Color(0xFFFEE2E2)
-                              : const Color(0xFFF8F9FC),
+                              : (isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC)),
                           borderRadius: BorderRadius.circular(20.r),
                           border: Border.all(
                             color: isPriority
                                 ? const Color(0xFFEF4444)
-                                : const Color(0xFFE5E7EB),
+                                : borderColor,
                             width: 1.5,
                           ),
                           boxShadow: isPriority
@@ -507,7 +540,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                               size: 16.sp,
                               color: isPriority
                                   ? const Color(0xFFEF4444)
-                                  : const Color(0xFF9CA3AF),
+                                  : textSecondaryColor,
                             ),
                             SizedBox(width: 4.w),
                             Text(
@@ -518,7 +551,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                                 fontWeight: FontWeight.w600,
                                 color: isPriority
                                     ? const Color(0xFFEF4444)
-                                    : AppTheme.textMutedColor,
+                                    : textSecondaryColor,
                               ),
                             ),
                           ],
@@ -542,7 +575,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                       Icon(
                         Icons.business_outlined,
                         size: 14.sp,
-                        color: AppTheme.textMutedColor,
+                        color: textSecondaryColor,
                       ),
                       SizedBox(width: 6.w),
                       Expanded(
@@ -552,7 +585,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1F2937),
+                            color: textPrimaryColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -569,7 +602,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                       Icon(
                         Icons.description_outlined,
                         size: 14.sp,
-                        color: const Color(0xFF9CA3AF),
+                        color: textSecondaryColor,
                       ),
                       SizedBox(width: 6.w),
                       Expanded(
@@ -579,7 +612,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                             fontFamily: 'Inter',
                             fontSize: 11.sp,
                             fontWeight: FontWeight.w400,
-                            color: AppTheme.textMutedColor,
+                            color: textSecondaryColor,
                             height: 1.3,
                           ),
                           maxLines: 1,
@@ -591,7 +624,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                   SizedBox(height: 6.h),
 
                   // Divider
-                  const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                  Divider(height: 1, color: dividerColor),
                   SizedBox(height: 6.h),
 
                   // Dates Row
@@ -614,7 +647,7 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
                                   fontFamily: 'Inter',
                                   fontSize: 10.sp,
                                   fontWeight: FontWeight.w500,
-                                  color: AppTheme.textSecondaryColor,
+                                  color: textSecondaryColor,
                                 ),
                               ),
                             ),

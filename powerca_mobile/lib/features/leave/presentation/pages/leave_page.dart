@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/notification_provider.dart';
+import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
@@ -73,12 +77,55 @@ class _LeavePageState extends State<LeavePage> {
     super.initState();
     _calculateFinancialYear();
     _loadLeaveRequests();
-    // Set status bar style for white background with dark icons
+  }
+
+  /// Check for leave status changes and trigger notifications
+  Future<void> _checkLeaveStatusChanges(List<Map<String, dynamic>> leaves) async {
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+
+    // Skip if notifications are disabled
+    if (!notificationProvider.leaveNotificationsEnabled) return;
+
+    final lastKnownStatuses = notificationProvider.lastKnownLeaveStatuses;
+    final newStatuses = <int, String>{};
+
+    for (final leave in leaves) {
+      final leaveId = leave['id'] as int;
+      final status = leave['status'] as String;
+      newStatuses[leaveId] = status;
+
+      // Check if this is a status change we should notify about
+      final previousStatus = lastKnownStatuses[leaveId];
+
+      // Only notify if status changed FROM Pending TO Approved/Rejected
+      if (previousStatus == 'Pending' && (status == 'Approved' || status == 'Rejected')) {
+        final fromDate = leave['fromDate'] as DateTime;
+        final toDate = leave['toDate'] as DateTime;
+        final leaveType = leave['type'] as String? ?? 'Leave';
+        final dateRange = fromDate == toDate
+            ? DateFormat('dd MMM').format(fromDate)
+            : '${DateFormat('dd MMM').format(fromDate)} - ${DateFormat('dd MMM').format(toDate)}';
+
+        await NotificationService().showLeaveStatusNotification(
+          leaveId: leaveId,
+          status: status,
+          leaveType: leaveType,
+          dateRange: dateRange,
+        );
+      }
+    }
+
+    // Update stored statuses
+    await notificationProvider.updateLeaveStatuses(newStatuses);
+  }
+
+  /// Update status bar style based on theme
+  void _updateStatusBarStyle(bool isDarkMode) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
       ),
     );
   }
@@ -313,6 +360,9 @@ class _LeavePageState extends State<LeavePage> {
       // Calculate current month's EL usage (not LOP)
       final currentMonthEL = currentMonthUsedDays.clamp(0.0, availableAtMonthStart);
 
+      // Check for status changes and trigger notifications
+      await _checkLeaveStatusChanges(currentFYLeaves);
+
       setState(() {
         // Only show leaves from current financial year
         _leaveRequests = currentFYLeaves;
@@ -333,6 +383,15 @@ class _LeavePageState extends State<LeavePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textSecondaryColor;
+    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+
+    // Update status bar style based on theme
+    _updateStatusBarStyle(isDarkMode);
+
     // Calculate available leaves
     // Available = Earned - Used EL (LOP is calculated separately per monthly limit)
     // Note: _usedLeaves only contains EL days (max 1 per month), not LOP
@@ -341,13 +400,13 @@ class _LeavePageState extends State<LeavePage> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF8F9FC),
+      backgroundColor: scaffoldBgColor,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
       body: Column(
         children: [
-          // White status bar area
+          // Status bar area
           Container(
-            color: Colors.white,
+            color: headerBgColor,
             child: SafeArea(
               bottom: false,
               child: AppHeader(
@@ -377,7 +436,7 @@ class _LeavePageState extends State<LeavePage> {
                                 fontFamily: 'Inter',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.textSecondaryColor,
+                                color: titleColor,
                               ),
                             ),
                             SizedBox(height: 2.h),
@@ -387,7 +446,7 @@ class _LeavePageState extends State<LeavePage> {
                                 fontFamily: 'Inter',
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w400,
-                                color: AppTheme.textMutedColor,
+                                color: subtitleColor,
                               ),
                             ),
                             SizedBox(height: 16.h),
@@ -397,6 +456,7 @@ class _LeavePageState extends State<LeavePage> {
                               children: [
                                 Expanded(
                                   child: _buildSummaryCard(
+                                    context: context,
                                     title: 'Earned',
                                     value: _earnedLeaves,
                                     icon: Icons.calendar_month_rounded,
@@ -406,6 +466,7 @@ class _LeavePageState extends State<LeavePage> {
                                 SizedBox(width: 8.w),
                                 Expanded(
                                   child: _buildSummaryCard(
+                                    context: context,
                                     title: 'Used',
                                     value: _usedLeaves,
                                     icon: Icons.event_busy_rounded,
@@ -415,6 +476,7 @@ class _LeavePageState extends State<LeavePage> {
                                 SizedBox(width: 8.w),
                                 Expanded(
                                   child: _buildSummaryCard(
+                                    context: context,
                                     title: 'Available',
                                     value: availableLeaves,
                                     icon: Icons.beach_access_rounded,
@@ -430,7 +492,7 @@ class _LeavePageState extends State<LeavePage> {
                                 margin: EdgeInsets.only(top: 12.h),
                                 padding: EdgeInsets.all(12.w),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEFF6FF),
+                                  color: isDarkMode ? const Color(0xFF1E3A5F) : const Color(0xFFEFF6FF),
                                   borderRadius: BorderRadius.circular(12.r),
                                   border: Border.all(
                                     color: const Color(0xFF3B82F6),
@@ -442,7 +504,7 @@ class _LeavePageState extends State<LeavePage> {
                                     Icon(
                                       Icons.info_outline_rounded,
                                       size: 20.sp,
-                                      color: const Color(0xFF2563EB),
+                                      color: isDarkMode ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
                                     ),
                                     SizedBox(width: 8.w),
                                     Expanded(
@@ -452,7 +514,7 @@ class _LeavePageState extends State<LeavePage> {
                                           fontFamily: 'Inter',
                                           fontSize: 12.sp,
                                           fontWeight: FontWeight.w500,
-                                          color: const Color(0xFF2563EB),
+                                          color: isDarkMode ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
                                         ),
                                       ),
                                     ),
@@ -466,7 +528,7 @@ class _LeavePageState extends State<LeavePage> {
                                 margin: EdgeInsets.only(top: 12.h),
                                 padding: EdgeInsets.all(12.w),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF3C7),
+                                  color: isDarkMode ? const Color(0xFF422006) : const Color(0xFFFEF3C7),
                                   borderRadius: BorderRadius.circular(12.r),
                                   border: Border.all(
                                     color: const Color(0xFFF59E0B),
@@ -478,7 +540,7 @@ class _LeavePageState extends State<LeavePage> {
                                     Icon(
                                       Icons.warning_amber_rounded,
                                       size: 20.sp,
-                                      color: const Color(0xFFD97706),
+                                      color: isDarkMode ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
                                     ),
                                     SizedBox(width: 8.w),
                                     Expanded(
@@ -488,7 +550,7 @@ class _LeavePageState extends State<LeavePage> {
                                           fontFamily: 'Inter',
                                           fontSize: 12.sp,
                                           fontWeight: FontWeight.w500,
-                                          color: const Color(0xFFD97706),
+                                          color: isDarkMode ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
                                         ),
                                       ),
                                     ),
@@ -502,7 +564,7 @@ class _LeavePageState extends State<LeavePage> {
                                 margin: EdgeInsets.only(top: 12.h),
                                 padding: EdgeInsets.all(12.w),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFEE2E2),
+                                  color: isDarkMode ? const Color(0xFF450A0A) : const Color(0xFFFEE2E2),
                                   borderRadius: BorderRadius.circular(12.r),
                                   border: Border.all(
                                     color: const Color(0xFFEF4444),
@@ -514,7 +576,7 @@ class _LeavePageState extends State<LeavePage> {
                                     Icon(
                                       Icons.warning_amber_rounded,
                                       size: 20.sp,
-                                      color: const Color(0xFFEF4444),
+                                      color: isDarkMode ? const Color(0xFFF87171) : const Color(0xFFEF4444),
                                     ),
                                     SizedBox(width: 8.w),
                                     Expanded(
@@ -524,7 +586,7 @@ class _LeavePageState extends State<LeavePage> {
                                           fontFamily: 'Inter',
                                           fontSize: 13.sp,
                                           fontWeight: FontWeight.w600,
-                                          color: const Color(0xFFEF4444),
+                                          color: isDarkMode ? const Color(0xFFF87171) : const Color(0xFFEF4444),
                                         ),
                                       ),
                                     ),
@@ -541,7 +603,7 @@ class _LeavePageState extends State<LeavePage> {
                                 fontFamily: 'Inter',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.textSecondaryColor,
+                                color: titleColor,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -625,11 +687,17 @@ class _LeavePageState extends State<LeavePage> {
   }
 
   Widget _buildSummaryCard({
+    required BuildContext context,
     required String title,
     required double value,
     required IconData icon,
     required Color color,
   }) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final valueColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+
     // Format display: show decimal only if not a whole number
     final displayValue = value == value.toInt()
         ? value.toInt().toString()
@@ -638,11 +706,11 @@ class _LeavePageState extends State<LeavePage> {
     return Container(
       padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.08),
+            color: color.withValues(alpha: isDarkMode ? 0.15 : 0.08),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -672,7 +740,7 @@ class _LeavePageState extends State<LeavePage> {
               fontFamily: 'Inter',
               fontSize: 22.sp,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
+              color: valueColor,
             ),
           ),
           SizedBox(height: 2.h),
@@ -682,7 +750,7 @@ class _LeavePageState extends State<LeavePage> {
               fontFamily: 'Inter',
               fontSize: 11.sp,
               fontWeight: FontWeight.w500,
-              color: AppTheme.textMutedColor,
+              color: labelColor,
             ),
           ),
         ],

@@ -3,8 +3,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart';
 import 'package:flutter_calendar_carousel/classes/event.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../pages/work_log_entry_form_page.dart';
 import '../pages/work_log_list_page.dart';
 
@@ -136,13 +138,21 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textPrimaryColor;
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final iconBgColor = isDarkMode ? const Color(0xFF2563EB).withValues(alpha: 0.2) : const Color(0xFF2563EB).withValues(alpha: 0.1);
+    final errorBgColor = isDarkMode ? const Color(0xFF7F1D1D) : const Color(0xFFFFEBEE);
+    final errorTextColor = isDarkMode ? const Color(0xFFFCA5A5) : Colors.red;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.06),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -158,7 +168,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               Container(
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                  color: iconBgColor,
                   borderRadius: BorderRadius.circular(10.r),
                 ),
                 child: Icon(
@@ -177,7 +187,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                       fontFamily: 'Inter',
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimaryColor,
+                      color: textPrimaryColor,
                     ),
                   ),
                   SizedBox(height: 2.h),
@@ -188,7 +198,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                         fontFamily: 'Inter',
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w400,
-                        color: AppTheme.textMutedColor,
+                        color: textSecondaryColor,
                       ),
                     )
                   else
@@ -198,7 +208,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                         fontFamily: 'Inter',
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w400,
-                        color: AppTheme.textMutedColor,
+                        color: textSecondaryColor,
                       ),
                     ),
                 ],
@@ -222,12 +232,12 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFEBEE),
+                color: errorBgColor,
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red),
+                  Icon(Icons.error_outline, color: errorTextColor),
                   SizedBox(width: 8.w),
                   Expanded(
                     child: Text(
@@ -235,7 +245,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12.sp,
-                        color: Colors.red,
+                        color: errorTextColor,
                       ),
                     ),
                   ),
@@ -275,7 +285,9 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                 final isCurrentDate = isToday;
                 final textColor = isCurrentDate
                     ? Colors.white  // White text for today
-                    : const Color(0xFF2E7D32);  // Dark green for others
+                    : isDarkMode
+                        ? const Color(0xFF4ADE80)  // Light green for dark mode
+                        : const Color(0xFF2E7D32);  // Dark green for light mode
                 final dotColor = isCurrentDate
                     ? Colors.white  // White dots for today
                     : const Color(0xFF4CAF50);  // Green dots for others
@@ -297,10 +309,15 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                                   end: Alignment.bottomRight,
                                 )
                               : LinearGradient(
-                                  colors: [
-                                    const Color(0xFF4CAF50).withOpacity(0.2),
-                                    const Color(0xFF4CAF50).withOpacity(0.12),
-                                  ],
+                                  colors: isDarkMode
+                                      ? [
+                                          const Color(0xFF4CAF50).withOpacity(0.3),
+                                          const Color(0xFF4CAF50).withOpacity(0.2),
+                                        ]
+                                      : [
+                                          const Color(0xFF4CAF50).withOpacity(0.2),
+                                          const Color(0xFF4CAF50).withOpacity(0.12),
+                                        ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -315,7 +332,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                                 ]
                               : [
                                   BoxShadow(
-                                    color: const Color(0xFF4CAF50).withOpacity(0.15),
+                                    color: const Color(0xFF4CAF50).withOpacity(isDarkMode ? 0.25 : 0.15),
                                     blurRadius: 4,
                                     offset: const Offset(0, 1),
                                   ),
@@ -373,7 +390,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                               color: const Color(0xFFFF6B35),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white,
+                                color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
                                 width: 1.5,
                               ),
                             ),
@@ -383,7 +400,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                             ),
                             child: Center(
                               child: Text(
-                                '${entryCount}',
+                                '$entryCount',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 8.sp,
@@ -406,7 +423,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               fontFamily: 'Inter',
               fontSize: 12.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF2563EB),
+              color: isDarkMode ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
             ),
             weekFormat: false,
             markedDatesMap: _markedDateMap,
@@ -438,13 +455,13 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFFA8A8A8),  // Gray for previous month
+              color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFA8A8A8),  // Gray for previous month
             ),
             inactiveDaysTextStyle: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFFA8A8A8),  // Gray for next month
+              color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFA8A8A8),  // Gray for next month
             ),
             onCalendarChanged: (DateTime date) {
               // Calendar month changed - no action needed
@@ -453,17 +470,17 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               fontFamily: 'Inter',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFF080E29),  // Black for regular days
+              color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29),  // Text color for regular days
             ),
             headerTextStyle: TextStyle(
               fontFamily: 'Inter',
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimaryColor,
+              color: textPrimaryColor,
             ),
             headerMargin: EdgeInsets.only(bottom: 12.h),
             childAspectRatio: 1.15,
-            iconColor: const Color(0xFF2563EB),
+            iconColor: isDarkMode ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
           ),
         ],
       ),

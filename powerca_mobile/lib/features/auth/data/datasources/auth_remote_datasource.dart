@@ -49,7 +49,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw Exception('Invalid username or password');
       }
 
-      // Authentication successful - return staff model
+      // Authentication successful - fetch complete staff data including phone number
+      // The RPC function may not return all fields, so we fetch from mbstaff directly
+      final staffId = response['staff_id'];
+      if (staffId != null) {
+        final completeStaffData = await supabaseClient
+            .from('mbstaff')
+            .select('staff_id, name, app_username, org_id, loc_id, con_id, email, phonumber, dob, stafftype, active_status')
+            .eq('staff_id', staffId)
+            .maybeSingle();
+
+        if (completeStaffData != null) {
+          return StaffModel.fromJson(completeStaffData);
+        }
+      }
+
+      // Fallback to RPC response if direct query fails
       return StaffModel.fromJson(response);
     } on PostgrestException catch (e) {
       // Handle specific database errors

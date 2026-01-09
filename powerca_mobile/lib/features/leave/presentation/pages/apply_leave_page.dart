@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../auth/domain/entities/staff.dart';
 
 class ApplyLeavePage extends StatefulWidget {
@@ -29,6 +31,7 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
   String _fromDayType = 'full';
   String _toDayType = 'full';
   bool _isMultiDay = false;
+  bool _isSubmitting = false;
   final _reasonController = TextEditingController();
 
   @override
@@ -54,233 +57,134 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+
     return Scaffold(
-      backgroundColor: Colors.white, // White for safe areas (status bar & bottom)
-      body: SafeArea(
-        child: Container(
-          color: const Color(0xFFF8F9FC), // Gray for content area
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(16.w),
-                  child: _buildLeaveApplicationForm(),
-                ),
-              ),
-              _buildBottomButton(),
-            ],
+      backgroundColor: scaffoldBgColor,
+      appBar: AppBar(
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: _buildBackButton(context),
           ),
         ),
+        leadingWidth: 58.w,
+        title: _buildAppBarTitle(context),
+        backgroundColor: headerBgColor,
+        elevation: 0,
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-      color: Colors.white,
-      child: Row(
+      body: Column(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 42.w,
-              height: 42.h,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8EDF3),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFD1D9E6),
-                  width: 1,
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 18.sp,
-                  color: AppTheme.textSecondaryColor,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 16.w),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Apply Leave',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  'Submit a new leave request',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-              ],
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                top: 20.w,
+                bottom: 20.w + MediaQuery.of(context).padding.bottom,
+              ),
+              child: _buildLeaveApplicationForm(context),
             ),
           ),
+          _buildSubmitButton(context),
         ],
       ),
     );
   }
 
-  Widget _buildBottomButton() {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
+  Widget _buildBackButton(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor;
+
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        width: 42.w,
+        height: 42.h,
+        decoration: BoxDecoration(
+          color: backButtonBgColor,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: backButtonBorderColor,
+            width: 1,
           ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: GestureDetector(
-          onTap: _submitLeaveRequest,
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 14.h),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppTheme.primaryColor,
-                  AppTheme.primaryColor.withValues(alpha: 0.85),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.send_rounded,
-                  size: 20.sp,
-                  color: Colors.white,
-                ),
-                SizedBox(width: 8.w),
-                Text(
-                  'Submit Request',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.arrow_back_ios_new,
+            size: 18.sp,
+            color: textSecondaryColor,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildDayTypeSelector({
-    required String selectedType,
-    required Function(String) onChanged,
-    required bool enabled,
-  }) {
-    final options = [
-      {'value': 'full', 'label': 'Full Day'},
-      {'value': 'first_half', 'label': 'First Half'},
-      {'value': 'second_half', 'label': 'Second Half'},
-    ];
+  Widget _buildAppBarTitle(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor;
 
-    return Row(
-      children: options.map((option) {
-        final isSelected = selectedType == option['value'];
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 2.w),
-            child: InkWell(
-              onTap: enabled ? () => onChanged(option['value']!) : null,
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppTheme.primaryColor
-                      : enabled
-                          ? Colors.white
-                          : const Color(0xFFF5F7FA),
-                  borderRadius: BorderRadius.circular(6.r),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppTheme.primaryColor
-                        : const Color(0xFFE9F0F8),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    option['label']!,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w500,
-                      color: isSelected
-                          ? Colors.white
-                          : enabled
-                              ? const Color(0xFF080E29)
-                              : const Color(0xFFA8A8A8),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Apply Leave',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w700,
+            color: textPrimaryColor,
           ),
-        );
-      }).toList(),
+        ),
+        Text(
+          'Submit a new leave request',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w400,
+            color: textSecondaryColor,
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildLeaveApplicationForm() {
+  Widget _buildSectionTitle(String title) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    return Text(
+      title,
+      style: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 14.sp,
+        fontWeight: FontWeight.w600,
+        color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29),
+      ),
+    );
+  }
+
+  Widget _buildLeaveApplicationForm(BuildContext context) {
     // For single day, toDate is same as fromDate
     DateTime? effectiveToDate = _isMultiDay ? _toDate : _fromDate;
 
     // Calculate number of days with half-day support (excluding Sundays)
-    // Sunday is always a holiday and should not be counted as leave
     double? numberOfDays;
     if (_fromDate != null && effectiveToDate != null) {
       if (_fromDate == effectiveToDate) {
-        // Single day - date picker already blocks Sundays
         numberOfDays = _fromDayType == 'full' ? 1.0 : 0.5;
       } else {
-        // Multi-day - count working days excluding Sundays
         int totalWorkingDays = _countWorkingDays(_fromDate!, effectiveToDate);
-
-        // Adjust for half-days on first and last days
         double adjustment = 0.0;
         if (_fromDayType != 'full') {
-          adjustment -= 0.5; // Subtract half day from first day
+          adjustment -= 0.5;
         }
         if (_toDayType != 'full') {
-          adjustment -= 0.5; // Subtract half day from last day
+          adjustment -= 0.5;
         }
-
         numberOfDays = totalWorkingDays + adjustment;
         if (numberOfDays < 0) numberOfDays = 0;
       }
@@ -296,150 +200,22 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Leave Type Dropdown
-        Text(
-          'Leave Type',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF080E29),
-          ),
-        ),
+        _buildSectionTitle('Leave Type'),
         SizedBox(height: 8.h),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10.r),
-            border: Border.all(color: const Color(0xFFE9F0F8)),
-          ),
-          child: DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              hintText: 'Select leave type',
-              hintStyle: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.sp,
-                color: const Color(0xFFA8A8A8),
-              ),
-              prefixIcon: const Icon(Icons.category_outlined),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            ),
-            value: _leaveType,
-            items: ['Sick Leave', 'Casual Leave', 'Earned Leave', 'Emergency Leave']
-                .map((type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(
-                        type,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                    ))
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _leaveType = value;
-              });
-            },
-          ),
-        ),
-
+        _buildLeaveTypeDropdown(context),
         SizedBox(height: 20.h),
 
         // Leave Duration Toggle
-        Text(
-          'Leave Duration',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF080E29),
-          ),
-        ),
+        _buildSectionTitle('Leave Duration'),
         SizedBox(height: 8.h),
-        Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _isMultiDay = false;
-                    _toDate = null;
-                    _toDayType = 'full';
-                  });
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  decoration: BoxDecoration(
-                    color: !_isMultiDay ? AppTheme.primaryColor : Colors.white,
-                    borderRadius: BorderRadius.circular(8.r),
-                    border: Border.all(
-                      color: !_isMultiDay ? AppTheme.primaryColor : const Color(0xFFE9F0F8),
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Single Day',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: !_isMultiDay ? Colors.white : const Color(0xFF080E29),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _isMultiDay = true;
-                  });
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  decoration: BoxDecoration(
-                    color: _isMultiDay ? AppTheme.primaryColor : Colors.white,
-                    borderRadius: BorderRadius.circular(8.r),
-                    border: Border.all(
-                      color: _isMultiDay ? AppTheme.primaryColor : const Color(0xFFE9F0F8),
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Multiple Days',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: _isMultiDay ? Colors.white : const Color(0xFF080E29),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-
+        _buildDurationToggle(context),
         SizedBox(height: 20.h),
 
         // From Date
-        Text(
-          _isMultiDay ? 'From Date' : 'Date',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF080E29),
-          ),
-        ),
+        _buildSectionTitle(_isMultiDay ? 'From Date' : 'Date'),
         SizedBox(height: 8.h),
-        _buildDatePicker(
+        _buildDateSelector(
+          context: context,
           date: _fromDate,
           hint: 'Select start date',
           onSelect: (date) {
@@ -462,18 +238,11 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
         // From Day Type Selector
         if (_fromDate != null) ...[
-          SizedBox(height: 8.h),
-          Text(
-            _isMultiDay ? 'From Date - Day Type' : 'Day Type',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF6B7280),
-            ),
-          ),
-          SizedBox(height: 4.h),
+          SizedBox(height: 12.h),
+          _buildDayTypeLabel(_isMultiDay ? 'From Date - Day Type' : 'Day Type'),
+          SizedBox(height: 6.h),
           _buildDayTypeSelector(
+            context: context,
             selectedType: _fromDayType,
             onChanged: (value) {
               setState(() {
@@ -487,17 +256,10 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
         // To Date (only for multi-day)
         if (_isMultiDay) ...[
           SizedBox(height: 20.h),
-          Text(
-            'To Date',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF080E29),
-            ),
-          ),
+          _buildSectionTitle('To Date'),
           SizedBox(height: 8.h),
-          _buildDatePicker(
+          _buildDateSelector(
+            context: context,
             date: _toDate,
             hint: 'Select end date',
             enabled: _fromDate != null,
@@ -517,18 +279,11 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
           // To Day Type Selector
           if (_fromDate != null && _toDate != null && _fromDate != _toDate) ...[
-            SizedBox(height: 8.h),
-            Text(
-              'To Date - Day Type',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF6B7280),
-              ),
-            ),
-            SizedBox(height: 4.h),
+            SizedBox(height: 12.h),
+            _buildDayTypeLabel('To Date - Day Type'),
+            SizedBox(height: 6.h),
             _buildDayTypeSelector(
+              context: context,
               selectedType: _toDayType,
               onChanged: (value) {
                 setState(() {
@@ -542,81 +297,158 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
         // Number of Days Display
         if (numberOfDays != null) ...[
-          SizedBox(height: 12.h),
-          Container(
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: AppTheme.successColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6.r),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.event_available,
-                  size: 18.sp,
-                  color: AppTheme.successColor,
-                ),
-                SizedBox(width: 8.w),
-                Text(
-                  'Total: $daysDisplay ${numberOfDays == 1 ? 'day' : 'days'}',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.successColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          SizedBox(height: 16.h),
+          _buildDaysDisplay(context, numberOfDays, daysDisplay),
         ],
 
         SizedBox(height: 20.h),
 
         // Reason
-        Text(
-          'Reason',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF080E29),
-          ),
-        ),
+        _buildSectionTitle('Reason'),
         SizedBox(height: 8.h),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10.r),
-            border: Border.all(color: const Color(0xFFE9F0F8)),
-          ),
-          child: TextField(
-            controller: _reasonController,
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: 'Enter reason for leave...',
-              hintStyle: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.sp,
-                color: const Color(0xFFA8A8A8),
-              ),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16.w),
-            ),
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              color: const Color(0xFF080E29),
-            ),
-          ),
-        ),
+        _buildReasonField(context),
 
-        SizedBox(height: 20.h),
+        SizedBox(height: 32.h),
       ],
     );
   }
 
-  Widget _buildDatePicker({
+  Widget _buildLeaveTypeDropdown(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final hintColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
+    final iconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
+    final dropdownBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: fieldBgColor,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: fieldBorderColor),
+      ),
+      child: DropdownButtonFormField<String>(
+        dropdownColor: dropdownBgColor,
+        decoration: InputDecoration(
+          hintText: 'Select leave type',
+          hintStyle: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14.sp,
+            color: hintColor,
+          ),
+          prefixIcon: Icon(Icons.category_outlined, color: iconColor),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        ),
+        value: _leaveType,
+        icon: Icon(Icons.arrow_drop_down, color: iconColor),
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14.sp,
+          color: textColor,
+        ),
+        items: ['Sick Leave', 'Casual Leave', 'Earned Leave', 'Emergency Leave']
+            .map((type) => DropdownMenuItem(
+                  value: type,
+                  child: Text(
+                    type,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14.sp,
+                      color: textColor,
+                    ),
+                  ),
+                ),)
+            .toList(),
+        onChanged: (value) {
+          setState(() {
+            _leaveType = value;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildDurationToggle(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                _isMultiDay = false;
+                _toDate = null;
+                _toDayType = 'full';
+              });
+            },
+            borderRadius: BorderRadius.circular(12.r),
+            child: Container(
+              padding: EdgeInsets.symmetric(vertical: 14.h),
+              decoration: BoxDecoration(
+                color: !_isMultiDay ? AppTheme.primaryColor : fieldBgColor,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color: !_isMultiDay ? AppTheme.primaryColor : fieldBorderColor,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  'Single Day',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: !_isMultiDay ? Colors.white : textColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                _isMultiDay = true;
+              });
+            },
+            borderRadius: BorderRadius.circular(12.r),
+            child: Container(
+              padding: EdgeInsets.symmetric(vertical: 14.h),
+              decoration: BoxDecoration(
+                color: _isMultiDay ? AppTheme.primaryColor : fieldBgColor,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color: _isMultiDay ? AppTheme.primaryColor : fieldBorderColor,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  'Multiple Days',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: _isMultiDay ? Colors.white : textColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateSelector({
+    required BuildContext context,
     required DateTime? date,
     required String hint,
     required Function(DateTime) onSelect,
@@ -624,6 +456,13 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
     bool enabled = true,
     DateTime? minDate,
   }) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final disabledBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA);
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final hintColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
+
     return InkWell(
       onTap: !enabled
           ? null
@@ -644,8 +483,9 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
                 builder: (context, child) {
                   return Theme(
                     data: Theme.of(context).copyWith(
-                      colorScheme: const ColorScheme.light(
+                      colorScheme: ColorScheme.light(
                         primary: AppTheme.primaryColor,
+                        surface: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
                       ),
                     ),
                     child: child!,
@@ -656,28 +496,30 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
                 onSelect(selectedDate);
               }
             },
+      borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: !enabled ? const Color(0xFFF5F7FA) : Colors.white,
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: const Color(0xFFE9F0F8)),
+          color: enabled ? fieldBgColor : disabledBgColor,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: fieldBorderColor),
         ),
         child: Row(
           children: [
             Icon(
               Icons.calendar_today,
               size: 20.sp,
-              color: !enabled ? const Color(0xFFA8A8A8) : const Color(0xFF8F8E90),
+              color: AppTheme.primaryColor,
             ),
             SizedBox(width: 12.w),
             Expanded(
               child: Text(
-                date != null ? DateFormat('dd MMM yyyy').format(date) : hint,
+                date != null ? DateFormat('EEEE, MMMM d, yyyy').format(date) : hint,
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
-                  color: date != null ? const Color(0xFF080E29) : const Color(0xFFA8A8A8),
+                  fontWeight: FontWeight.w400,
+                  color: date != null ? textColor : hintColor,
                 ),
               ),
             ),
@@ -687,10 +529,224 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
                 child: Icon(
                   Icons.cancel,
                   size: 20.sp,
-                  color: const Color(0xFFA8A8A8),
+                  color: hintColor,
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayTypeLabel(String text) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    return Text(
+      text,
+      style: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 12.sp,
+        fontWeight: FontWeight.w500,
+        color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
+      ),
+    );
+  }
+
+  Widget _buildDayTypeSelector({
+    required BuildContext context,
+    required String selectedType,
+    required Function(String) onChanged,
+    required bool enabled,
+  }) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final disabledBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA);
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final disabledTextColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
+
+    final options = [
+      {'value': 'full', 'label': 'Full Day'},
+      {'value': 'first_half', 'label': 'First Half'},
+      {'value': 'second_half', 'label': 'Second Half'},
+    ];
+
+    return Row(
+      children: options.map((option) {
+        final isSelected = selectedType == option['value'];
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 3.w),
+            child: InkWell(
+              onTap: enabled ? () => onChanged(option['value']!) : null,
+              borderRadius: BorderRadius.circular(8.r),
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : enabled
+                          ? fieldBgColor
+                          : disabledBgColor,
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppTheme.primaryColor
+                        : fieldBorderColor,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    option['label']!,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : enabled
+                              ? textColor
+                              : disabledTextColor,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDaysDisplay(BuildContext context, double numberOfDays, String daysDisplay) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final bgColor = isDarkMode ? const Color(0xFF064E3B) : AppTheme.successColor.withValues(alpha: 0.1);
+    final textColor = isDarkMode ? const Color(0xFF34D399) : AppTheme.successColor;
+
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.event_available,
+            size: 18.sp,
+            color: textColor,
+          ),
+          SizedBox(width: 8.w),
+          Text(
+            'Total: $daysDisplay ${numberOfDays == 1 ? 'day' : 'days'}',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReasonField(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final hintColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: fieldBgColor,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: fieldBorderColor),
+      ),
+      child: TextFormField(
+        controller: _reasonController,
+        maxLines: 5,
+        decoration: InputDecoration(
+          hintText: 'Enter reason for leave...',
+          hintStyle: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w400,
+            color: hintColor,
+          ),
+          filled: true,
+          fillColor: fieldBgColor,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.all(16.w),
+        ),
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w400,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final bottomBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 12.h + MediaQuery.of(context).padding.bottom),
+      decoration: BoxDecoration(
+        color: bottomBgColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 50.h,
+        child: ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitLeaveRequest,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            elevation: 0,
+          ),
+          child: _isSubmitting
+              ? SizedBox(
+                  width: 20.w,
+                  height: 20.h,
+                  child: const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.send_rounded,
+                      size: 20.sp,
+                      color: Colors.white,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Submit Request',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -717,12 +773,7 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
     final submitToDate = _isMultiDay ? _toDate : _fromDate;
 
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
+    setState(() => _isSubmitting = true);
 
     try {
       final supabase = Supabase.instance.client;
@@ -772,12 +823,11 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
       await supabase.from('learequest').insert(leaveData);
 
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading
 
       // Show success
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Leave request submitted successfully!'),
+        const SnackBar(
+          content: Text('Leave request submitted successfully!'),
           backgroundColor: AppTheme.successColor,
           behavior: SnackBarBehavior.floating,
         ),
@@ -787,7 +837,7 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
       Navigator.of(context).pop(); // Go back to leave list
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading
+      setState(() => _isSubmitting = false);
       _showError('Error: ${e.toString()}');
     }
   }

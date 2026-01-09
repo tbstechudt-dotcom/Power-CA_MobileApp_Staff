@@ -67,6 +67,13 @@ class StorageConstants {
   static const String keyThemeMode = 'theme_mode';
   static const String keyLanguage = 'language';
 
+  // Notification Settings Keys
+  static const String keyNotificationsEnabled = 'notifications_enabled';
+  static const String keyLeaveNotificationsEnabled = 'leave_notifications_enabled';
+  static const String keyPinboardNotificationsEnabled = 'pinboard_notifications_enabled';
+  static const String keyLastKnownLeaveStatuses = 'last_known_leave_statuses';
+  static const String keyLastPinboardCheckTimestamp = 'last_pinboard_check_timestamp';
+
   // Cache Keys
   static const String cacheKeyJobs = 'cache_jobs';
   static const String cacheKeyClients = 'cache_clients';

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/services/priority_service.dart';
 import 'work_log_list_page.dart';
 
@@ -544,8 +546,16 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor;
+    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
+      backgroundColor: scaffoldBgColor,
       appBar: AppBar(
         leading: Padding(
           padding: EdgeInsets.only(left: 8.w),
@@ -556,10 +566,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                 width: 42.w,
                 height: 42.h,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8EDF3),
+                  color: backButtonBgColor,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFFD1D9E6),
+                    color: backButtonBorderColor,
                     width: 1,
                   ),
                 ),
@@ -567,7 +577,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   child: Icon(
                     Icons.arrow_back_ios_new,
                     size: 18.sp,
-                    color: AppTheme.textSecondaryColor,
+                    color: textSecondaryColor,
                   ),
                 ),
               ),
@@ -578,7 +588,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Create Work Log Entry'),
+            Text(
+              'Create Work Log Entry',
+              style: TextStyle(color: textPrimaryColor),
+            ),
             if (_hasPriorities)
               Text(
                 'Showing ${_priorityJobIds.length} priority jobs',
@@ -591,8 +604,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               ),
           ],
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF080E29),
+        backgroundColor: headerBgColor,
+        foregroundColor: textPrimaryColor,
         elevation: 0,
       ),
       body: _isLoading
@@ -676,26 +689,33 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildSectionTitle(String title) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     return Text(
       title,
       style: TextStyle(
         fontFamily: 'Inter',
         fontSize: 14.sp,
         fontWeight: FontWeight.w600,
-        color: const Color(0xFF080E29),
+        color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29),
       ),
     );
   }
 
   Widget _buildDateSelector() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+
     return InkWell(
       onTap: _selectDate,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: fieldBgColor,
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: const Color(0xFFE9F0F8)),
+          border: Border.all(color: fieldBorderColor),
         ),
         child: Row(
           children: [
@@ -714,9 +734,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
-                  color: _selectedDate != null
-                      ? const Color(0xFF080E29)
-                      : const Color(0xFF8F8E90),
+                  color: _selectedDate != null ? textColor : placeholderColor,
                 ),
               ),
             ),
@@ -727,6 +745,12 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildTimeSelector(bool isFromTime) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+
     final time = isFromTime ? _fromTime : _toTime;
     final label = isFromTime ? 'From Time' : 'To Time';
 
@@ -735,9 +759,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: fieldBgColor,
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: const Color(0xFFE9F0F8)),
+          border: Border.all(color: fieldBorderColor),
         ),
         child: Row(
           children: [
@@ -757,7 +781,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       fontFamily: 'Inter',
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w400,
-                      color: const Color(0xFF8F8E90),
+                      color: placeholderColor,
                     ),
                   ),
                   SizedBox(height: 2.h),
@@ -767,9 +791,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       fontFamily: 'Inter',
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
-                      color: time != null
-                          ? const Color(0xFF080E29)
-                          : const Color(0xFF8F8E90),
+                      color: time != null ? textColor : placeholderColor,
                     ),
                   ),
                 ],
@@ -782,6 +804,12 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildClientDropdown() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+
     // Get selected client name for display
     String? selectedClientName;
     if (_selectedClientId != null) {
@@ -797,9 +825,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: fieldBgColor,
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: const Color(0xFFE9F0F8)),
+          border: Border.all(color: fieldBorderColor),
         ),
         child: Row(
           children: [
@@ -810,15 +838,13 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
-                  color: selectedClientName != null
-                      ? const Color(0xFF080E29)
-                      : const Color(0xFF8F8E90),
+                  color: selectedClientName != null ? textColor : placeholderColor,
                 ),
               ),
             ),
             Icon(
               Icons.arrow_drop_down,
-              color: const Color(0xFF8F8E90),
+              color: placeholderColor,
               size: 24.sp,
             ),
           ],
@@ -829,13 +855,23 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
   /// Show searchable client selection dialog
   Future<void> _showClientSearchDialog() async {
+    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final handleColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
+    final searchFieldBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
+    final borderColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[100];
+
     String searchQuery = '';
     final searchController = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: sheetBgColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
       ),
@@ -869,7 +905,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       width: 36.w,
                       height: 4.h,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: handleColor,
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -885,7 +921,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                               fontFamily: 'Inter',
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF080E29),
+                              color: textPrimaryColor,
                             ),
                           ),
                           Text(
@@ -894,7 +930,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                               fontFamily: 'Inter',
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w400,
-                              color: const Color(0xFF8F8E90),
+                              color: textSecondaryColor,
                             ),
                           ),
                         ],
@@ -916,16 +952,16 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                           hintStyle: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14.sp,
-                            color: const Color(0xFF9CA3AF),
+                            color: textSecondaryColor,
                           ),
                           prefixIcon: Icon(
                             Icons.search,
                             size: 20.sp,
-                            color: const Color(0xFF9CA3AF),
+                            color: textSecondaryColor,
                           ),
                           suffixIcon: searchQuery.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                                  icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
                                   onPressed: () {
                                     searchController.clear();
                                     setModalState(() {
@@ -935,7 +971,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                 )
                               : null,
                           filled: true,
-                          fillColor: const Color(0xFFF8F9FC),
+                          fillColor: searchFieldBgColor,
                           contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.r),
@@ -945,11 +981,11 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 14.sp,
-                          color: const Color(0xFF1F2937),
+                          color: searchTextColor,
                         ),
                       ),
                     ),
-                    Divider(height: 1, color: Colors.grey[200]),
+                    Divider(height: 1, color: dividerColor),
                     // Client list
                     Expanded(
                       child: filteredClients.isEmpty
@@ -960,7 +996,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                   Icon(
                                     Icons.search_off,
                                     size: 48.sp,
-                                    color: Colors.grey[300],
+                                    color: isDarkMode ? const Color(0xFF475569) : Colors.grey[300],
                                   ),
                                   SizedBox(height: 12.h),
                                   Text(
@@ -969,7 +1005,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                       fontFamily: 'Inter',
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF8F8E90),
+                                      color: textSecondaryColor,
                                     ),
                                   ),
                                 ],
@@ -1000,7 +1036,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                     decoration: BoxDecoration(
                                       color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
                                       border: Border(
-                                        bottom: BorderSide(color: Colors.grey[100]!, width: 0.5),
+                                        bottom: BorderSide(color: borderColor!, width: 0.5),
                                       ),
                                     ),
                                     child: Row(
@@ -1012,7 +1048,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                               fontFamily: 'Inter',
                                               fontSize: 14.sp,
                                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                              color: isSelected ? AppTheme.primaryColor : const Color(0xFF080E29),
+                                              color: isSelected ? AppTheme.primaryColor : textPrimaryColor,
                                             ),
                                           ),
                                         ),
@@ -1040,6 +1076,12 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildJobDropdown() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+
     // Get jobs for the selected client from the pre-grouped structure
     final filteredJobs = _selectedClientId != null && _jobsByClient.containsKey(_selectedClientId)
         ? _jobsByClient[_selectedClientId]!.values.toList()
@@ -1064,9 +1106,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: fieldBgColor,
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: const Color(0xFFE9F0F8)),
+          border: Border.all(color: fieldBorderColor),
         ),
         child: Row(
           children: [
@@ -1077,9 +1119,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
-                  color: selectedJobDisplay != null
-                      ? const Color(0xFF080E29)
-                      : const Color(0xFF8F8E90),
+                  color: selectedJobDisplay != null ? textColor : placeholderColor,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1087,7 +1127,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             ),
             Icon(
               Icons.arrow_drop_down,
-              color: const Color(0xFF8F8E90),
+              color: placeholderColor,
               size: 24.sp,
             ),
           ],
@@ -1098,13 +1138,23 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
   /// Show searchable job selection dialog
   Future<void> _showJobSearchDialog(List<Map<String, dynamic>> jobs) async {
+    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final handleColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
+    final searchFieldBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
+    final borderColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[100];
+
     String searchQuery = '';
     final searchController = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: sheetBgColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
       ),
@@ -1140,7 +1190,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       width: 36.w,
                       height: 4.h,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: handleColor,
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1156,7 +1206,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                               fontFamily: 'Inter',
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF080E29),
+                              color: textPrimaryColor,
                             ),
                           ),
                           Text(
@@ -1165,7 +1215,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                               fontFamily: 'Inter',
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w400,
-                              color: const Color(0xFF8F8E90),
+                              color: textSecondaryColor,
                             ),
                           ),
                         ],
@@ -1187,16 +1237,16 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                           hintStyle: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14.sp,
-                            color: const Color(0xFF9CA3AF),
+                            color: textSecondaryColor,
                           ),
                           prefixIcon: Icon(
                             Icons.search,
                             size: 20.sp,
-                            color: const Color(0xFF9CA3AF),
+                            color: textSecondaryColor,
                           ),
                           suffixIcon: searchQuery.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                                  icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
                                   onPressed: () {
                                     searchController.clear();
                                     setModalState(() {
@@ -1206,7 +1256,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                 )
                               : null,
                           filled: true,
-                          fillColor: const Color(0xFFF8F9FC),
+                          fillColor: searchFieldBgColor,
                           contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.r),
@@ -1216,11 +1266,11 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 14.sp,
-                          color: const Color(0xFF1F2937),
+                          color: searchTextColor,
                         ),
                       ),
                     ),
-                    Divider(height: 1, color: Colors.grey[200]),
+                    Divider(height: 1, color: dividerColor),
                     // Job list
                     Expanded(
                       child: filteredJobs.isEmpty
@@ -1231,7 +1281,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                   Icon(
                                     Icons.search_off,
                                     size: 48.sp,
-                                    color: Colors.grey[300],
+                                    color: isDarkMode ? const Color(0xFF475569) : Colors.grey[300],
                                   ),
                                   SizedBox(height: 12.h),
                                   Text(
@@ -1240,7 +1290,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                       fontFamily: 'Inter',
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF8F8E90),
+                                      color: textSecondaryColor,
                                     ),
                                   ),
                                 ],
@@ -1272,7 +1322,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                     decoration: BoxDecoration(
                                       color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
                                       border: Border(
-                                        bottom: BorderSide(color: Colors.grey[100]!, width: 0.5),
+                                        bottom: BorderSide(color: borderColor!, width: 0.5),
                                       ),
                                     ),
                                     child: Row(
@@ -1287,7 +1337,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                   fontFamily: 'Inter',
                                                   fontSize: 14.sp,
                                                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                                  color: isSelected ? AppTheme.primaryColor : const Color(0xFF080E29),
+                                                  color: isSelected ? AppTheme.primaryColor : textPrimaryColor,
                                                 ),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
@@ -1299,7 +1349,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                   fontFamily: 'Inter',
                                                   fontSize: 12.sp,
                                                   fontWeight: FontWeight.w400,
-                                                  color: const Color(0xFF8F8E90),
+                                                  color: textSecondaryColor,
                                                 ),
                                               ),
                                             ],
@@ -1329,6 +1379,12 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildTaskDropdown() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+
     // Get selected task name for display
     String? selectedTaskName;
     if (_selectedTaskId != null && _tasks.isNotEmpty) {
@@ -1346,9 +1402,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: fieldBgColor,
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: const Color(0xFFE9F0F8)),
+          border: Border.all(color: fieldBorderColor),
         ),
         child: Row(
           children: [
@@ -1359,15 +1415,13 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   fontFamily: 'Inter',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w400,
-                  color: selectedTaskName != null
-                      ? const Color(0xFF080E29)
-                      : const Color(0xFF8F8E90),
+                  color: selectedTaskName != null ? textColor : placeholderColor,
                 ),
               ),
             ),
             Icon(
               Icons.arrow_drop_down,
-              color: const Color(0xFF8F8E90),
+              color: placeholderColor,
               size: 24.sp,
             ),
           ],
@@ -1378,13 +1432,23 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
   /// Show searchable task selection dialog
   Future<void> _showTaskSearchDialog() async {
+    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final handleColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
+    final searchFieldBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
+    final borderColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[100];
+
     String searchQuery = '';
     final searchController = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: sheetBgColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
       ),
@@ -1418,7 +1482,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       width: 36.w,
                       height: 4.h,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: handleColor,
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1434,7 +1498,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                               fontFamily: 'Inter',
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF080E29),
+                              color: textPrimaryColor,
                             ),
                           ),
                           Text(
@@ -1443,7 +1507,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                               fontFamily: 'Inter',
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w400,
-                              color: const Color(0xFF8F8E90),
+                              color: textSecondaryColor,
                             ),
                           ),
                         ],
@@ -1465,16 +1529,16 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                           hintStyle: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14.sp,
-                            color: const Color(0xFF9CA3AF),
+                            color: textSecondaryColor,
                           ),
                           prefixIcon: Icon(
                             Icons.search,
                             size: 20.sp,
-                            color: const Color(0xFF9CA3AF),
+                            color: textSecondaryColor,
                           ),
                           suffixIcon: searchQuery.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                                  icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
                                   onPressed: () {
                                     searchController.clear();
                                     setModalState(() {
@@ -1484,7 +1548,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                 )
                               : null,
                           filled: true,
-                          fillColor: const Color(0xFFF8F9FC),
+                          fillColor: searchFieldBgColor,
                           contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.r),
@@ -1494,11 +1558,11 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 14.sp,
-                          color: const Color(0xFF1F2937),
+                          color: searchTextColor,
                         ),
                       ),
                     ),
-                    Divider(height: 1, color: Colors.grey[200]),
+                    Divider(height: 1, color: dividerColor),
                     // Task list
                     Expanded(
                       child: filteredTasks.isEmpty
@@ -1509,7 +1573,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                   Icon(
                                     Icons.search_off,
                                     size: 48.sp,
-                                    color: Colors.grey[300],
+                                    color: isDarkMode ? const Color(0xFF475569) : Colors.grey[300],
                                   ),
                                   SizedBox(height: 12.h),
                                   Text(
@@ -1518,7 +1582,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                       fontFamily: 'Inter',
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF8F8E90),
+                                      color: textSecondaryColor,
                                     ),
                                   ),
                                 ],
@@ -1546,7 +1610,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                     decoration: BoxDecoration(
                                       color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
                                       border: Border(
-                                        bottom: BorderSide(color: Colors.grey[100]!, width: 0.5),
+                                        bottom: BorderSide(color: borderColor!, width: 0.5),
                                       ),
                                     ),
                                     child: Row(
@@ -1558,7 +1622,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                               fontFamily: 'Inter',
                                               fontSize: 14.sp,
                                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                              color: isSelected ? AppTheme.primaryColor : const Color(0xFF080E29),
+                                              color: isSelected ? AppTheme.primaryColor : textPrimaryColor,
                                             ),
                                           ),
                                         ),
@@ -1586,11 +1650,17 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildDescriptionField() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final hintColor = isDarkMode ? const Color(0xFF64748B) : AppTheme.textDisabledColor;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: fieldBgColor,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE9F0F8)),
+        border: Border.all(color: fieldBorderColor),
       ),
       child: TextFormField(
         controller: _descriptionController,
@@ -1601,10 +1671,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
             fontFamily: 'Inter',
             fontSize: 14.sp,
             fontWeight: FontWeight.w400,
-            color: AppTheme.textDisabledColor,
+            color: hintColor,
           ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: fieldBgColor,
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(16.w),
         ),
@@ -1612,7 +1682,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           fontFamily: 'Inter',
           fontSize: 14.sp,
           fontWeight: FontWeight.w400,
-          color: const Color(0xFF080E29),
+          color: textColor,
         ),
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
@@ -1757,6 +1827,20 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
   /// Show priority job selection dialog
   Future<void> _showPrioritySelectionDialog() async {
+    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final handleColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
+    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
+    final searchFieldBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorderColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
+    final expandedBgColor = isDarkMode ? const Color(0xFF0F172A) : Colors.grey[50];
+    final checkboxBgColor = isDarkMode ? const Color(0xFF334155) : Colors.white;
+    final checkboxBorderColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
+
     Set<int> tempSelectedIds = Set<int>.from(_selectedPriorityJobIds);
     String? expandedStatus;
     String searchQuery = '';
@@ -1765,7 +1849,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: sheetBgColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
       ),
@@ -1786,7 +1870,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       width: 36.w,
                       height: 4.h,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: handleColor,
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1810,7 +1894,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                   fontFamily: 'Inter',
                                   fontSize: 16.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF080E29),
+                                  color: textPrimaryColor,
                                 ),
                               ),
                             ],
@@ -1834,7 +1918,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                         ],
                       ),
                     ),
-                    Divider(height: 1, color: Colors.grey[200]),
+                    Divider(height: 1, color: dividerColor),
                     // Search Field
                     Padding(
                       padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 4.h),
@@ -1850,16 +1934,16 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                           hintStyle: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 13.sp,
-                            color: const Color(0xFF9CA3AF),
+                            color: textSecondaryColor,
                           ),
                           prefixIcon: Icon(
                             Icons.search,
                             size: 20.sp,
-                            color: const Color(0xFF9CA3AF),
+                            color: textSecondaryColor,
                           ),
                           suffixIcon: searchQuery.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                                  icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
                                   onPressed: () {
                                     searchController.clear();
                                     setModalState(() {
@@ -1869,7 +1953,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                 )
                               : null,
                           filled: true,
-                          fillColor: const Color(0xFFF8F9FC),
+                          fillColor: searchFieldBgColor,
                           contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10.r),
@@ -1879,7 +1963,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 13.sp,
-                          color: const Color(0xFF1F2937),
+                          color: searchTextColor,
                         ),
                       ),
                     ),
@@ -1899,10 +1983,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                           return Container(
                             margin: EdgeInsets.only(bottom: 8.h),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: cardBgColor,
                               borderRadius: BorderRadius.circular(12.r),
                               border: Border.all(
-                                color: isExpanded ? color.withValues(alpha: 0.5) : Colors.grey[200]!,
+                                color: isExpanded ? color.withValues(alpha: 0.5) : cardBorderColor!,
                               ),
                             ),
                             child: Column(
@@ -1939,7 +2023,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                   fontFamily: 'Inter',
                                                   fontSize: 14.sp,
                                                   fontWeight: FontWeight.w600,
-                                                  color: const Color(0xFF080E29),
+                                                  color: textPrimaryColor,
                                                 ),
                                               ),
                                               Text(
@@ -1948,7 +2032,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                   fontFamily: 'Inter',
                                                   fontSize: 11.sp,
                                                   fontWeight: FontWeight.w400,
-                                                  color: selectedInCategory > 0 ? color : const Color(0xFF8F8E90),
+                                                  color: selectedInCategory > 0 ? color : textSecondaryColor,
                                                 ),
                                               ),
                                             ],
@@ -1956,7 +2040,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                         ),
                                         Icon(
                                           isExpanded ? Icons.expand_less : Icons.expand_more,
-                                          color: Colors.grey[400],
+                                          color: textSecondaryColor,
                                           size: 20.sp,
                                         ),
                                       ],
@@ -1967,7 +2051,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                 if (isExpanded && jobs.isNotEmpty)
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.grey[50],
+                                      color: expandedBgColor,
                                       borderRadius: BorderRadius.only(
                                         bottomLeft: Radius.circular(12.r),
                                         bottomRight: Radius.circular(12.r),
@@ -1992,7 +2076,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                                             decoration: BoxDecoration(
                                               border: Border(
-                                                top: BorderSide(color: Colors.grey[200]!, width: 0.5),
+                                                top: BorderSide(color: dividerColor!, width: 0.5),
                                               ),
                                             ),
                                             child: Row(
@@ -2001,10 +2085,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                   width: 22.w,
                                                   height: 22.h,
                                                   decoration: BoxDecoration(
-                                                    color: isSelected ? color : Colors.white,
+                                                    color: isSelected ? color : checkboxBgColor,
                                                     borderRadius: BorderRadius.circular(6.r),
                                                     border: Border.all(
-                                                      color: isSelected ? color : Colors.grey[300]!,
+                                                      color: isSelected ? color : checkboxBorderColor!,
                                                       width: 1.5,
                                                     ),
                                                   ),
@@ -2023,7 +2107,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                           fontFamily: 'Inter',
                                                           fontSize: 13.sp,
                                                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                                          color: const Color(0xFF080E29),
+                                                          color: textPrimaryColor,
                                                         ),
                                                         maxLines: 1,
                                                         overflow: TextOverflow.ellipsis,
@@ -2034,7 +2118,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                           Icon(
                                                             Icons.business_rounded,
                                                             size: 12.sp,
-                                                            color: AppTheme.textMutedColor,
+                                                            color: textSecondaryColor,
                                                           ),
                                                           SizedBox(width: 4.w),
                                                           Expanded(
@@ -2048,7 +2132,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                                 fontWeight: FontWeight.w500,
                                                                 color: _getClientNameById(job['client_id']).isNotEmpty
                                                                     ? AppTheme.primaryColor
-                                                                    : const Color(0xFF8F8E90),
+                                                                    : textSecondaryColor,
                                                               ),
                                                               maxLines: 1,
                                                               overflow: TextOverflow.ellipsis,
@@ -2064,7 +2148,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                           fontFamily: 'Inter',
                                                           fontSize: 10.sp,
                                                           fontWeight: FontWeight.w400,
-                                                          color: const Color(0xFF8F8E90),
+                                                          color: textSecondaryColor,
                                                         ),
                                                       ),
                                                     ],
@@ -2087,8 +2171,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                     Container(
                       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                        color: sheetBgColor,
+                        border: Border(top: BorderSide(color: dividerColor!)),
                       ),
                       child: Row(
                         children: [
@@ -2105,7 +2189,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                 fontFamily: 'Inter',
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w500,
-                                color: tempSelectedIds.isEmpty ? Colors.grey[400] : Colors.red,
+                                color: tempSelectedIds.isEmpty ? textSecondaryColor : Colors.red,
                               ),
                             ),
                           ),
@@ -2121,7 +2205,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                     },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryColor,
-                                disabledBackgroundColor: Colors.grey[300],
+                                disabledBackgroundColor: isDarkMode ? const Color(0xFF334155) : Colors.grey[300],
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10.r),
                                 ),
@@ -2192,8 +2276,23 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   /// Build priority selection banner - minimalistic design
   /// Shows different text based on whether priorities are already set
   Widget _buildPrioritySelectionBanner() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     final hasPriorities = _priorityJobIds.isNotEmpty;
     final priorityCount = _priorityJobIds.length;
+
+    // Dark mode colors for banner
+    final priorityBgColor = hasPriorities
+        ? (isDarkMode ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4))
+        : (isDarkMode ? const Color(0xFF7F1D1D) : const Color(0xFFFEF2F2));
+    final priorityBorderColor = hasPriorities
+        ? (isDarkMode ? const Color(0xFF10B981) : const Color(0xFFBBF7D0))
+        : (isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFFECACA));
+    final titleColor = hasPriorities
+        ? (isDarkMode ? const Color(0xFF34D399) : const Color(0xFF059669))
+        : (isDarkMode ? const Color(0xFFF87171) : const Color(0xFFDC2626));
+    final subtitleColor = hasPriorities
+        ? (isDarkMode ? const Color(0xFF6EE7B7) : const Color(0xFF047857))
+        : (isDarkMode ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C));
 
     return InkWell(
       onTap: _showPrioritySelectionDialog,
@@ -2202,10 +2301,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         margin: EdgeInsets.only(bottom: 16.h),
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
         decoration: BoxDecoration(
-          color: hasPriorities ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+          color: priorityBgColor,
           borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
-            color: hasPriorities ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+            color: priorityBorderColor,
           ),
         ),
         child: Row(
@@ -2215,8 +2314,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               height: 36.h,
               decoration: BoxDecoration(
                 color: hasPriorities
-                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                    : const Color(0xFFEF4444).withValues(alpha: 0.15),
+                    ? const Color(0xFF10B981).withValues(alpha: isDarkMode ? 0.25 : 0.15)
+                    : const Color(0xFFEF4444).withValues(alpha: isDarkMode ? 0.25 : 0.15),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Icon(
@@ -2236,7 +2335,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       fontFamily: 'Inter',
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
-                      color: hasPriorities ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                      color: titleColor,
                     ),
                   ),
                   Text(
@@ -2247,7 +2346,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                       fontFamily: 'Inter',
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w400,
-                      color: hasPriorities ? const Color(0xFF047857) : const Color(0xFFB91C1C),
+                      color: subtitleColor,
                     ),
                   ),
                 ],

@@ -4,11 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/theme.dart';
 import 'core/config/injection.dart';
 import 'core/config/supabase_config.dart';
+import 'core/providers/notification_provider.dart';
+import 'core/providers/theme_provider.dart';
+import 'core/services/notification_service.dart';
 import 'features/auth/domain/entities/staff.dart';
 import 'features/auth/presentation/pages/select_concern_location_page.dart';
 import 'features/auth/presentation/pages/sign_in_page.dart';
@@ -79,6 +83,17 @@ void main() async {
           debugPrint('Dependency injection error: $e');
           debugPrint('Stack: $stack');
         }
+      }
+
+      // Initialize notification service
+      try {
+        await NotificationService().initialize();
+        await NotificationService().requestPermissions();
+        debugPrint('NotificationService initialized successfully');
+      } catch (e, stack) {
+        debugPrint('NotificationService initialization error: $e');
+        debugPrint('Stack: $stack');
+        // Don't block app startup for notification errors
       }
 
       runApp(const PowerCAApp());
@@ -198,83 +213,95 @@ class PowerCAApp extends StatelessWidget {
       );
     }
 
-    return ScreenUtilInit(
-      designSize: const Size(
-          393, 852,), // Based on Figma design (Splash Screen dimensions)
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return MaterialApp(
-          title: 'PowerCA - Auditor WorkLog',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          home: const SecurityGatePage(),
-          onGenerateRoute: (settings) {
-            switch (settings.name) {
-              case '/':
-              case '/security-gate':
-                return MaterialPageRoute(builder: (_) => const SecurityGatePage());
-              case '/splash':
-                return MaterialPageRoute(builder: (_) => const SplashPage());
-              case '/sign-in':
-                return MaterialPageRoute(builder: (_) => const SignInPage());
-              case '/select-concern-location':
-                final staff = settings.arguments as Staff;
-                return MaterialPageRoute(
-                  builder: (_) => SelectConcernLocationPage(currentStaff: staff),
-                );
-              case '/dashboard':
-                final staff = settings.arguments as Staff;
-                return MaterialPageRoute(
-                  builder: (_) => DashboardPage(currentStaff: staff),
-                );
-              case '/jobs':
-                final staff = settings.arguments as Staff;
-                return MaterialPageRoute(
-                  builder: (_) => JobsPage(currentStaff: staff),
-                );
-              case '/leave':
-                final staff = settings.arguments as Staff;
-                return MaterialPageRoute(
-                  builder: (_) => LeavePage(currentStaff: staff),
-                );
-              case '/pinboard':
-                final staff = settings.arguments as Staff;
-                return MaterialPageRoute(
-                  builder: (_) => PinboardPage(currentStaff: staff),
-                );
-              case '/work-diary':
-                final job = settings.arguments as Job;
-                return MaterialPageRoute(
-                  builder: (_) => WorkDiaryListPage(job: job),
-                );
-              case '/phone-verification':
-                final args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(
-                  builder: (_) => PhoneVerificationPage(
-                    deviceInfo: args['deviceInfo'] as DeviceInfo,
-                    staffId: args['staffId'] as int?,
-                  ),
-                );
-              case '/otp-verification':
-                final args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(
-                  builder: (_) => BlocProvider(
-                    create: (_) => getIt<DeviceSecurityBloc>(),
-                    child: OtpVerificationPage(
-                      maskedPhone: args['maskedPhone'] as String,
-                      expiresInSeconds: args['expiresInSeconds'] as int,
-                      phoneNumber: args['phoneNumber'] as String?,
-                      fingerprint: args['fingerprint'] as String?,
-                    ),
-                  ),
-                );
-              default:
-                return MaterialPageRoute(builder: (_) => const SplashPage());
-            }
-          },
-        );
-      },
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()..initialize()),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return ScreenUtilInit(
+            designSize: const Size(
+                393, 852,), // Based on Figma design (Splash Screen dimensions)
+            minTextAdapt: true,
+            splitScreenMode: true,
+            builder: (context, child) {
+              return MaterialApp(
+                title: 'PowerCA - Auditor WorkLog',
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: themeProvider.themeMode,
+                home: const SecurityGatePage(),
+                onGenerateRoute: (settings) {
+                  switch (settings.name) {
+                    case '/':
+                    case '/security-gate':
+                      return MaterialPageRoute(builder: (_) => const SecurityGatePage());
+                    case '/splash':
+                      return MaterialPageRoute(builder: (_) => const SplashPage());
+                    case '/sign-in':
+                      return MaterialPageRoute(builder: (_) => const SignInPage());
+                    case '/select-concern-location':
+                      final staff = settings.arguments as Staff;
+                      return MaterialPageRoute(
+                        builder: (_) => SelectConcernLocationPage(currentStaff: staff),
+                      );
+                    case '/dashboard':
+                      final staff = settings.arguments as Staff;
+                      return MaterialPageRoute(
+                        builder: (_) => DashboardPage(currentStaff: staff),
+                      );
+                    case '/jobs':
+                      final staff = settings.arguments as Staff;
+                      return MaterialPageRoute(
+                        builder: (_) => JobsPage(currentStaff: staff),
+                      );
+                    case '/leave':
+                      final staff = settings.arguments as Staff;
+                      return MaterialPageRoute(
+                        builder: (_) => LeavePage(currentStaff: staff),
+                      );
+                    case '/pinboard':
+                      final staff = settings.arguments as Staff;
+                      return MaterialPageRoute(
+                        builder: (_) => PinboardPage(currentStaff: staff),
+                      );
+                    case '/work-diary':
+                      final job = settings.arguments as Job;
+                      return MaterialPageRoute(
+                        builder: (_) => WorkDiaryListPage(job: job),
+                      );
+                    case '/phone-verification':
+                      final args = settings.arguments as Map<String, dynamic>;
+                      return MaterialPageRoute(
+                        builder: (_) => PhoneVerificationPage(
+                          deviceInfo: args['deviceInfo'] as DeviceInfo,
+                          staffId: args['staffId'] as int?,
+                        ),
+                      );
+                    case '/otp-verification':
+                      final args = settings.arguments as Map<String, dynamic>;
+                      return MaterialPageRoute(
+                        builder: (_) => BlocProvider(
+                          create: (_) => getIt<DeviceSecurityBloc>(),
+                          child: OtpVerificationPage(
+                            maskedPhone: args['maskedPhone'] as String,
+                            expiresInSeconds: args['expiresInSeconds'] as int,
+                            phoneNumber: args['phoneNumber'] as String?,
+                            fingerprint: args['fingerprint'] as String?,
+                          ),
+                        ),
+                      );
+                    default:
+                      return MaterialPageRoute(builder: (_) => const SplashPage());
+                  }
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

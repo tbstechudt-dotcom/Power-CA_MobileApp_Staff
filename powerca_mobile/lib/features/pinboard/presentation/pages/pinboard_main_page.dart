@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../app/theme.dart';
+import '../../../../core/providers/notification_provider.dart';
+import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../auth/domain/entities/staff.dart';
 import 'pinboard_detail_page.dart';
 
@@ -39,6 +43,44 @@ class _PinboardMainPageState extends State<PinboardMainPage>
         setState(() {}); // Refresh to show filtered reminders
       }
     });
+  }
+
+  /// Check for new pinboard items and trigger notifications
+  Future<void> _checkNewPinboardItems(List<Map<String, dynamic>> reminders) async {
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+
+    // Skip if notifications are disabled
+    if (!notificationProvider.pinboardNotificationsEnabled) return;
+
+    final lastCheckTimestamp = notificationProvider.lastPinboardCheckTimestamp;
+    final dateFormat = DateFormat('dd MMM yyyy');
+
+    // If no previous check, just update timestamp and return (first time setup)
+    if (lastCheckTimestamp == null) {
+      await notificationProvider.updatePinboardCheckTimestamp();
+      return;
+    }
+
+    // Find reminders created after the last check
+    for (final reminder in reminders) {
+      final remDate = reminder['remdate'] as DateTime?;
+      final remDueDate = reminder['remduedate'] as DateTime?;
+
+      // Use remdate as the creation indicator (when the reminder was assigned)
+      if (remDate != null && remDate.isAfter(lastCheckTimestamp)) {
+        final displayDate = remDueDate ?? remDate;
+
+        await NotificationService().showPinboardNotification(
+          remId: reminder['rem_id'] as String,
+          title: reminder['remtitle'] as String,
+          clientName: reminder['clientName'] as String,
+          dueDate: dateFormat.format(displayDate),
+        );
+      }
+    }
+
+    // Update the last check timestamp
+    await notificationProvider.updatePinboardCheckTimestamp();
   }
 
   Future<void> _loadReminders() async {
@@ -107,12 +149,15 @@ class _PinboardMainPageState extends State<PinboardMainPage>
         };
       }).toList();
 
+      // Check for new reminders and trigger notifications
+      await _checkNewPinboardItems(reminders);
+
       setState(() {
         _reminders = reminders;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading reminders: $e');
+      debugPrint('Error loading reminders: $e');
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
@@ -203,12 +248,20 @@ class _PinboardMainPageState extends State<PinboardMainPage>
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final searchBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final searchFieldColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
+    final searchHintColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final tabBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final unselectedTabColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+
     return Column(
       children: [
         // Search Bar
         Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-          color: Colors.white,
+          color: searchBgColor,
           child: TextField(
             controller: _searchController,
             onChanged: (value) {
@@ -221,16 +274,16 @@ class _PinboardMainPageState extends State<PinboardMainPage>
               hintStyle: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 13.sp,
-                color: const Color(0xFF9CA3AF),
+                color: searchHintColor,
               ),
               prefixIcon: Icon(
                 Icons.search,
                 size: 20.sp,
-                color: const Color(0xFF9CA3AF),
+                color: searchHintColor,
               ),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: Icon(Icons.clear, size: 18.sp, color: const Color(0xFF9CA3AF)),
+                      icon: Icon(Icons.clear, size: 18.sp, color: searchHintColor),
                       onPressed: () {
                         _searchController.clear();
                         setState(() {
@@ -240,7 +293,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                     )
                   : null,
               filled: true,
-              fillColor: const Color(0xFFF8F9FC),
+              fillColor: searchFieldColor,
               contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
@@ -250,18 +303,18 @@ class _PinboardMainPageState extends State<PinboardMainPage>
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13.sp,
-              color: const Color(0xFF1F2937),
+              color: searchTextColor,
             ),
           ),
         ),
 
         // Tab Bar
         Container(
-          color: Colors.white,
+          color: tabBgColor,
           child: TabBar(
             controller: _tabController,
             labelColor: AppTheme.primaryColor,
-            unselectedLabelColor: const Color(0xFF6B7280),
+            unselectedLabelColor: unselectedTabColor,
             indicatorColor: AppTheme.primaryColor,
             indicatorWeight: 3,
             dividerColor: Colors.transparent,
@@ -316,7 +369,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                           Text(
                             _errorMessage!,
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14.sp),
+                            style: TextStyle(fontSize: 14.sp, color: isDarkMode ? const Color(0xFFF1F5F9) : null),
                           ),
                           SizedBox(height: 16.h),
                           ElevatedButton.icon(
@@ -330,8 +383,8 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                   : TabBarView(
                       controller: _tabController,
                       children: [
-                        _buildReminderList(0), // Due Date
-                        _buildReminderList(1), // Meetings
+                        _buildReminderList(context, 0), // Due Date
+                        _buildReminderList(context, 1), // Meetings
                       ],
                     ),
         ),
@@ -339,9 +392,13 @@ class _PinboardMainPageState extends State<PinboardMainPage>
     );
   }
 
-  Widget _buildReminderList(int tabIndex) {
+  Widget _buildReminderList(BuildContext context, int tabIndex) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     final filteredReminders = _getFilteredReminders();
     final categoryColor = _getCategoryColor(tabIndex);
+    final emptyIconColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFE0E0E0);
+    final emptyTextColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
+    final emptySubTextColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
 
     if (filteredReminders.isEmpty) {
       return Center(
@@ -351,7 +408,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
             Icon(
               tabIndex == 0 ? Icons.event_available_rounded : Icons.event_busy_rounded,
               size: 64.sp,
-              color: const Color(0xFFE0E0E0),
+              color: emptyIconColor,
             ),
             SizedBox(height: 16.h),
             Text(
@@ -360,7 +417,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                 fontFamily: 'Inter',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF8F8E90),
+                color: emptyTextColor,
               ),
             ),
             SizedBox(height: 8.h),
@@ -370,7 +427,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                 fontFamily: 'Inter',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFFA8A8A8),
+                color: emptySubTextColor,
               ),
             ),
           ],
@@ -386,13 +443,24 @@ class _PinboardMainPageState extends State<PinboardMainPage>
         itemCount: filteredReminders.length,
         itemBuilder: (context, index) {
           final reminder = filteredReminders[index];
-          return _buildReminderCard(reminder, tabIndex, categoryColor);
+          return _buildReminderCard(context, reminder, tabIndex, categoryColor);
         },
       ),
     );
   }
 
-  Widget _buildReminderCard(Map<String, dynamic> reminder, int tabIndex, Color categoryColor) {
+  Widget _buildReminderCard(BuildContext context, Map<String, dynamic> reminder, int tabIndex, Color categoryColor) {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final notesColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
+    final notesIconColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
+    final clientColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final clientIconColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1);
+    final chevronColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1);
+    final daysUntilBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF5F7FA);
+    final daysUntilTextColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+
     final dateFormat = DateFormat('dd MMM yyyy');
 
     // Parse the date
@@ -421,11 +489,11 @@ class _PinboardMainPageState extends State<PinboardMainPage>
       child: Container(
         margin: EdgeInsets.only(bottom: 10.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBgColor,
           borderRadius: BorderRadius.circular(14.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -490,7 +558,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                             decoration: BoxDecoration(
                               color: isDueToday
                                   ? AppTheme.warningColor.withValues(alpha: 0.1)
-                                  : const Color(0xFFF5F7FA),
+                                  : daysUntilBgColor,
                               borderRadius: BorderRadius.circular(6.r),
                             ),
                             child: Text(
@@ -505,7 +573,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                                 fontWeight: FontWeight.w600,
                                 color: isDueToday
                                     ? AppTheme.warningColor
-                                    : const Color(0xFF6B7280),
+                                    : daysUntilTextColor,
                               ),
                             ),
                           ),
@@ -521,7 +589,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                           fontFamily: 'Inter',
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF080E29),
+                          color: titleColor,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -536,7 +604,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                           Icon(
                             Icons.notes_rounded,
                             size: 14.sp,
-                            color: const Color(0xFFA8A8A8),
+                            color: notesIconColor,
                           ),
                           SizedBox(width: 6.w),
                           Expanded(
@@ -546,7 +614,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                                 fontFamily: 'Inter',
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w400,
-                                color: const Color(0xFF8F8E90),
+                                color: notesColor,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -567,7 +635,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                                 Icon(
                                   Icons.business_rounded,
                                   size: 12.sp,
-                                  color: const Color(0xFFCBD5E1),
+                                  color: clientIconColor,
                                 ),
                                 SizedBox(width: 4.w),
                                 Expanded(
@@ -577,7 +645,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                                       fontFamily: 'Inter',
                                       fontSize: 11.sp,
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF6B7280),
+                                      color: clientColor,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -618,7 +686,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                 child: Icon(
                   Icons.chevron_right_rounded,
                   size: 20.sp,
-                  color: const Color(0xFFCBD5E1),
+                  color: chevronColor,
                 ),
               ),
             ],
