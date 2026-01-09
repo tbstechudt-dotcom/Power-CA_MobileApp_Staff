@@ -70,11 +70,12 @@ jobs:
         run: |
           echo "Syncing version $VERSION_NAME (code: $VERSION_CODE) to Supabase..."
 
+          # Use UPSERT to handle duplicates (update if version_code exists)
           curl -X POST "$SUPABASE_URL/rest/v1/app_versions" \
             -H "apikey: $SUPABASE_SERVICE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
             -H "Content-Type: application/json" \
-            -H "Prefer: return=minimal" \
+            -H "Prefer: resolution=merge-duplicates" \
             -d "{
               \"version_name\": \"$VERSION_NAME\",
               \"version_code\": $VERSION_CODE,
