@@ -9,6 +9,7 @@ import '../../features/auth/domain/entities/staff.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/settings/presentation/pages/app_update_page.dart';
+import '../../features/settings/presentation/pages/help_support_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 
 /// Professional drawer menu that slides from left to right
@@ -100,8 +101,7 @@ class _AppDrawerState extends State<AppDrawer> {
                     context,
                     icon: Icons.help_outline_rounded,
                     title: 'Help & Support',
-                    onTap: () {},
-                    isDisabled: true,
+                    onTap: () => _handleMenuTap(context, 'HelpSupport'),
                   ),
                 ],
               ),
@@ -379,6 +379,14 @@ class _AppDrawerState extends State<AppDrawer> {
         context,
         MaterialPageRoute(
           builder: (context) => const AppUpdatePage(),
+        ),
+      );
+    } else if (title == 'HelpSupport') {
+      // Navigate to Help & Support page
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HelpSupportPage(),
         ),
       );
     }
