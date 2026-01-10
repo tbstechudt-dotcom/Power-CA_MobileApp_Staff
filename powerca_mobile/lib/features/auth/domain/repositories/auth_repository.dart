@@ -29,4 +29,27 @@ abstract class AuthRepository {
 
   /// Clear staff session
   Future<Either<Failure, void>> clearStaffSession();
+
+  /// Validate if current session is still active on this device
+  /// Returns error message if session was invalidated by another device login
+  Future<String?> validateSession();
+
+  /// Check if there's an existing session for a staff on another device
+  /// Returns session info if exists, null otherwise
+  Future<Map<String, dynamic>?> checkExistingSession(int staffId);
+
+  /// Create a login request for permission-based authentication
+  /// Returns the request ID if created
+  Future<int?> createLoginRequest(int staffId);
+
+  /// Wait for login request approval from the other device
+  /// Returns: 'approved', 'denied', 'expired', or 'error'
+  Future<String> waitForLoginApproval(int requestId);
+
+  /// Cancel a pending login request
+  Future<void> cancelLoginRequest(int requestId);
+
+  /// Register this device as the active session for the staff
+  /// Call this AFTER successful authentication and permission approval (if needed)
+  Future<bool> registerDeviceSession(int staffId);
 }
