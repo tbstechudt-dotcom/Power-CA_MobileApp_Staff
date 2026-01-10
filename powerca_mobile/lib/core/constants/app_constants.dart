@@ -2,7 +2,7 @@
 class AppConstants {
   static const String appName = 'PowerCA';
   static const String appTagline = 'Auditor WorkLog';
-  static const String appVersion = '1.0.6';
+  static const String appVersion = '1.0.7';
 
   // Pagination
   static const int defaultPageSize = 20;
