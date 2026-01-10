@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
 import '../../../device_security/domain/repositories/device_security_repository.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -36,9 +37,15 @@ class _SignInPageContentState extends State<_SignInPageContent> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isProcessingPermission = false;
+  int? _pendingLoginRequestId;
 
   @override
   void dispose() {
+    // Cancel any pending login request
+    if (_pendingLoginRequestId != null) {
+      getIt<AuthRepository>().cancelLoginRequest(_pendingLoginRequestId!);
+    }
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -56,6 +63,158 @@ class _SignInPageContentState extends State<_SignInPageContent> {
             password: _passwordController.text,
           ),
         );
+  }
+
+  /// Handle permission-based login when another device is already logged in
+  Future<bool> _handlePermissionBasedLogin(
+    BuildContext context,
+    Authenticated state,
+  ) async {
+    final authRepository = getIt<AuthRepository>();
+
+    // Check if there's an existing session on another device
+    final existingSession = await authRepository.checkExistingSession(state.staff.staffId);
+
+    if (existingSession == null) {
+      // No existing session - register this device and proceed
+      await authRepository.registerDeviceSession(state.staff.staffId);
+      return true;
+    }
+
+    // Another device is logged in - need to request permission
+    final otherDeviceName = existingSession['device_name'] as String? ?? 'another device';
+
+    if (!context.mounted) return false;
+
+    // Show waiting dialog
+    setState(() {
+      _isProcessingPermission = true;
+    });
+
+    // Create login request
+    final requestId = await authRepository.createLoginRequest(state.staff.staffId);
+
+    if (requestId == null) {
+      if (!context.mounted) return false;
+      setState(() {
+        _isProcessingPermission = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to request login permission. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
+    _pendingLoginRequestId = requestId;
+
+    if (!context.mounted) return false;
+
+    // Show waiting dialog to user
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Waiting for Approval'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Your account is currently logged in on $otherDeviceName.\n\n'
+              'A login request has been sent to that device. '
+              'Please approve the request on the other device to continue.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This request will expire in 2 minutes.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Cancel the request
+              authRepository.cancelLoginRequest(requestId);
+              _pendingLoginRequestId = null;
+              Navigator.of(dialogContext).pop();
+              setState(() {
+                _isProcessingPermission = false;
+              });
+            },
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    // Wait for approval
+    final result = await authRepository.waitForLoginApproval(requestId);
+    _pendingLoginRequestId = null;
+
+    if (!context.mounted) return false;
+
+    // Close waiting dialog
+    Navigator.of(context).pop();
+
+    setState(() {
+      _isProcessingPermission = false;
+    });
+
+    switch (result) {
+      case 'approved':
+        // Register this device as active session
+        await authRepository.registerDeviceSession(state.staff.staffId);
+        if (!context.mounted) return false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login approved! Proceeding...'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+        return true;
+
+      case 'denied':
+        if (!context.mounted) return false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login denied by $otherDeviceName.'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return false;
+
+      case 'expired':
+        if (!context.mounted) return false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login request expired. Please try again.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return false;
+
+      default:
+        if (!context.mounted) return false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+    }
   }
 
   /// Check if logged-in staff matches the locally verified staff
@@ -151,7 +310,17 @@ class _SignInPageContentState extends State<_SignInPageContent> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) async {
         if (state is Authenticated) {
-          // Simplified phone-based verification (no fingerprint)
+          // Step 1: Handle permission-based login (check for existing sessions)
+          final permissionGranted = await _handlePermissionBasedLogin(context, state);
+
+          if (!permissionGranted) {
+            // Permission denied or failed - stay on login page
+            return;
+          }
+
+          if (!context.mounted) return;
+
+          // Step 2: Simplified phone-based verification (no fingerprint)
           final securityRepository = getIt<DeviceSecurityRepository>();
           await _checkPhoneVerification(context, state, securityRepository);
         } else if (state is AuthError) {
@@ -165,7 +334,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
         }
       },
       builder: (context, state) {
-        final isLoading = state is AuthLoading;
+        final isLoading = state is AuthLoading || _isProcessingPermission;
 
         return Scaffold(
           backgroundColor: const Color(0xFFF8F9FC), // Background color from Figma
