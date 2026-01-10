@@ -6,10 +6,13 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/config/injection.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/services/app_update_service.dart';
+import '../../../../core/services/session_service.dart';
 import '../../../../shared/widgets/update_dialog.dart';
 import '../../../auth/domain/entities/staff.dart';
+import '../../../auth/domain/repositories/auth_repository.dart';
 import '../widgets/modern_work_calendar.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
@@ -28,20 +31,349 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserver {
   final supabase = Supabase.instance.client;
+  final _sessionService = SessionService();
 
   double _hoursLoggedToday = 0.0;
   double _hoursLoggedThisWeek = 0.0;
   double _totalMonthHours = 0.0;
   int _daysActive = 0;
   bool _isLoading = true;
+  bool _isCheckingSession = false;
+  bool _isSessionDialogShowing = false;
+  bool _isLoginRequestDialogShowing = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchDashboardStats();
     _checkForAppUpdate();
+    // Check session validity on first load
+    _validateSession();
+    // Start real-time session listener for instant alerts
+    _startSessionListener();
+    // Start listening for login requests from other devices
+    _startLoginRequestListener();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _sessionService.stopSessionListener();
+    _sessionService.stopLoginRequestListener();
+    super.dispose();
+  }
+
+  /// Start listening for real-time session changes
+  /// When another device logs in, we get an instant alert
+  void _startSessionListener() {
+    _sessionService.startSessionListener(
+      staffId: widget.currentStaff.staffId,
+      onSessionInvalidated: (deviceName, message) {
+        debugPrint('Dashboard: Session invalidated by $deviceName');
+        if (mounted && !_isSessionDialogShowing) {
+          _showSessionExpiredDialog(message);
+        }
+      },
+    );
+  }
+
+  /// Start listening for login requests from other devices
+  /// Shows a permission dialog when another device wants to login
+  void _startLoginRequestListener() {
+    _sessionService.startLoginRequestListener(
+      staffId: widget.currentStaff.staffId,
+      onLoginRequest: (requestId, deviceName) {
+        debugPrint('Dashboard: Login request from $deviceName (ID: $requestId)');
+        if (mounted && !_isLoginRequestDialogShowing) {
+          _showLoginRequestDialog(requestId, deviceName);
+        }
+      },
+    );
+  }
+
+  /// Show dialog when another device requests permission to login
+  void _showLoginRequestDialog(int requestId, String deviceName) {
+    if (_isLoginRequestDialogShowing) return;
+    _isLoginRequestDialogShowing = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 40.w,
+              height: 40.h,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.phone_android_rounded,
+                  size: 20.sp,
+                  color: const Color(0xFFF59E0B),
+                ),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Text(
+                'Login Request',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$deviceName is trying to sign in to your account.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF6B7280),
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'If you allow, you will be logged out from this device.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFFDC2626),
+              ),
+            ),
+          ],
+        ),
+        actionsPadding: EdgeInsets.all(16.w),
+        actions: [
+          Row(
+            children: [
+              // Deny Button
+              Expanded(
+                child: TextButton(
+                  onPressed: () async {
+                    Navigator.pop(dialogContext);
+                    _isLoginRequestDialogShowing = false;
+                    // Deny the request
+                    await _sessionService.denyLoginRequest(requestId);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Login request denied'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                  ),
+                  child: Text(
+                    'Deny',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF6B7280),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              // Allow Button
+              Expanded(
+                child: TextButton(
+                  onPressed: () async {
+                    Navigator.pop(dialogContext);
+                    _isLoginRequestDialogShowing = false;
+                    // Approve the request
+                    await _sessionService.approveLoginRequest(requestId);
+                    // Now logout this device
+                    if (mounted) {
+                      _showSessionExpiredDialog(
+                        'You approved login on $deviceName. You have been logged out.',
+                      );
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    backgroundColor: const Color(0xFF10B981),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                  child: Text(
+                    'Allow',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Check session when app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      _validateSession();
+    }
+  }
+
+  /// Validate if current session is still active
+  /// If another device logged in, this session becomes invalid
+  Future<void> _validateSession() async {
+    if (_isCheckingSession) return;
+    _isCheckingSession = true;
+
+    try {
+      final authRepository = getIt<AuthRepository>();
+      final errorMessage = await authRepository.validateSession();
+
+      if (errorMessage != null && mounted) {
+        // Session was invalidated by another device
+        _showSessionExpiredDialog(errorMessage);
+      }
+    } catch (e) {
+      debugPrint('Error validating session: $e');
+    } finally {
+      _isCheckingSession = false;
+    }
+  }
+
+  /// Show dialog when session is expired/invalidated
+  void _showSessionExpiredDialog(String message) {
+    // Prevent multiple dialogs
+    if (_isSessionDialogShowing) return;
+    _isSessionDialogShowing = true;
+
+    // Stop the real-time listeners since we're logging out
+    _sessionService.stopSessionListener();
+    _sessionService.stopLoginRequestListener();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 40.w,
+              height: 40.h,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.devices_other_rounded,
+                  size: 20.sp,
+                  color: const Color(0xFFDC2626),
+                ),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Text(
+                'Signed In Elsewhere',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w400,
+            color: const Color(0xFF6B7280),
+          ),
+        ),
+        actionsPadding: EdgeInsets.all(16.w),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                _isSessionDialogShowing = false;
+                // Clear local session and navigate to splash
+                try {
+                  final authRepository = getIt<AuthRepository>();
+                  await authRepository.clearStaffSession();
+                } catch (e) {
+                  debugPrint('Error clearing session: $e');
+                }
+                if (mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/splash',
+                    (route) => false,
+                  );
+                }
+              },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                backgroundColor: const Color(0xFF2563EB),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+              ),
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Check for app updates on dashboard load
@@ -86,7 +418,7 @@ class _DashboardPageState extends State<DashboardPage> {
       // Calculate start of this week (Monday)
       final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
       final startOfWeekStr = DateFormat('yyyy-MM-dd').format(
-        DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day)
+        DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day),
       );
 
       // Calculate start of this month

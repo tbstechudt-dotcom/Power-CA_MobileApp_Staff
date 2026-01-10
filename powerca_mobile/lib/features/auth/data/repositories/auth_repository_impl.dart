@@ -1,5 +1,7 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/services/session_service.dart';
 import '../../domain/entities/staff.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
@@ -18,6 +20,8 @@ class AuthRepositoryImpl implements AuthRepository {
     required this.localDataSource,
   });
 
+  final _sessionService = SessionService();
+
   @override
   Future<Either<Failure, Staff>> signIn({
     required String username,
@@ -32,6 +36,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
       // Cache the authenticated staff
       await localDataSource.cacheStaff(staffModel);
+
+      // NOTE: Session registration is now separate via registerDeviceSession()
+      // This allows for permission-based login where existing device must approve
+      debugPrint('AuthRepository: Staff authenticated - ${staffModel.staffId}');
 
       // Return the staff entity
       return Right(staffModel.toEntity());
@@ -60,11 +68,33 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, void>> signOut() async {
     try {
+      // Get current staff to clear their session
+      final cachedStaff = await localDataSource.getCachedStaff();
+      if (cachedStaff != null) {
+        await _sessionService.clearSession(cachedStaff.staffId);
+        debugPrint('AuthRepository: Session cleared for staff ${cachedStaff.staffId}');
+      }
+
       // Clear cached staff data
       await localDataSource.clearCachedStaff();
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  /// Validate if current session is still active on this device
+  /// Returns error message if session was invalidated by another device login
+  @override
+  Future<String?> validateSession() async {
+    try {
+      final cachedStaff = await localDataSource.getCachedStaff();
+      if (cachedStaff == null) return null;
+
+      return await _sessionService.validateSession(cachedStaff.staffId);
+    } catch (e) {
+      debugPrint('AuthRepository: Error validating session: $e');
+      return null;
     }
   }
 
@@ -111,6 +141,58 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> checkExistingSession(int staffId) async {
+    try {
+      return await _sessionService.checkExistingSession(staffId);
+    } catch (e) {
+      debugPrint('AuthRepository: Error checking existing session: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<int?> createLoginRequest(int staffId) async {
+    try {
+      return await _sessionService.createLoginRequest(staffId);
+    } catch (e) {
+      debugPrint('AuthRepository: Error creating login request: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<String> waitForLoginApproval(int requestId) async {
+    try {
+      final result = await _sessionService.waitForLoginApproval(requestId);
+      return result.name; // Returns 'approved', 'denied', 'expired', or 'error'
+    } catch (e) {
+      debugPrint('AuthRepository: Error waiting for approval: $e');
+      return 'error';
+    }
+  }
+
+  @override
+  Future<void> cancelLoginRequest(int requestId) async {
+    try {
+      await _sessionService.cancelLoginRequest(requestId);
+    } catch (e) {
+      debugPrint('AuthRepository: Error canceling login request: $e');
+    }
+  }
+
+  @override
+  Future<bool> registerDeviceSession(int staffId) async {
+    try {
+      final result = await _sessionService.registerSession(staffId);
+      debugPrint('AuthRepository: Device session registered for staff $staffId: $result');
+      return result;
+    } catch (e) {
+      debugPrint('AuthRepository: Error registering device session: $e');
+      return false;
     }
   }
 }
