@@ -74,6 +74,9 @@ class StorageConstants {
   static const String keyLastKnownLeaveStatuses = 'last_known_leave_statuses';
   static const String keyLastPinboardCheckTimestamp = 'last_pinboard_check_timestamp';
 
+  // Work Hours Settings Keys
+  static const String keyDefaultWorkHoursMode = 'default_work_hours_mode';
+
   // Cache Keys
   static const String cacheKeyJobs = 'cache_jobs';
   static const String cacheKeyClients = 'cache_clients';
