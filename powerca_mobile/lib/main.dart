@@ -12,6 +12,7 @@ import 'core/config/injection.dart';
 import 'core/config/supabase_config.dart';
 import 'core/providers/notification_provider.dart';
 import 'core/providers/theme_provider.dart';
+import 'core/providers/work_hours_provider.dart';
 import 'core/services/notification_service.dart';
 import 'features/auth/domain/entities/staff.dart';
 import 'features/auth/presentation/pages/select_concern_location_page.dart';
@@ -219,6 +220,7 @@ class PowerCAApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => WorkHoursProvider()..initialize()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
