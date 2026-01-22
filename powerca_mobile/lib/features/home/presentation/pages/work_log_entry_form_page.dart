@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/providers/work_hours_provider.dart';
 import '../../../../core/services/priority_service.dart';
 import 'work_log_list_page.dart';
 
@@ -38,6 +39,8 @@ class WorkLogEntryFormPage extends StatefulWidget {
 class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
+  final _hoursController = TextEditingController();
+  final _minutesController = TextEditingController();
 
   DateTime? _selectedDate;
   TimeOfDay? _fromTime;
@@ -45,6 +48,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   int? _selectedClientId;
   int? _selectedJobId;
   int? _selectedTaskId;
+
+  // Work hours input mode: true = From/To Time, false = Hours/Minutes
+  bool _useTimeRangeMode = true;
 
   List<Map<String, dynamic>> _clients = [];
   List<Map<String, dynamic>> _allClients = []; // All clients for search in priority dialog
@@ -62,6 +68,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   List<Map<String, dynamic>> _allJobs = [];
   Set<int> _selectedPriorityJobIds = {};
 
+  bool _hasLoadedDefaultMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -70,8 +78,48 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load default work hours mode from settings (only once)
+    if (!_hasLoadedDefaultMode) {
+      final workHoursProvider = Provider.of<WorkHoursProvider>(context, listen: false);
+      if (workHoursProvider.isInitialized) {
+        _useTimeRangeMode = workHoursProvider.isFromToTimeDefault;
+        _hasLoadedDefaultMode = true;
+      } else {
+        // Listen for provider initialization
+        workHoursProvider.addListener(_onWorkHoursProviderChanged);
+      }
+    }
+  }
+
+  void _onWorkHoursProviderChanged() {
+    if (!_hasLoadedDefaultMode) {
+      final workHoursProvider = Provider.of<WorkHoursProvider>(context, listen: false);
+      if (workHoursProvider.isInitialized) {
+        setState(() {
+          _useTimeRangeMode = workHoursProvider.isFromToTimeDefault;
+          _hasLoadedDefaultMode = true;
+        });
+        workHoursProvider.removeListener(_onWorkHoursProviderChanged);
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    // Clean up listener if still attached
+    if (!_hasLoadedDefaultMode) {
+      try {
+        final workHoursProvider = Provider.of<WorkHoursProvider>(context, listen: false);
+        workHoursProvider.removeListener(_onWorkHoursProviderChanged);
+      } catch (_) {
+        // Context may not be valid during dispose
+      }
+    }
     _descriptionController.dispose();
+    _hoursController.dispose();
+    _minutesController.dispose();
     super.dispose();
   }
 
@@ -311,19 +359,49 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   double _calculateHours() {
-    if (_fromTime == null || _toTime == null) return 0.0;
+    if (_useTimeRangeMode) {
+      // From/To Time mode
+      if (_fromTime == null || _toTime == null) return 0.0;
 
-    final from = _fromTime!.hour + _fromTime!.minute / 60.0;
-    final to = _toTime!.hour + _toTime!.minute / 60.0;
+      final from = _fromTime!.hour + _fromTime!.minute / 60.0;
+      final to = _toTime!.hour + _toTime!.minute / 60.0;
 
-    // Handle overnight work (when toTime is past midnight)
-    if (to > from) {
-      return to - from;
-    } else if (to < from) {
-      // Overnight work: add 24 hours to toTime
-      return (24.0 - from) + to;
+      // Handle overnight work (when toTime is past midnight)
+      if (to > from) {
+        return to - from;
+      } else if (to < from) {
+        // Overnight work: add 24 hours to toTime
+        return (24.0 - from) + to;
+      } else {
+        return 0.0; // Same time = 0 hours
+      }
     } else {
-      return 0.0; // Same time = 0 hours
+      // Hours/Minutes direct input mode
+      final hours = int.tryParse(_hoursController.text) ?? 0;
+      final minutes = int.tryParse(_minutesController.text) ?? 0;
+      return hours + minutes / 60.0;
+    }
+  }
+
+  /// Get total minutes from current input mode
+  int _getTotalMinutes() {
+    if (_useTimeRangeMode) {
+      return (_calculateHours() * 60).round();
+    } else {
+      final hours = int.tryParse(_hoursController.text) ?? 0;
+      final minutes = int.tryParse(_minutesController.text) ?? 0;
+      return (hours * 60) + minutes;
+    }
+  }
+
+  /// Check if work hours are valid based on current input mode
+  bool _hasValidWorkHours() {
+    if (_useTimeRangeMode) {
+      return _fromTime != null && _toTime != null;
+    } else {
+      final hours = int.tryParse(_hoursController.text) ?? 0;
+      final minutes = int.tryParse(_minutesController.text) ?? 0;
+      return hours > 0 || minutes > 0;
     }
   }
 
@@ -421,9 +499,14 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       return;
     }
 
-    if (_fromTime == null || _toTime == null) {
+    // Validate work hours based on input mode
+    if (!_hasValidWorkHours()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select from and to times')),
+        SnackBar(
+          content: Text(_useTimeRangeMode
+              ? 'Please select from and to times'
+              : 'Please enter hours or minutes'),
+        ),
       );
       return;
     }
@@ -451,38 +534,41 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
     setState(() => _isSubmitting = true);
 
-    // Check for time overlap with existing entries
-    final overlap = await _checkTimeOverlap();
-    if (overlap != null) {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Time overlap! You already have an entry from ${overlap['fromTime']} to ${overlap['toTime']}',
+    // Check for time overlap with existing entries (only for time range mode)
+    if (_useTimeRangeMode) {
+      final overlap = await _checkTimeOverlap();
+      if (overlap != null) {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Time overlap! You already have an entry from ${overlap['fromTime']} to ${overlap['toTime']}',
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 4),
             ),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+          );
+        }
+        return;
       }
-      return;
     }
 
     try {
       final supabase = Supabase.instance.client;
-      final hours = _calculateHours();
-      final minutes = (hours * 60).round(); // Convert hours to minutes
+      final minutes = _getTotalMinutes();
 
       // IMPORTANT: workdiary columns are: date, minutes, tasknotes (NOT wd_date, actual_hrs, wd_notes)
       // Format times as TIME ONLY (HH:mm:ss) - timefrom/timeto columns are time type
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-      final fromTimeStr = _fromTime != null
-          ? '${_fromTime!.hour.toString().padLeft(2, '0')}:${_fromTime!.minute.toString().padLeft(2, '0')}:00'
-          : null;
-      final toTimeStr = _toTime != null
-          ? '${_toTime!.hour.toString().padLeft(2, '0')}:${_toTime!.minute.toString().padLeft(2, '0')}:00'
-          : null;
+
+      // Only set time strings if using time range mode
+      String? fromTimeStr;
+      String? toTimeStr;
+      if (_useTimeRangeMode && _fromTime != null && _toTime != null) {
+        fromTimeStr = '${_fromTime!.hour.toString().padLeft(2, '0')}:${_fromTime!.minute.toString().padLeft(2, '0')}:00';
+        toTimeStr = '${_toTime!.hour.toString().padLeft(2, '0')}:${_toTime!.minute.toString().padLeft(2, '0')}:00';
+      }
 
       await supabase.from('workdiary').insert({
         'staff_id': widget.staffId,
@@ -492,8 +578,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         'date': dateStr, // Column is 'date'
         'tasknotes': _descriptionController.text.trim(), // Column is 'tasknotes'
         'minutes': minutes, // Column is 'minutes' (integer)
-        'timefrom': fromTimeStr, // From time (full timestamp format)
-        'timeto': toTimeStr, // To time (full timestamp format)
+        'timefrom': fromTimeStr, // From time (null if using hours/minutes mode)
+        'timeto': toTimeStr, // To time (null if using hours/minutes mode)
         'source': 'M', // Mobile source
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
@@ -631,27 +717,46 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                     _buildDateSelector(),
                     SizedBox(height: 20.h),
 
-                    // Time Selectors
-                    _buildSectionTitle('Work Hours'),
+                    // Work Hours Section with Mode Toggle and Info Icon
+                    _buildWorkHoursSectionTitle(),
                     SizedBox(height: 8.h),
-                    Row(
-                      children: [
-                        Expanded(child: _buildTimeSelector(true)),
-                        SizedBox(width: 12.w),
-                        Expanded(child: _buildTimeSelector(false)),
-                      ],
-                    ),
-                    if (_fromTime != null && _toTime != null) ...[
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Total Hours: ${_formatMinutesToHours((_calculateHours() * 60).round())}',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.primaryColor,
-                        ),
+                    _buildWorkHoursModeToggle(),
+                    SizedBox(height: 12.h),
+                    // Show either Time Range or Hours/Minutes input based on mode
+                    if (_useTimeRangeMode) ...[
+                      Row(
+                        children: [
+                          Expanded(child: _buildTimeSelector(true)),
+                          SizedBox(width: 12.w),
+                          Expanded(child: _buildTimeSelector(false)),
+                        ],
                       ),
+                      if (_fromTime != null && _toTime != null) ...[
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Total Hours: ${_formatMinutesToHours(_getTotalMinutes())}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ] else ...[
+                      _buildHoursMinutesInput(),
+                      if (_hasValidWorkHours()) ...[
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Total Hours: ${_formatMinutesToHours(_getTotalMinutes())}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ],
                     ],
                     SizedBox(height: 20.h),
 
@@ -701,6 +806,50 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     );
   }
 
+  Widget _buildWorkHoursSectionTitle() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final iconColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+
+    return Row(
+      children: [
+        Text(
+          'Work Hours',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: titleColor,
+          ),
+        ),
+        SizedBox(width: 6.w),
+        Tooltip(
+          message: 'You can change the default\ninput method in Settings',
+          preferBelow: false,
+          verticalOffset: 20,
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFF1F2937),
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          textStyle: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w400,
+            color: Colors.white,
+          ),
+          triggerMode: TooltipTriggerMode.tap,
+          showDuration: const Duration(seconds: 3),
+          child: Icon(
+            Icons.info_outline_rounded,
+            size: 16.sp,
+            color: iconColor,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDateSelector() {
     final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
@@ -741,6 +890,255 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Build toggle for switching between Time Range and Hours/Minutes input modes
+  /// The default option (from settings) appears first
+  Widget _buildWorkHoursModeToggle() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final workHoursProvider = Provider.of<WorkHoursProvider>(context, listen: false);
+    final inactiveBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final inactiveTextColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF64748B);
+    final activeBgColor = AppTheme.primaryColor;
+    final activeTextColor = Colors.white;
+
+    // Check which mode is the default from settings
+    final isHoursMinutesDefault = workHoursProvider.isHoursMinutesDefault;
+
+    // Build From/To Time chip
+    Widget fromToChip = GestureDetector(
+      onTap: () {
+        setState(() {
+          _useTimeRangeMode = true;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: _useTimeRangeMode ? activeBgColor : inactiveBgColor,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(
+            color: _useTimeRangeMode ? activeBgColor : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.schedule,
+              size: 14.sp,
+              color: _useTimeRangeMode ? activeTextColor : inactiveTextColor,
+            ),
+            SizedBox(width: 6.w),
+            Text(
+              'From / To',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+                color: _useTimeRangeMode ? activeTextColor : inactiveTextColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Build Hours/Minutes chip
+    Widget hoursMinChip = GestureDetector(
+      onTap: () {
+        setState(() {
+          _useTimeRangeMode = false;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: !_useTimeRangeMode ? activeBgColor : inactiveBgColor,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(
+            color: !_useTimeRangeMode ? activeBgColor : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.timer_outlined,
+              size: 14.sp,
+              color: !_useTimeRangeMode ? activeTextColor : inactiveTextColor,
+            ),
+            SizedBox(width: 6.w),
+            Text(
+              'Hours / Min',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+                color: !_useTimeRangeMode ? activeTextColor : inactiveTextColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Order chips based on default setting - default option comes first
+    return Row(
+      children: isHoursMinutesDefault
+          ? [hoursMinChip, SizedBox(width: 10.w), fromToChip]
+          : [fromToChip, SizedBox(width: 10.w), hoursMinChip],
+    );
+  }
+
+  /// Build Hours and Minutes direct input fields - like From/To time style
+  Widget _buildHoursMinutesInput() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+    return Row(
+      children: [
+        // Hours input
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hours',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                  color: labelColor,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Theme(
+                data: Theme.of(context).copyWith(
+                  textSelectionTheme: TextSelectionThemeData(
+                    cursorColor: textColor,
+                    selectionColor: textColor.withValues(alpha: 0.2),
+                    selectionHandleColor: textColor,
+                  ),
+                ),
+                child: TextField(
+                  controller: _hoursController,
+                  keyboardType: TextInputType.number,
+                  cursorColor: textColor,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                    color: textColor,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    hintStyle: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: placeholderColor,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.schedule,
+                      size: 18.sp,
+                      color: AppTheme.primaryColor,
+                    ),
+                    filled: true,
+                    fillColor: fieldBgColor,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                      borderSide: BorderSide(color: fieldBorderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                      borderSide: BorderSide(color: AppTheme.primaryColor),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    isDense: true,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: 12.w),
+        // Minutes input
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Minutes',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                  color: labelColor,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Theme(
+                data: Theme.of(context).copyWith(
+                  textSelectionTheme: TextSelectionThemeData(
+                    cursorColor: textColor,
+                    selectionColor: textColor.withValues(alpha: 0.2),
+                    selectionHandleColor: textColor,
+                  ),
+                ),
+                child: TextField(
+                  controller: _minutesController,
+                  keyboardType: TextInputType.number,
+                  cursorColor: textColor,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                    color: textColor,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    hintStyle: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: placeholderColor,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.timer_outlined,
+                      size: 18.sp,
+                      color: AppTheme.primaryColor,
+                    ),
+                    filled: true,
+                    fillColor: fieldBgColor,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                      borderSide: BorderSide(color: fieldBorderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                      borderSide: BorderSide(color: AppTheme.primaryColor),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    isDense: true,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1697,12 +2095,12 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
-      height: 50.h,
       child: ElevatedButton(
         onPressed: _isSubmitting ? null : _submitForm,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
           disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
+          padding: EdgeInsets.symmetric(vertical: 14.h),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),
@@ -1724,6 +2122,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
+                  height: 1.2,
                 ),
               ),
       ),
@@ -2169,7 +2568,12 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                     ),
                     // Bottom action bar
                     Container(
-                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
+                      padding: EdgeInsets.fromLTRB(
+                        16.w,
+                        12.h,
+                        16.w,
+                        16.h + MediaQuery.of(context).padding.bottom,
+                      ),
                       decoration: BoxDecoration(
                         color: sheetBgColor,
                         border: Border(top: BorderSide(color: dividerColor!)),
@@ -2209,7 +2613,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10.r),
                                 ),
-                                padding: EdgeInsets.symmetric(vertical: 12.h),
+                                padding: EdgeInsets.symmetric(vertical: 14.h),
                                 elevation: 0,
                               ),
                               child: Text(
@@ -2219,6 +2623,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white,
+                                  height: 1.2,
                                 ),
                               ),
                             ),

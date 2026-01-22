@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/providers/work_hours_provider.dart';
 import '../../../../core/services/app_update_service.dart';
 
 /// Settings page with app preferences
@@ -156,6 +157,77 @@ class SettingsPage extends StatelessWidget {
 
             SizedBox(height: 24.h),
 
+            // Work Log Preferences Section
+            _buildSectionHeader('Work Log Preferences', titleColor),
+            SizedBox(height: 12.h),
+
+            Consumer<WorkHoursProvider>(
+              builder: (context, workHoursProvider, _) {
+                final isFromToDefault = workHoursProvider.isFromToTimeDefault;
+                final isHoursMinDefault = workHoursProvider.isHoursMinutesDefault;
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: borderColor, width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      // From/To Time Option
+                      _buildWorkHoursOption(
+                        icon: Icons.schedule,
+                        title: 'From / To Time',
+                        subtitle: 'Select start and end time',
+                        isSelected: isFromToDefault,
+                        titleColor: titleColor,
+                        subtitleColor: subtitleColor,
+                        iconColor: iconColor,
+                        onTap: () {
+                          workHoursProvider.setDefaultMode(WorkHoursMode.fromToTime);
+                        },
+                      ),
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: borderColor,
+                        indent: 70.w,
+                      ),
+                      // Hours/Minutes Option
+                      _buildWorkHoursOption(
+                        icon: Icons.timer_outlined,
+                        title: 'Hours / Minutes',
+                        subtitle: 'Enter duration directly',
+                        isSelected: isHoursMinDefault,
+                        titleColor: titleColor,
+                        subtitleColor: subtitleColor,
+                        iconColor: iconColor,
+                        onTap: () {
+                          workHoursProvider.setDefaultMode(WorkHoursMode.hoursMinutes);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+            // Hint text for the setting
+            Padding(
+              padding: EdgeInsets.only(left: 4.w, top: 8.h),
+              child: Text(
+                'Select your preferred default input method for work hours',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w400,
+                  color: subtitleColor,
+                ),
+              ),
+            ),
+
+            SizedBox(height: 24.h),
+
             // App Info Section
             _buildSectionHeader('About', titleColor),
             SizedBox(height: 12.h),
@@ -290,6 +362,108 @@ class SettingsPage extends StatelessWidget {
             indent: 70.w,
           ),
       ],
+    );
+  }
+
+  Widget _buildWorkHoursOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required Color titleColor,
+    required Color subtitleColor,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    final selectedColor = AppTheme.primaryColor;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        child: Row(
+          children: [
+            Container(
+              width: 40.w,
+              height: 40.h,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? selectedColor.withValues(alpha: 0.1)
+                    : iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Icon(
+                icon,
+                size: 20.sp,
+                color: isSelected ? selectedColor : iconColor,
+              ),
+            ),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w500,
+                          color: isSelected ? selectedColor : titleColor,
+                        ),
+                      ),
+                      if (isSelected) ...[
+                        SizedBox(width: 8.w),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: selectedColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                          child: Text(
+                            'Default',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                              color: selectedColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w400,
+                      color: subtitleColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Radio-style indicator
+            Container(
+              width: 22.w,
+              height: 22.h,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? selectedColor : iconColor,
+                  width: isSelected ? 6 : 2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
