@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -48,6 +49,10 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   int? _selectedClientId;
   int? _selectedJobId;
   int? _selectedTaskId;
+  String? _selectedRecurrent;
+
+  // Recurrent options
+  final List<String> _recurrentOptions = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
 
   // Work hours input mode: true = From/To Time, false = Hours/Minutes
   bool _useTimeRangeMode = true;
@@ -525,6 +530,13 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       return;
     }
 
+    if (_selectedRecurrent == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a recurrence')),
+      );
+      return;
+    }
+
     if (_selectedTaskId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a task')),
@@ -580,6 +592,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         'minutes': minutes, // Column is 'minutes' (integer)
         'timefrom': fromTimeStr, // From time (null if using hours/minutes mode)
         'timeto': toTimeStr, // To time (null if using hours/minutes mode)
+        'recurrent': _selectedRecurrent, // Recurrence: Daily, Weekly, Monthly, Yearly
         'source': 'M', // Mobile source
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
@@ -770,6 +783,12 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                     _buildSectionTitle('Select Job'),
                     SizedBox(height: 8.h),
                     _buildJobDropdown(),
+                    SizedBox(height: 20.h),
+
+                    // Recurrent Selector (Required)
+                    _buildSectionTitle('Recurrent'),
+                    SizedBox(height: 8.h),
+                    _buildRecurrentDropdown(),
                     SizedBox(height: 20.h),
 
                     // Task Selector (Required)
@@ -1034,6 +1053,11 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   controller: _hoursController,
                   keyboardType: TextInputType.number,
                   cursorColor: textColor,
+                  maxLength: 2,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    _RangeTextInputFormatter(min: 0, max: 12),
+                  ],
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 14.sp,
@@ -1042,6 +1066,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   ),
                   decoration: InputDecoration(
                     hintText: '0',
+                    counterText: '',
                     hintStyle: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 14.sp,
@@ -1100,6 +1125,11 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   controller: _minutesController,
                   keyboardType: TextInputType.number,
                   cursorColor: textColor,
+                  maxLength: 2,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    _RangeTextInputFormatter(min: 0, max: 59),
+                  ],
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 14.sp,
@@ -1108,6 +1138,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                   ),
                   decoration: InputDecoration(
                     hintText: '0',
+                    counterText: '',
                     hintStyle: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 14.sp,
@@ -1479,6 +1510,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
     final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
     final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+    final disabledBgColor = isDarkMode ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.grey[100];
+
+    final isEnabled = _selectedClientId != null;
 
     // Get jobs for the selected client from the pre-grouped structure
     final filteredJobs = _selectedClientId != null && _jobsByClient.containsKey(_selectedClientId)
@@ -1497,38 +1531,51 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       }
     }
 
-    return InkWell(
-      onTap: _selectedClientId == null || filteredJobs.isEmpty
-          ? null
-          : () => _showJobSearchDialog(filteredJobs),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        decoration: BoxDecoration(
-          color: fieldBgColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: fieldBorderColor),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                selectedJobDisplay ?? (filteredJobs.isEmpty ? 'No jobs available' : 'Select a job'),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w400,
-                  color: selectedJobDisplay != null ? textColor : placeholderColor,
+    // Determine hint text
+    String hintText;
+    if (!isEnabled) {
+      hintText = 'Select a client first';
+    } else if (filteredJobs.isEmpty) {
+      hintText = 'No jobs available';
+    } else {
+      hintText = 'Select a job';
+    }
+
+    return Opacity(
+      opacity: isEnabled ? 1.0 : 0.5,
+      child: InkWell(
+        onTap: !isEnabled || filteredJobs.isEmpty
+            ? null
+            : () => _showJobSearchDialog(filteredJobs),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          decoration: BoxDecoration(
+            color: isEnabled ? fieldBgColor : disabledBgColor,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: fieldBorderColor),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  selectedJobDisplay ?? hintText,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w400,
+                    color: selectedJobDisplay != null ? textColor : placeholderColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            Icon(
-              Icons.arrow_drop_down,
-              color: placeholderColor,
-              size: 24.sp,
-            ),
-          ],
+              Icon(
+                Icons.arrow_drop_down,
+                color: placeholderColor,
+                size: 24.sp,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1776,12 +1823,89 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     );
   }
 
+  Widget _buildRecurrentDropdown() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
+    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+    final disabledBgColor = isDarkMode ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.grey[100];
+
+    final isEnabled = _selectedJobId != null;
+
+    return Opacity(
+      opacity: isEnabled ? 1.0 : 0.5,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        decoration: BoxDecoration(
+          color: isEnabled ? fieldBgColor : disabledBgColor,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: fieldBorderColor),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: _selectedRecurrent,
+            hint: Text(
+              isEnabled ? 'Select recurrence' : 'Select a job first',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w400,
+                color: placeholderColor,
+              ),
+            ),
+            isExpanded: true,
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: placeholderColor,
+              size: 24.sp,
+            ),
+            dropdownColor: fieldBgColor,
+            borderRadius: BorderRadius.circular(12.r),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w400,
+              color: textColor,
+            ),
+            items: isEnabled
+                ? _recurrentOptions.map((String option) {
+                    return DropdownMenuItem<String>(
+                      value: option,
+                      child: Text(
+                        option,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w400,
+                          color: textColor,
+                        ),
+                      ),
+                    );
+                  }).toList()
+                : null,
+            onChanged: isEnabled
+                ? (String? newValue) {
+                    setState(() {
+                      _selectedRecurrent = newValue;
+                    });
+                  }
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTaskDropdown() {
     final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
     final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
     final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
     final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
+    final disabledBgColor = isDarkMode ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.grey[100];
+
+    final isEnabled = _selectedRecurrent != null;
 
     // Get selected task name for display
     String? selectedTaskName;
@@ -1793,36 +1917,49 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       selectedTaskName = selectedTask['task_desc'] as String?;
     }
 
-    return InkWell(
-      onTap: _selectedJobId == null || _tasks.isEmpty
-          ? null
-          : () => _showTaskSearchDialog(),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        decoration: BoxDecoration(
-          color: fieldBgColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: fieldBorderColor),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                selectedTaskName ?? (_tasks.isEmpty ? 'No tasks available' : 'Select a task'),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w400,
-                  color: selectedTaskName != null ? textColor : placeholderColor,
+    // Determine hint text
+    String hintText;
+    if (!isEnabled) {
+      hintText = 'Select a recurrence first';
+    } else if (_tasks.isEmpty) {
+      hintText = 'No tasks available';
+    } else {
+      hintText = 'Select a task';
+    }
+
+    return Opacity(
+      opacity: isEnabled ? 1.0 : 0.5,
+      child: InkWell(
+        onTap: !isEnabled || _tasks.isEmpty
+            ? null
+            : () => _showTaskSearchDialog(),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          decoration: BoxDecoration(
+            color: isEnabled ? fieldBgColor : disabledBgColor,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: fieldBorderColor),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  selectedTaskName ?? hintText,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w400,
+                    color: selectedTaskName != null ? textColor : placeholderColor,
+                  ),
                 ),
               ),
-            ),
-            Icon(
-              Icons.arrow_drop_down,
-              color: placeholderColor,
-              size: 24.sp,
-            ),
-          ],
+              Icon(
+                Icons.arrow_drop_down,
+                color: placeholderColor,
+                size: 24.sp,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2766,5 +2903,37 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         ),
       ),
     );
+  }
+}
+
+/// Custom TextInputFormatter that limits input to a range of values
+class _RangeTextInputFormatter extends TextInputFormatter {
+  final int min;
+  final int max;
+
+  _RangeTextInputFormatter({required this.min, required this.max});
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    final int? value = int.tryParse(newValue.text);
+    if (value == null) {
+      return oldValue;
+    }
+
+    if (value > max) {
+      return TextEditingValue(
+        text: max.toString(),
+        selection: TextSelection.collapsed(offset: max.toString().length),
+      );
+    }
+
+    return newValue;
   }
 }
