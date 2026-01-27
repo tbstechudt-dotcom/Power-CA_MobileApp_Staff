@@ -25,19 +25,41 @@ class SettingsPage extends StatelessWidget {
     final titleColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
     final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
     final iconColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final backBtnBgColor = isDark ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backBtnBorderColor = isDark ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final backBtnIconColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     return Scaffold(
       backgroundColor: headerColor,
       appBar: AppBar(
         backgroundColor: headerColor,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: titleColor,
-            size: 20.sp,
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: backBtnBgColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: backBtnBorderColor,
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: backBtnIconColor,
+                  ),
+                ),
+              ),
+            ),
           ),
-          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Settings',

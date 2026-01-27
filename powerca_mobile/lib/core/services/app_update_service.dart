@@ -49,8 +49,8 @@ class AppUpdateService {
   final _dio = Dio();
 
   // Current app version - UPDATE THIS when releasing new versions
-  static const String currentVersionName = '1.0.7';
-  static const int currentVersionCode = 7;
+  static const String currentVersionName = '1.0.8';
+  static const int currentVersionCode = 8;
 
   /// Check if a new version is available
   Future<AppVersionInfo?> checkForUpdate() async {
