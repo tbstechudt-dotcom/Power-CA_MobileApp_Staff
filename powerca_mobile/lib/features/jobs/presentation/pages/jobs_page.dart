@@ -134,12 +134,14 @@ class _JobsPageState extends State<JobsPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Fetch jobs for current staff (filtered by sporg_id which stores staff_id in jobshead)
+      // Fetch jobs for current staff's organization and location
+      // (sporg_id is not populated in synced data, so we filter by org_id and loc_id)
       // Exclude Closer jobs (status code 'C') - they should not appear in the app
       final jobsResponse = await supabase
           .from('jobshead')
           .select('job_id, job_uid, job_status, jobdate, targetdate, work_desc, client_id')
-          .eq('sporg_id', widget.currentStaff.staffId)
+          .eq('org_id', widget.currentStaff.orgId)
+          .eq('loc_id', widget.currentStaff.locId)
           .neq('job_status', 'C')
           .order('job_id', ascending: false);
 

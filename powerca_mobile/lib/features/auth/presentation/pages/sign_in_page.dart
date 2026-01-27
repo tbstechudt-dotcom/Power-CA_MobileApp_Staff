@@ -224,6 +224,30 @@ class _SignInPageContentState extends State<_SignInPageContent> {
     Authenticated state,
     DeviceSecurityRepository securityRepository,
   ) async {
+    // TEMPORARY: Bypass phone verification for testing
+    // TODO: Remove this bypass for production
+    debugPrint('=== BYPASSING Phone Verification for Testing ===');
+    debugPrint('Logged in staff ID: ${state.staff.staffId}');
+    debugPrint('Logged in staff name: ${state.staff.name}');
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Welcome, ${state.staff.name}!'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+    Navigator.pushReplacementNamed(
+      context,
+      '/select-concern-location',
+      arguments: state.staff,
+    );
+    return;
+
+    // ORIGINAL CODE BELOW - Uncomment for production
+    /*
     // Check if device has verified staff locally
     final isVerified = await securityRepository.isDeviceVerifiedLocally();
 
@@ -303,6 +327,7 @@ class _SignInPageContentState extends State<_SignInPageContent> {
       );
       // Don't navigate - stay on login page
     }
+    */
   }
 
   @override
