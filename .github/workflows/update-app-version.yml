@@ -16,7 +16,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
 
-          # Extract version code (e.g., 1.0.8 -> 8, assumes patch version is the code)
+          # Extract version code from patch number (e.g., 1.0.8 -> 8)
           VERSION_CODE=$(echo "$VERSION" | cut -d. -f3)
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
 
