@@ -341,8 +341,18 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
       setState(() {
         _recurrentPeriods = loadedPeriods;
-        _selectedRecurrent = null;
-        _selectedRecperId = null;
+
+        // Auto-select if there's exactly one recurrent period
+        if (loadedPeriods.length == 1) {
+          final period = loadedPeriods.first;
+          // Use recper_id as string (matches dropdown item value)
+          _selectedRecurrent = period['recper_id']?.toString();
+          _selectedRecperId = period['recper_id'] as int?;
+        } else {
+          // Multiple options or none - leave for user to select
+          _selectedRecurrent = null;
+          _selectedRecperId = null;
+        }
       });
     } catch (e) {
       if (mounted) {
