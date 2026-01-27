@@ -1,0 +1,60 @@
+name: Update App Version in Supabase
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-supabase:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract version from release tag
+        id: version
+        run: |
+          # Extract version from tag (e.g., v1.0.8 -> 1.0.8)
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
+
+          # Extract version code (e.g., 1.0.8 -> 8, assumes patch version is the code)
+          VERSION_CODE=$(echo "$VERSION" | cut -d. -f3)
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+
+          echo "Extracted version: $VERSION (code: $VERSION_CODE)"
+
+      - name: Update Supabase app_versions table
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Build the download URL from the release
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/app-release.apk"
+
+          # Get release notes from the release body
+          RELEASE_NOTES="${{ github.event.release.body }}"
+          if [ -z "$RELEASE_NOTES" ]; then
+            RELEASE_NOTES="Version ${{ steps.version.outputs.version_name }}"
+          fi
+
+          # Escape special characters for JSON
+          RELEASE_NOTES=$(echo "$RELEASE_NOTES" | jq -Rs '.')
+
+          echo "Inserting version ${{ steps.version.outputs.version_name }} (code: ${{ steps.version.outputs.version_code }})"
+          echo "Download URL: $DOWNLOAD_URL"
+
+          # Insert new version into Supabase
+          curl -X POST "$SUPABASE_URL/rest/v1/app_versions" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d "{
+              \"version_name\": \"${{ steps.version.outputs.version_name }}\",
+              \"version_code\": ${{ steps.version.outputs.version_code }},
+              \"download_url\": \"$DOWNLOAD_URL\",
+              \"release_notes\": $RELEASE_NOTES,
+              \"is_force_update\": false
+            }"
+
+          echo ""
+          echo "Successfully updated app_versions table!"
