@@ -50,9 +50,13 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   int? _selectedJobId;
   int? _selectedTaskId;
   String? _selectedRecurrent;
+  int? _selectedRecperId; // recper_id from mbrecurrent_periods table
 
-  // Recurrent options
-  final List<String> _recurrentOptions = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
+  // Recurrent options loaded from database
+  List<Map<String, dynamic>> _recurrentPeriods = [];
+
+  // Staff's con_id (from mbstaff table, NOT from job)
+  int? _staffConId;
 
   // Work hours input mode: true = From/To Time, false = Hours/Minutes
   bool _useTimeRangeMode = true;
@@ -139,14 +143,23 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       _priorityJobIds = priorityJobIds;
       _hasPriorities = priorityJobIds.isNotEmpty;
 
+      // STEP 0.5: Load staff's con_id from mbstaff (for workdiary insert)
+      final staffResponse = await supabase
+          .from('mbstaff')
+          .select('con_id')
+          .eq('staff_id', widget.staffId)
+          .maybeSingle();
+      if (staffResponse != null) {
+        _staffConId = staffResponse['con_id'] as int?;
+      }
+
       // STEP 1: Load jobs assigned to current staff from jobshead
       // Note: work_desc maps to job_name
-      // Filter by sporg_id to match jobs_page.dart behavior
+      // Load jobs from jobshead (sporg_id is not populated, so we don't filter by it)
       // Exclude Closer jobs (status code 'C') - they should not appear in the app
       final jobsResponse = await supabase
           .from('jobshead')
-          .select('job_id, job_uid, work_desc, client_id, job_status')
-          .eq('sporg_id', widget.staffId)
+          .select('job_id, job_uid, work_desc, client_id, job_status, org_id, loc_id, con_id')
           .neq('job_status', 'C')
           .order('work_desc')
           .limit(50000); // Increase limit to get all jobs
@@ -259,6 +272,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         _selectedJobId = widget.preSelectedJobId;
         // Load tasks for the pre-selected job
         await _loadTasksForJob(widget.preSelectedJobId!);
+        // Load recurrent periods for the pre-selected job
+        await _loadRecurrentPeriodsForJob(widget.preSelectedJobId!);
 
         // Handle task pre-selection if task was also passed (from Job Detail page)
         if (widget.preSelectedTaskId != null) {
@@ -304,6 +319,34 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading tasks: $e')),
+        );
+      }
+    }
+  }
+
+  /// Load recurrent periods for the selected job from mbrecurrent_periods table
+  Future<void> _loadRecurrentPeriodsForJob(int jobId) async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Load recurrent periods ONLY for this specific job_id
+      final recurrentResponse = await supabase
+          .from('mbrecurrent_periods')
+          .select('recper_id, recur_period, recper_order')
+          .eq('job_id', jobId)
+          .order('recper_order');
+
+      final loadedPeriods = List<Map<String, dynamic>>.from(recurrentResponse);
+
+      setState(() {
+        _recurrentPeriods = loadedPeriods;
+        _selectedRecurrent = null;
+        _selectedRecperId = null;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading recurrent periods: $e')),
         );
       }
     }
@@ -582,17 +625,30 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         toTimeStr = '${_toTime!.hour.toString().padLeft(2, '0')}:${_toTime!.minute.toString().padLeft(2, '0')}:00';
       }
 
+      // If recper_id is negative, it's a fallback option - save null
+      final recperId = (_selectedRecperId != null && _selectedRecperId! > 0)
+          ? _selectedRecperId
+          : null;
+
+      // Get org_id, loc_id from the selected job (con_id comes from staff)
+      final selectedJob = _jobsByClient[_selectedClientId]?[_selectedJobId];
+      final orgId = selectedJob?['org_id'];
+      final locId = selectedJob?['loc_id'];
+
       await supabase.from('workdiary').insert({
         'staff_id': widget.staffId,
         'job_id': _selectedJobId,
         'client_id': _selectedClientId,
         'task_id': _selectedTaskId,
+        'org_id': orgId, // From selected job
+        'loc_id': locId, // From selected job
+        'con_id': _staffConId, // From logged-in staff (mbstaff.con_id)
         'date': dateStr, // Column is 'date'
         'tasknotes': _descriptionController.text.trim(), // Column is 'tasknotes'
         'minutes': minutes, // Column is 'minutes' (integer)
         'timefrom': fromTimeStr, // From time (null if using hours/minutes mode)
         'timeto': toTimeStr, // To time (null if using hours/minutes mode)
-        'recurrent': _selectedRecurrent, // Recurrence: Daily, Weekly, Monthly, Yearly
+        'recper_id': recperId, // recper_id from mbrecurrent_periods table (null if fallback option)
         'source': 'M', // Mobile source
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
@@ -1757,10 +1813,14 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                     setState(() {
                                       _selectedJobId = jobId;
                                       _selectedTaskId = null;
+                                      _selectedRecurrent = null;
+                                      _selectedRecperId = null;
                                       _tasks = [];
+                                      _recurrentPeriods = [];
                                     });
                                     Navigator.pop(context);
                                     _loadTasksForJob(jobId);
+                                    _loadRecurrentPeriodsForJob(jobId);
                                   },
                                   child: Container(
                                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -1831,7 +1891,18 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
     final disabledBgColor = isDarkMode ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.grey[100];
 
-    final isEnabled = _selectedJobId != null;
+    // Enable dropdown only if job is selected and recurrent periods are loaded
+    final isEnabled = _selectedJobId != null && _recurrentPeriods.isNotEmpty;
+
+    // Determine hint text based on state
+    String hintText;
+    if (_selectedJobId == null) {
+      hintText = 'Select a job first';
+    } else if (_recurrentPeriods.isEmpty) {
+      hintText = 'No recurrent periods available';
+    } else {
+      hintText = 'Select recurrence';
+    }
 
     return Opacity(
       opacity: isEnabled ? 1.0 : 0.5,
@@ -1846,7 +1917,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
           child: DropdownButton<String>(
             value: _selectedRecurrent,
             hint: Text(
-              isEnabled ? 'Select recurrence' : 'Select a job first',
+              hintText,
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 14.sp,
@@ -1869,11 +1940,13 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               color: textColor,
             ),
             items: isEnabled
-                ? _recurrentOptions.map((String option) {
+                ? _recurrentPeriods.map((period) {
+                    final recperIdStr = period['recper_id'].toString();
+                    final recurPeriod = period['recur_period'] as String? ?? 'Unknown';
                     return DropdownMenuItem<String>(
-                      value: option,
+                      value: recperIdStr, // Use recper_id as value
                       child: Text(
-                        option,
+                        recurPeriod, // Display recur_period text
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 14.sp,
@@ -1888,6 +1961,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                 ? (String? newValue) {
                     setState(() {
                       _selectedRecurrent = newValue;
+                      // Store recper_id as integer
+                      _selectedRecperId = newValue != null ? int.tryParse(newValue) : null;
                     });
                   }
                 : null,
