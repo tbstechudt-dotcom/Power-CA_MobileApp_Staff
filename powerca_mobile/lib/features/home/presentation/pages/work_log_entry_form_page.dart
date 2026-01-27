@@ -40,6 +40,7 @@ class WorkLogEntryFormPage extends StatefulWidget {
 class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
+  final _descriptionScrollController = ScrollController();
   final _hoursController = TextEditingController();
   final _minutesController = TextEditingController();
 
@@ -853,8 +854,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                     _buildTaskDropdown(),
                     SizedBox(height: 20.h),
 
-                    // Work Description
-                    _buildSectionTitle('Work Description'),
+                    // Work Description with character counter
+                    _buildDescriptionSectionTitle(),
                     SizedBox(height: 8.h),
                     _buildDescriptionField(),
                     SizedBox(height: 32.h),
@@ -2259,6 +2260,37 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     );
   }
 
+  Widget _buildDescriptionSectionTitle() {
+    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
+    // Blue color for counter
+    const counterColor = Color(0xFF3B82F6);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Work Description',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: titleColor,
+          ),
+        ),
+        Text(
+          '${_descriptionController.text.length}/200',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w500,
+            color: counterColor,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDescriptionField() {
     final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
@@ -2272,34 +2304,46 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: fieldBorderColor),
       ),
-      child: TextFormField(
-        controller: _descriptionController,
-        maxLines: 5,
-        decoration: InputDecoration(
-          hintText: 'Describe the work performed...',
-          hintStyle: TextStyle(
+      child: Scrollbar(
+        controller: _descriptionScrollController,
+        thumbVisibility: false,
+        interactive: true,
+        thickness: 4,
+        radius: Radius.circular(4.r),
+        child: TextFormField(
+          controller: _descriptionController,
+          scrollController: _descriptionScrollController,
+          minLines: 4,
+          maxLines: 4,
+          maxLength: 200,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            hintText: 'Describe the work performed...',
+            hintStyle: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w400,
+              color: hintColor,
+            ),
+            filled: true,
+            fillColor: fieldBgColor,
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.all(16.w),
+            counterText: '', // Hide default counter
+          ),
+          style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 14.sp,
             fontWeight: FontWeight.w400,
-            color: hintColor,
+            color: textColor,
           ),
-          filled: true,
-          fillColor: fieldBgColor,
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(16.w),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter a work description';
+            }
+            return null;
+          },
         ),
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 14.sp,
-          fontWeight: FontWeight.w400,
-          color: textColor,
-        ),
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'Please enter a work description';
-          }
-          return null;
-        },
       ),
     );
   }
