@@ -75,19 +75,41 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
     final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
     final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
     final borderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final backBtnBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
+    final backBtnBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final backBtnIconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: cardColor,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_rounded,
-            color: textColor,
-            size: 20.sp,
+        leading: Padding(
+          padding: EdgeInsets.only(left: 8.w),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 42.w,
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: backBtnBgColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: backBtnBorderColor,
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18.sp,
+                    color: backBtnIconColor,
+                  ),
+                ),
+              ),
+            ),
           ),
-          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'App Update',

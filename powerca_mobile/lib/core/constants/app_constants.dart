@@ -2,7 +2,7 @@
 class AppConstants {
   static const String appName = 'PowerCA';
   static const String appTagline = 'Auditor WorkLog';
-  static const String appVersion = '1.0.7';
+  static const String appVersion = '1.0.8';
 
   // Pagination
   static const int defaultPageSize = 20;
@@ -73,6 +73,9 @@ class StorageConstants {
   static const String keyPinboardNotificationsEnabled = 'pinboard_notifications_enabled';
   static const String keyLastKnownLeaveStatuses = 'last_known_leave_statuses';
   static const String keyLastPinboardCheckTimestamp = 'last_pinboard_check_timestamp';
+
+  // Work Hours Settings Keys
+  static const String keyDefaultWorkHoursMode = 'default_work_hours_mode';
 
   // Cache Keys
   static const String cacheKeyJobs = 'cache_jobs';
