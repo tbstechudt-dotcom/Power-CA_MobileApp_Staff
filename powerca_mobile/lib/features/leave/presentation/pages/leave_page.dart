@@ -13,7 +13,6 @@ import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
 import '../../../auth/domain/entities/staff.dart';
-import 'leave_detail_page.dart';
 import 'apply_leave_page.dart';
 import 'leave_filtered_page.dart';
 
@@ -39,6 +38,7 @@ class _LeavePageState extends State<LeavePage> {
   double _usedLeaves = 0;
   double _lopDays = 0; // Loss of Pay days (when used > earned)
   double _currentMonthELUsed = 0; // EL days used in current month
+  // ignore: unused_field
   int _pendingRequests = 0; // Number of pending leave requests
   bool _allELUsed = false; // Track if all available EL is used
 
@@ -666,19 +666,6 @@ class _LeavePageState extends State<LeavePage> {
           currentStaff: widget.currentStaff,
           existingLeaveRequests: _leaveRequests,
           onLeaveCreated: () {
-            _loadLeaveRequests();
-          },
-        ),
-      ),
-    );
-  }
-
-  void _navigateToLeaveDetail(Map<String, dynamic> leave) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => LeaveDetailPage(
-          leave: leave,
-          onDeleted: () {
             _loadLeaveRequests();
           },
         ),

@@ -208,32 +208,6 @@ class _JobDetailPageState extends State<JobDetailPage>
     super.dispose();
   }
 
-  Color _getTaskStatusColor(String status) {
-    switch (status) {
-      case 'C':
-        return const Color(0xFF10B981); // Completed - green
-      case 'P':
-        return const Color(0xFFF59E0B); // Pending - orange
-      case 'W':
-        return const Color(0xFF3B82F6); // Working - blue
-      default:
-        return const Color(0xFF6B7280); // Default - gray
-    }
-  }
-
-  String _getTaskStatusText(String status) {
-    switch (status) {
-      case 'C':
-        return 'Completed';
-      case 'P':
-        return 'Pending';
-      case 'W':
-        return 'In Progress';
-      default:
-        return 'Unknown';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
