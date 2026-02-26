@@ -750,20 +750,4 @@ class _WorkLogChecklistPageState extends State<WorkLogChecklistPage> {
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
-      case 'done':
-        return const Color(0xFF4CAF50);
-      case 'in progress':
-      case 'ongoing':
-        return const Color(0xFF2196F3);
-      case 'pending':
-        return const Color(0xFFFFA726);
-      case 'on hold':
-        return const Color(0xFF9E9E9E);
-      default:
-        return const Color(0xFF6B7280);
-    }
-  }
 }

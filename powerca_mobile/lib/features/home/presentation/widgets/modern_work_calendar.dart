@@ -28,15 +28,37 @@ class ModernWorkCalendar extends StatefulWidget {
 class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
   Map<DateTime, int> _workDays = {};
   Map<DateTime, List<Map<String, dynamic>>> _workEntriesByDate = {};
+  // ignore: unused_field
   List<Map<String, dynamic>> _allWorkEntries = [];
   bool _isLoading = true;
   String? _errorMessage;
   EventList<Event> _markedDateMap = EventList<Event>(events: {});
+  int _holidaysInMonth = 0;
+  int _workingDaysInMonth = 0;
+  DateTime _displayedMonth = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    _calculateHolidays(_displayedMonth);
     _loadWorkDiaryData();
+  }
+
+  /// Count Sundays and working days in the given month
+  void _calculateHolidays(DateTime month) {
+    final firstDay = DateTime(month.year, month.month, 1);
+    final lastDay = DateTime(month.year, month.month + 1, 0);
+    int sundays = 0;
+    DateTime day = firstDay;
+    while (!day.isAfter(lastDay)) {
+      if (day.weekday == DateTime.sunday) sundays++;
+      day = day.add(const Duration(days: 1));
+    }
+    setState(() {
+      _holidaysInMonth = sundays;
+      _workingDaysInMonth = lastDay.day - sundays;
+      _displayedMonth = month;
+    });
   }
 
   Future<void> _loadWorkDiaryData() async {
@@ -65,12 +87,12 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             counts[normalized] = (counts[normalized] ?? 0) + 1;
 
             // Store full entry data
-            allEntries.add(entry as Map<String, dynamic>);
+            allEntries.add(entry);
 
             if (entriesByDate[normalized] == null) {
               entriesByDate[normalized] = [];
             }
-            entriesByDate[normalized]!.add(entry as Map<String, dynamic>);
+            entriesByDate[normalized]!.add(entry);
           } catch (e) {
             // Skip invalid dates
           }
@@ -214,7 +236,75 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                 ],
               ),
               const Spacer(),
-              if (_isLoading)
+              // Working days & Holidays badges
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Working days badge
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                          : const Color(0xFFD1FAE5),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.work_rounded,
+                          size: 14.sp,
+                          color: const Color(0xFF10B981),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          '$_workingDaysInMonth Working',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF10B981),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  // Holidays badge
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? const Color(0xFFEF4444).withValues(alpha: 0.15)
+                          : const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.weekend_rounded,
+                          size: 14.sp,
+                          color: const Color(0xFFEF4444),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          '$_holidaysInMonth Holidays',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_isLoading) ...[
+                SizedBox(width: 8.w),
                 SizedBox(
                   width: 20.w,
                   height: 20.h,
@@ -223,6 +313,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                     valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
                   ),
                 ),
+              ],
             ],
           ),
           SizedBox(height: 16.h),
@@ -464,7 +555,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFA8A8A8),  // Gray for next month
             ),
             onCalendarChanged: (DateTime date) {
-              // Calendar month changed - no action needed
+              _calculateHolidays(date);
             },
             daysTextStyle: TextStyle(
               fontFamily: 'Inter',

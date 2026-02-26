@@ -188,8 +188,8 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                 // SVG Icon (no background)
                 SvgPicture.asset(
                   isSelected ? selectedIconPath : iconPath,
-                  width: 20.sp,
-                  height: 20.sp,
+                  width: 20,
+                  height: 20,
                   colorFilter: ColorFilter.mode(
                     isSelected
                         ? AppTheme.primaryColor
@@ -197,7 +197,7 @@ class _ModernBottomNavigationState extends State<ModernBottomNavigation>
                     BlendMode.srcIn,
                   ),
                 ),
-                SizedBox(height: 4.h),
+                const SizedBox(height: 4),
                 // Label
                 Text(
                   label,

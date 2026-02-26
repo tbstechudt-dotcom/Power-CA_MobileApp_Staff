@@ -236,7 +236,9 @@ class PowerCAApp extends StatelessWidget {
                 theme: AppTheme.lightTheme,
                 darkTheme: AppTheme.darkTheme,
                 themeMode: themeProvider.themeMode,
+                // ============ SECURITY GATE (PRODUCTION) ============
                 home: const SecurityGatePage(),
+                // ================================================
                 onGenerateRoute: (settings) {
                   switch (settings.name) {
                     case '/':
