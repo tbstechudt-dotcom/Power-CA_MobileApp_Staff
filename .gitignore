@@ -1,5 +1,4 @@
 # Power CA Mobile - Git Ignore
-# =============================
 
 # ============================================
 # CRITICAL: Environment Variables & Secrets
@@ -8,6 +7,7 @@
 .env.local
 .env.production
 .env.development
+.env.*.local
 *.env
 
 # Credentials and sensitive files
@@ -17,6 +17,9 @@
 *.pem
 *.key
 *.cert
+
+# Supabase credentials
+**/supabase_config.dart.local
 
 # ============================================
 # Node.js
@@ -63,14 +66,102 @@ $RECYCLE.BIN/
 .vscode/
 *.code-workspace
 
-# JetBrains IDEs (IntelliJ, WebStorm, etc.)
+# IntelliJ / Android Studio
 .idea/
 *.iml
+*.ipr
 *.iws
 
 # Sublime Text
 *.sublime-project
 *.sublime-workspace
+
+# Other
+.atom/
+.buildlog/
+.history
+.svn/
+
+# ============================================
+# Miscellaneous
+# ============================================
+*.class
+*.pyc
+*.swp
+*.swo
+*~.nib
+migrate_working_dir/
+
+# ============================================
+# Flutter/Dart/Pub related
+# ============================================
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.config.dart
+
+# ============================================
+# Android
+# ============================================
+*.jks
+local.properties
+.gradle/
+captures/
+GeneratedPluginRegistrant.java
+
+# Android Studio build artifacts
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ============================================
+# iOS/XCode
+# ============================================
+**/Pods/
+**/Podfile.lock
+**/ios/Flutter/flutter_export_environment.sh
+.symlinks/
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata
+**/ios/.generated/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# ============================================
+# Symbolication / Obfuscation
+# ============================================
+app.*.symbols
+app.*.map.json
 
 # ============================================
 # Database Files
@@ -90,50 +181,23 @@ tmp/
 temp/
 *.tmp
 *.bak
-*.swp
-*.swo
-*~.nib
 
 # ============================================
 # Build and Distribution
 # ============================================
 dist/
-build/
 out/
+
+# APK files (build artifacts)
+*.apk
+assets/apk/
 
 # ============================================
 # Testing
 # ============================================
 coverage/
 .nyc_output/
-
-# ============================================
-# Flutter (for future mobile app)
-# ============================================
-# Flutter SDK (should be installed system-wide, not in project)
-flutter/
-
-# Flutter project files
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-build/
-
-# Android
-*.jks
-local.properties
-.gradle/
-captures/
-GeneratedPluginRegistrant.java
-
-# iOS
-**/Pods/
-**/Podfile.lock
-**/ios/Flutter/flutter_export_environment.sh
-.symlinks/
+test-results/
 
 # ============================================
 # Project Specific
@@ -149,12 +213,7 @@ sync_metadata.json
 docs/drafts/
 
 # ============================================
-# ALLOWED FILES (for reference)
+# Exceptions
 # ============================================
-# Keep these files in git:
-# - .env.example (template without actual credentials)
-# - README.md
-# - package.json
-# - All source code in sync/, scripts/, docs/
-nul
-powerca_mobile/nul
+!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
+!/dev/ci/**/Gemfile.lock
