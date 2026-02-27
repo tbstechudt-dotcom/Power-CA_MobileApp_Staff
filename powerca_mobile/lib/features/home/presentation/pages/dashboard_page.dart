@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -35,11 +34,6 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   final supabase = Supabase.instance.client;
   final _sessionService = SessionService();
 
-  double _hoursLoggedToday = 0.0;
-  double _hoursLoggedThisWeek = 0.0;
-  double _totalMonthHours = 0.0;
-  int _daysActive = 0;
-  bool _isLoading = true;
   bool _isCheckingSession = false;
   bool _isSessionDialogShowing = false;
   bool _isLoginRequestDialogShowing = false;
@@ -411,109 +405,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   }
 
   Future<void> _fetchDashboardStats() async {
-    try {
-      final now = DateTime.now();
-      final todayStr = DateFormat('yyyy-MM-dd').format(now);
-
-      // Calculate start of this week (Monday)
-      final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-      final startOfWeekStr = DateFormat('yyyy-MM-dd').format(
-        DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day),
-      );
-
-      // Calculate start of this month
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final startOfMonthStr = DateFormat('yyyy-MM-dd').format(startOfMonth);
-
-      // Fetch hours logged today
-      final todayResponse = await supabase
-          .from('workdiary')
-          .select('minutes')
-          .eq('staff_id', widget.currentStaff.staffId)
-          .eq('date', todayStr);
-
-      double todayHours = 0.0;
-      for (final entry in todayResponse) {
-        final minutes = entry['minutes'];
-        if (minutes != null) {
-          final minutesValue = minutes is int ? minutes.toDouble() : minutes as double;
-          todayHours += minutesValue / 60.0;
-        }
-      }
-
-      // Fetch hours logged this week
-      final weekResponse = await supabase
-          .from('workdiary')
-          .select('minutes')
-          .eq('staff_id', widget.currentStaff.staffId)
-          .gte('date', startOfWeekStr);
-
-      double weekHours = 0.0;
-      for (final entry in weekResponse) {
-        final minutes = entry['minutes'];
-        if (minutes != null) {
-          final minutesValue = minutes is int ? minutes.toDouble() : minutes as double;
-          weekHours += minutesValue / 60.0;
-        }
-      }
-
-      // Fetch all entries this month (with date and minutes for calculations)
-      final monthResponse = await supabase
-          .from('workdiary')
-          .select('wd_id, date, minutes')
-          .eq('staff_id', widget.currentStaff.staffId)
-          .gte('date', startOfMonthStr);
-
-      // Calculate days active and total hours for the month
-      final Set<String> uniqueDates = {};
-      double totalMonthHours = 0.0;
-
-      for (final entry in monthResponse) {
-        // Track unique dates (days active)
-        if (entry['date'] != null) {
-          uniqueDates.add(entry['date'] as String);
-        }
-
-        // Calculate total hours for the month
-        final minutes = entry['minutes'];
-        if (minutes != null) {
-          final minutesValue = minutes is int ? minutes.toDouble() : minutes as double;
-          totalMonthHours += minutesValue / 60.0;
-        }
-      }
-
-      final daysActive = uniqueDates.length;
-
-      if (mounted) {
-        setState(() {
-          _hoursLoggedToday = todayHours;
-          _hoursLoggedThisWeek = weekHours;
-          _totalMonthHours = totalMonthHours;
-          _daysActive = daysActive;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching dashboard stats: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  String _formatHours(double hours) {
-    if (hours == 0) return '0h';
-
-    final wholeHours = hours.floor();
-    final minutes = ((hours - wholeHours) * 60).round();
-
-    if (minutes == 0) {
-      return '${wholeHours}h';
-    } else {
-      return '${wholeHours}h ${minutes}m';
-    }
+    // Refresh callback used by calendar widget after data changes
   }
 
   @override
@@ -569,11 +461,6 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
 
                                 // Monthly Calendar (Moved to second section)
                                 _buildMonthlyCalendar(),
-
-                                const SizedBox(height: 16),
-
-                                // Statistics Grid (4 cards in 2x2)
-                                _buildStatisticsGrid(),
 
                                 const SizedBox(height: 16),
                               ],
@@ -740,155 +627,6 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildStatisticsGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      mainAxisSpacing: 12.h,
-      crossAxisSpacing: 12.w,
-      childAspectRatio: 1.4,
-      children: [
-        _buildStatTile(
-          icon: Icons.wb_sunny_rounded,
-          title: 'Today Hours',
-          value: _isLoading ? '...' : _formatHours(_hoursLoggedToday),
-          gradient: [const Color(0xFFFBBF24), const Color(0xFFF59E0B)],
-          trend: 'Today',
-        ),
-        _buildStatTile(
-          icon: Icons.date_range_rounded,
-          title: 'Hours Logged',
-          value: _isLoading ? '...' : _formatHours(_hoursLoggedThisWeek),
-          gradient: [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
-          trend: 'Week',
-        ),
-        _buildStatTile(
-          icon: Icons.calendar_month_rounded,
-          title: 'Total Hours',
-          value: _isLoading ? '...' : _formatHours(_totalMonthHours),
-          gradient: [const Color(0xFF34D399), const Color(0xFF10B981)],
-          trend: 'Month',
-        ),
-        _buildStatTile(
-          icon: Icons.check_circle_rounded,
-          title: 'Days Active',
-          value: _isLoading ? '...' : '$_daysActive',
-          gradient: [const Color(0xFFA78BFA), const Color(0xFF8B5CF6)],
-          trend: 'Month',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatTile({
-    required IconData icon,
-    required String title,
-    required String value,
-    required List<Color> gradient,
-    required String trend,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: gradient[1].withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Background pattern icon
-          Positioned(
-            right: -20.w,
-            bottom: -20.h,
-            child: Icon(
-              icon,
-              size: 80.sp,
-              color: Colors.white.withValues(alpha: 0.15),
-            ),
-          ),
-          // Content
-          Padding(
-            padding: EdgeInsets.all(14.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Icon(
-                        icon,
-                        size: 24.sp,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Text(
-                        trend,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 22.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
 }
 
