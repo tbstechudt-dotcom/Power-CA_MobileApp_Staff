@@ -124,9 +124,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       ),
     );
 
-    // Navigate to splash/login page
+    // Navigate directly to sign-in page after OTP verification
     Navigator.of(context).pushNamedAndRemoveUntil(
-      '/splash',
+      '/sign-in',
       (route) => false,
     );
   }

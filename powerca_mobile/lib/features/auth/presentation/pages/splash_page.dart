@@ -83,10 +83,12 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
 
             if (!mounted) return;
 
-            // Staff is logged in - go to security gate for OTP verification
+            // Staff is logged in - bypass security gate and go to select-concern-location
+            // TODO: Re-enable security gate after testing
             Navigator.pushReplacementNamed(
               context,
-              '/security-gate',
+              '/select-concern-location',
+              arguments: staff,
             );
           } else {
             setState(() {
@@ -105,7 +107,9 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   }
 
   void _navigateToSignIn() {
-    Navigator.pushNamed(context, '/sign-in');
+    // Go to security gate first for phone verification
+    // Security gate will redirect to sign-in after verification
+    Navigator.pushNamed(context, '/security-gate');
   }
 
   @override
