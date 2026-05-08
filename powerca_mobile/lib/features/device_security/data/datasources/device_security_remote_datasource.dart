@@ -171,7 +171,7 @@ class DeviceSecurityRemoteDataSourceImpl
         'apikey': SupabaseConfig.anonKey,
       },
       body: json.encode(requestBody),
-    );
+    ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode != 200) {
       final errorBody = json.decode(response.body);
@@ -235,7 +235,7 @@ class DeviceSecurityRemoteDataSourceImpl
         'device_fingerprint': fingerprint,
         'otp': otp,
       }),
-    );
+    ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode != 200) {
       final errorBody = json.decode(response.body);

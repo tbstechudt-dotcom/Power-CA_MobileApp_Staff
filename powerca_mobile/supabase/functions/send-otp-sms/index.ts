@@ -167,10 +167,28 @@ serve(async (req) => {
 
     console.log('Sending SMS to:', phone)
 
-    const smsResponse = await fetch(smsUrl)
-    const smsResult = await smsResponse.text()
-
-    console.log('SMS Gateway Response:', smsResult)
+    let smsResult: string
+    try {
+      const smsResponse = await fetch(smsUrl, {
+        signal: AbortSignal.timeout(15000)
+      })
+      smsResult = await smsResponse.text()
+      console.log('SMS Gateway Response:', smsResult)
+    } catch (fetchError) {
+      const isTimeout = (fetchError as Error)?.name === 'TimeoutError'
+      console.error('SMS gateway fetch failed:', fetchError)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: isTimeout ? 'SMS_GATEWAY_TIMEOUT' : 'SMS_GATEWAY_UNREACHABLE',
+          message: 'SMS service is temporarily unavailable. Please try again in a few minutes.'
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
 
     // Check if SMS was sent successfully
     // BulkSMSGateway typically returns "success" or an error message
@@ -188,20 +206,16 @@ serve(async (req) => {
         }
       )
     } else {
-      // SMS sending failed, but OTP is stored - return success with warning
-      // This allows testing even if SMS fails
-      console.error('SMS sending may have failed:', smsResult)
+      console.error('SMS sending failed:', smsResult)
       return new Response(
         JSON.stringify({
-          success: true,
-          message: 'OTP generated. SMS delivery status: ' + smsResult,
-          phone_masked: maskPhone(phone),
-          expires_in_seconds: 300,
-          // For debugging - remove in production
-          debug_otp: otp
+          success: false,
+          error: 'SMS_DELIVERY_FAILED',
+          message: 'Could not deliver OTP via SMS. Please try again or contact support.',
+          gateway_response: smsResult
         }),
         {
-          status: 200,
+          status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )

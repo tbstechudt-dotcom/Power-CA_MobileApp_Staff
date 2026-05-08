@@ -1393,7 +1393,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               maxChildSize: 0.9,
               expand: false,
               builder: (context, scrollController) {
-                return Column(
+                return Stack(
+                  children: [
+                    Column(
                   children: [
                     // Handle bar
                     Container(
@@ -1560,6 +1562,45 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                 );
                               },
                             ),
+                    ),
+                  ],
+                ),
+                    // Floating button to jump to the priority selection sheet.
+                    // Centered at the bottom of the sheet, full-width minus margins.
+                    Positioned(
+                      left: 24.w,
+                      right: 24.w,
+                      bottom: 16.h,
+                      child: SizedBox(
+                        height: 52.h,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _showPrioritySelectionDialog();
+                          },
+                          icon: Icon(
+                            Icons.star_rounded,
+                            size: 20.sp,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            'Priority',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28.r),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 );
@@ -2490,6 +2531,174 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     }).toList();
   }
 
+  /// Flat list of matching jobs across every status, each with a status
+  /// badge in the right corner. Used inside the priority selection sheet
+  /// when there's an active search query.
+  List<Widget> _buildFlatSearchResults({
+    required String searchQuery,
+    required Set<int> tempSelectedIds,
+    required void Function(int jobId) onToggleJob,
+    required Color cardBgColor,
+    required Color cardBorderColor,
+    required Color checkboxBgColor,
+    required Color checkboxBorderColor,
+    required Color textPrimaryColor,
+    required Color textSecondaryColor,
+  }) {
+    final matches = <Map<String, dynamic>>[];
+    for (final config in _statusConfigs) {
+      final status = config['status'] as String;
+      final color = config['color'] as Color;
+      final jobs = _getFilteredJobsByStatus(status, searchQuery);
+      for (final job in jobs) {
+        matches.add({'job': job, 'status': status, 'color': color});
+      }
+    }
+
+    if (matches.isEmpty) {
+      return [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 32.h),
+          child: Center(
+            child: Text(
+              'No jobs match "$searchQuery"',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13.sp,
+                color: textSecondaryColor,
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return matches.map((match) {
+      final job = match['job'] as Map<String, dynamic>;
+      final statusName = match['status'] as String;
+      final color = match['color'] as Color;
+      final jobId = job['job_id'] as int;
+      final isSelected = tempSelectedIds.contains(jobId);
+      final clientName = _getClientNameById(job['client_id']);
+
+      return InkWell(
+        onTap: () => onToggleJob(jobId),
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
+          margin: EdgeInsets.only(bottom: 8.h),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: cardBgColor,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: isSelected ? color.withValues(alpha: 0.5) : cardBorderColor,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 22.w,
+                height: 22.h,
+                decoration: BoxDecoration(
+                  color: isSelected ? color : checkboxBgColor,
+                  borderRadius: BorderRadius.circular(6.r),
+                  border: Border.all(
+                    color: isSelected ? color : checkboxBorderColor,
+                    width: 1.5,
+                  ),
+                ),
+                child: isSelected
+                    ? Icon(Icons.check, size: 14.sp, color: Colors.white)
+                    : null,
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job['work_desc'] ?? 'Unknown Job',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13.sp,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: textPrimaryColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.business_rounded,
+                          size: 12.sp,
+                          color: textSecondaryColor,
+                        ),
+                        SizedBox(width: 4.w),
+                        Expanded(
+                          child: Text(
+                            clientName.isNotEmpty
+                                ? clientName
+                                : 'No client assigned',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w500,
+                              color: clientName.isNotEmpty
+                                  ? AppTheme.primaryColor
+                                  : textSecondaryColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      job['job_uid'] ?? 'N/A',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                        color: textSecondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8.w),
+              // Status badge anchored to the right corner.
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.3),
+                    width: 0.5,
+                  ),
+                ),
+                child: Text(
+                  statusName,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }).toList();
+  }
+
   /// Show priority job selection dialog
   Future<void> _showPrioritySelectionDialog() async {
     final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
@@ -2632,12 +2841,33 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                         ),
                       ),
                     ),
-                    // Status categories with jobs
+                    // Status categories with jobs (no search) OR
+                    // flat job list with status badges (when searching).
                     Expanded(
                       child: ListView(
                         controller: scrollController,
                         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                        children: _statusConfigs.map((config) {
+                        children: searchQuery.isNotEmpty
+                            ? _buildFlatSearchResults(
+                                searchQuery: searchQuery,
+                                tempSelectedIds: tempSelectedIds,
+                                onToggleJob: (jobId) {
+                                  setModalState(() {
+                                    if (tempSelectedIds.contains(jobId)) {
+                                      tempSelectedIds.remove(jobId);
+                                    } else {
+                                      tempSelectedIds.add(jobId);
+                                    }
+                                  });
+                                },
+                                cardBgColor: cardBgColor,
+                                cardBorderColor: cardBorderColor!,
+                                checkboxBgColor: checkboxBgColor,
+                                checkboxBorderColor: checkboxBorderColor!,
+                                textPrimaryColor: textPrimaryColor,
+                                textSecondaryColor: textSecondaryColor,
+                              )
+                            : _statusConfigs.map((config) {
                           final status = config['status'] as String;
                           final icon = config['icon'] as IconData;
                           final color = config['color'] as Color;
@@ -2811,8 +3041,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                                         job['job_uid'] ?? 'N/A',
                                                         style: TextStyle(
                                                           fontFamily: 'Inter',
-                                                          fontSize: 10.sp,
-                                                          fontWeight: FontWeight.w400,
+                                                          fontSize: 12.sp,
+                                                          fontWeight: FontWeight.w500,
                                                           color: textSecondaryColor,
                                                         ),
                                                       ),

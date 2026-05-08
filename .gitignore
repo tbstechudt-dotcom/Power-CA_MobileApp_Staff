@@ -200,6 +200,17 @@ coverage/
 test-results/
 
 # ============================================
+# Flutter Windows desktop scaffolding (auto-generated)
+# ============================================
+# The inner powerca_mobile project doesn't ship a Windows build, but
+# Flutter regenerates these files whenever the Windows platform is touched.
+powerca_mobile/windows/
+
+# Bash on Windows occasionally creates a literal `nul` file when a script
+# uses `2>nul` (treated as a filename instead of the null device).
+nul
+
+# ============================================
 # Project Specific
 # ============================================
 
