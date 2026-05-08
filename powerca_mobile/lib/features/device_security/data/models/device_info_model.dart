@@ -24,13 +24,15 @@ class DeviceInfoModel extends DeviceInfo {
     String platform = '';
 
     if (Platform.isAndroid) {
-      final androidInfo = await deviceInfo.androidInfo;
+      final androidInfo = await deviceInfo.androidInfo
+          .timeout(const Duration(seconds: 10));
       deviceId = androidInfo.id; // Android ID
       deviceName = androidInfo.device;
       deviceModel = '${androidInfo.brand} ${androidInfo.model}';
       platform = 'Android';
     } else if (Platform.isIOS) {
-      final iosInfo = await deviceInfo.iosInfo;
+      final iosInfo = await deviceInfo.iosInfo
+          .timeout(const Duration(seconds: 10));
       deviceId = iosInfo.identifierForVendor ?? '';
       deviceName = iosInfo.name;
       deviceModel = iosInfo.model;
