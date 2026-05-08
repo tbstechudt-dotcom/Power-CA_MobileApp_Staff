@@ -37,20 +37,23 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   final supabase = Supabase.instance.client;
   final _sessionService = SessionService();
 
-  int _loggedDaysThisMonth = 0;
-  int _leaveDaysThisMonth = 0;
-  bool _isLoading = true;
-
-  // Per-day data for swipeable status card
-  late DateTime _selectedDate = DateTime.now();
-  Map<String, int> _dailyMinutes = {};
-  Map<String, int> _dailyLogCount = {};
-  Set<String> _leaveDates = {};
   bool _isCheckingSession = false;
   bool _isSessionDialogShowing = false;
   bool _isLoginRequestDialogShowing = false;
   static const int _initialPage = 10000;
   late PageController _pageController;
+
+  // Summary card state
+  bool _isLoadingSummary = true;
+  int _loggedDaysThisMonth = 0;
+  int _leaveDaysThisMonth = 0;
+  Map<String, int> _dailyMinutes = {};
+  Map<String, int> _dailyLogCount = {};
+  Set<String> _leaveDates = {};
+  late DateTime _selectedDate = DateTime.now();
+  static const int _initialPage = 10000;
+  late final PageController _pageController =
+      PageController(initialPage: _initialPage);
 
   @override
   void initState() {
@@ -421,17 +424,18 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   }
 
   Future<void> _fetchDashboardStats() async {
+    if (mounted) {
+      setState(() => _isLoadingSummary = true);
+    }
+
     try {
       final now = DateTime.now();
-      final todayStr = DateFormat('yyyy-MM-dd').format(now);
-
-      // Calculate start and end of this month
       final startOfMonth = DateTime(now.year, now.month, 1);
-      final startOfMonthStr = DateFormat('yyyy-MM-dd').format(startOfMonth);
       final endOfMonth = DateTime(now.year, now.month + 1, 0);
+      final startOfMonthStr = DateFormat('yyyy-MM-dd').format(startOfMonth);
       final endOfMonthStr = DateFormat('yyyy-MM-dd').format(endOfMonth);
 
-      // 1. Fetch work diary entries this month (for logged days count + today's hours)
+      // 1. Work diary entries this month
       final monthResponse = await supabase
           .from('workdiary')
           .select('date, minutes')
@@ -440,7 +444,6 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           .lte('date', endOfMonthStr);
 
       final Set<String> uniqueDates = {};
-      bool hasLoggedToday = false;
       final Map<String, int> dailyMinutes = {};
       final Map<String, int> dailyLogCount = {};
 
@@ -451,13 +454,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           final mins = (entry['minutes'] as num?)?.toInt() ?? 0;
           dailyMinutes[dateStr] = (dailyMinutes[dateStr] ?? 0) + mins;
           dailyLogCount[dateStr] = (dailyLogCount[dateStr] ?? 0) + 1;
-          if (dateStr == todayStr) {
-            hasLoggedToday = true;
-          }
         }
       }
 
-      // 2. Fetch approved leave requests that overlap this month
+      // 2. Approved leave requests overlapping this month
       final leaveResponse = await supabase
           .from('learequest')
           .select('fromdate, todate, approval_status')
@@ -467,25 +467,18 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           .gte('todate', startOfMonthStr);
 
       int leaveDays = 0;
-      bool isOnLeaveToday = false;
       final Set<String> leaveDates = {};
 
       for (final leave in leaveResponse) {
         final fromDate = DateTime.parse(leave['fromdate']);
         final toDate = DateTime.parse(leave['todate']);
-
-        // Count leave days that fall within this month (excluding Sundays)
-        DateTime day = fromDate.isBefore(startOfMonth) ? startOfMonth : fromDate;
+        DateTime day =
+            fromDate.isBefore(startOfMonth) ? startOfMonth : fromDate;
         final lastDay = toDate.isAfter(endOfMonth) ? endOfMonth : toDate;
-
         while (!day.isAfter(lastDay)) {
           if (day.weekday != DateTime.sunday) {
             leaveDays++;
             leaveDates.add(DateFormat('yyyy-MM-dd').format(day));
-          }
-          // Check if today falls in this leave range
-          if (DateFormat('yyyy-MM-dd').format(day) == todayStr) {
-            isOnLeaveToday = true;
           }
           day = day.add(const Duration(days: 1));
         }
@@ -498,7 +491,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           _dailyMinutes = dailyMinutes;
           _dailyLogCount = dailyLogCount;
           _leaveDates = leaveDates;
-          _isLoading = false;
+          _isLoadingSummary = false;
         });
 
         // Send notification if user hasn't logged today (and not on leave)
@@ -511,9 +504,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     } catch (e) {
       debugPrint('Error fetching dashboard stats: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoadingSummary = false);
       }
     }
   }
@@ -569,13 +560,13 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
 
                                 const SizedBox(height: 16),
 
-                                // Monthly Calendar (Moved to second section)
+                                // Monthly Calendar
                                 _buildMonthlyCalendar(),
 
                                 const SizedBox(height: 16),
 
-                                // Statistics Grid (4 cards in 2x2)
-                                _buildStatisticsGrid(),
+                                // Summary Cards (Logged Days / Leave Days + Day Status)
+                                _buildSummarySection(),
 
                                 const SizedBox(height: 16),
                               ],
@@ -742,21 +733,23 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildStatisticsGrid() {
+  // ---------- Summary Section ----------
+
+  Widget _buildSummarySection() {
     final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     final monthName = DateFormat('MMMM').format(DateTime.now());
 
     return Column(
       children: [
-        // Row 1: Logged Days & Leave Days
+        // Row 1: Logged Days & Leave Days stat tiles
         Row(
           children: [
             Expanded(
               child: _buildStatTile(
                 icon: Icons.calendar_month_rounded,
                 title: 'Logged Days',
-                value: _isLoading ? '...' : '$_loggedDaysThisMonth',
-                gradient: [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
+                value: _isLoadingSummary ? '…' : '$_loggedDaysThisMonth',
+                gradient: const [Color(0xFF60A5FA), Color(0xFF3B82F6)],
                 badge: monthName,
               ),
             ),
@@ -765,186 +758,16 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
               child: _buildStatTile(
                 icon: Icons.event_busy_rounded,
                 title: 'Leave Days',
-                value: _isLoading ? '...' : '$_leaveDaysThisMonth',
-                gradient: [const Color(0xFFA78BFA), const Color(0xFF8B5CF6)],
+                value: _isLoadingSummary ? '…' : '$_leaveDaysThisMonth',
+                gradient: const [Color(0xFFA78BFA), Color(0xFF8B5CF6)],
                 badge: monthName,
               ),
             ),
           ],
         ),
-
         SizedBox(height: 12.h),
-
         // Row 2: Swipeable Day Status (full width)
         _buildSwipeableDayStatus(isDarkMode),
-      ],
-    );
-  }
-
-  /// Get status info for a given date from stored data
-  ({String status, IconData icon, List<Color> gradient, int minutes, int logCount}) _getDayInfo(DateTime date) {
-    final dateStr = DateFormat('yyyy-MM-dd').format(date);
-    final isLeave = _leaveDates.contains(dateStr);
-    final logCount = _dailyLogCount[dateStr] ?? 0;
-    final minutes = _dailyMinutes[dateStr] ?? 0;
-    final hasLogged = logCount > 0;
-
-    if (isLeave) {
-      return (
-        status: 'On Leave',
-        icon: Icons.beach_access_rounded,
-        gradient: [const Color(0xFFFBBF24), const Color(0xFFF59E0B)],
-        minutes: minutes,
-        logCount: logCount,
-      );
-    } else if (hasLogged) {
-      return (
-        status: 'Active',
-        icon: Icons.check_circle_rounded,
-        gradient: [const Color(0xFF34D399), const Color(0xFF10B981)],
-        minutes: minutes,
-        logCount: logCount,
-      );
-    } else {
-      return (
-        status: 'Not Logged',
-        icon: Icons.schedule_rounded,
-        gradient: [const Color(0xFF94A3B8), const Color(0xFF64748B)],
-        minutes: 0,
-        logCount: 0,
-      );
-    }
-  }
-
-  DateTime _dateFromPageIndex(int index) {
-    final today = DateTime.now();
-    final todayOnly = DateTime(today.year, today.month, today.day);
-    return todayOnly.subtract(Duration(days: _initialPage - index));
-  }
-
-  void _goToToday() {
-    _pageController.animateToPage(
-      _initialPage,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  bool get _isSelectedDateToday {
-    final now = DateTime.now();
-    return _selectedDate.year == now.year &&
-        _selectedDate.month == now.month &&
-        _selectedDate.day == now.day;
-  }
-
-  Widget _buildSwipeableDayStatus(bool isDarkMode) {
-    final today = DateTime.now();
-    final canGoNext = _selectedDate.isBefore(DateTime(today.year, today.month, today.day));
-
-    return Column(
-      children: [
-        // Full-width card with < > arrows on sides
-        Row(
-          children: [
-            // Left arrow
-            GestureDetector(
-              onTap: () {
-                _pageController.previousPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              child: Container(
-                width: 32.w,
-                height: 190.h,
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: 28.sp,
-                  color: isDarkMode ? Colors.white70 : Colors.grey[600],
-                ),
-              ),
-            ),
-
-            // Full-width PageView
-            Expanded(
-              child: SizedBox(
-                height: 190.h,
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: _initialPage + 1,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _selectedDate = _dateFromPageIndex(index);
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final date = _dateFromPageIndex(index);
-                    final dayInfo = _getDayInfo(date);
-                    final now = DateTime.now();
-                    final isToday = date.year == now.year &&
-                        date.month == now.month &&
-                        date.day == now.day;
-                    final dateLabel = isToday
-                        ? 'Today'
-                        : DateFormat('EEE, d MMM').format(date);
-
-                    return GestureDetector(
-                      onTap: () => _onDayStatusTapped(date, dayInfo.status, isDarkMode),
-                      child: _buildDayStatusCard(
-                        key: ValueKey(DateFormat('yyyy-MM-dd').format(date)),
-                        dateLabel: dateLabel,
-                        status: dayInfo.status,
-                        icon: dayInfo.icon,
-                        gradient: dayInfo.gradient,
-                        minutes: dayInfo.minutes,
-                        logCount: dayInfo.logCount,
-                        isDarkMode: isDarkMode,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // Right arrow
-            GestureDetector(
-              onTap: canGoNext
-                  ? () {
-                      _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  : null,
-              child: Container(
-                width: 32.w,
-                height: 190.h,
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 28.sp,
-                  color: canGoNext
-                      ? (isDarkMode ? Colors.white70 : Colors.grey[600])
-                      : (isDarkMode ? Colors.white24 : Colors.grey[300]),
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        SizedBox(height: 10.h),
-
-        // Today button centered below
-        Center(
-          child: _buildNavButton(
-            icon: Icons.today_rounded,
-            label: 'Today',
-            onTap: _isSelectedDateToday ? null : _goToToday,
-            isDarkMode: isDarkMode,
-            isHighlighted: true,
-          ),
-        ),
       ],
     );
   }
@@ -1219,62 +1042,63 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     required List<Color> gradient,
     required String badge,
   }) {
-    return Container(
-      height: 140.h,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: gradient[1].withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        height: 140.h,
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Background pattern icon
-          Positioned(
-            right: -20.w,
-            bottom: -20.h,
-            child: Icon(
-              icon,
-              size: 80.sp,
-              color: Colors.white.withValues(alpha: 0.15),
+          boxShadow: [
+            BoxShadow(
+              color: gradient.last.withValues(alpha: 0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
-          ),
-          // Content
-          Padding(
-            padding: EdgeInsets.all(14.w),
-            child: Column(
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Watermark icon (clipped by parent ClipRRect)
+            Positioned(
+              right: -20.w,
+              bottom: -20.h,
+              child: Icon(
+                icon,
+                size: 90.sp,
+                color: Colors.white.withValues(alpha: 0.15),
+              ),
+            ),
+            // Foreground content
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Top row: icon + month badge
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: EdgeInsets.all(10.w),
+                      padding: EdgeInsets.all(7.w),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12.r),
+                        color: Colors.white.withValues(alpha: 0.20),
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
                       child: Icon(
                         icon,
-                        size: 24.sp,
+                        size: 18.sp,
                         color: Colors.white,
                       ),
                     ),
+                    const Spacer(),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 8.w, vertical: 4.h),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
+                        color: Colors.white.withValues(alpha: 0.22),
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
@@ -1283,186 +1107,36 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                           fontFamily: 'Inter',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
                           color: Colors.white,
                         ),
                       ),
                     ),
                   ],
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 28.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Format minutes into "Xh Ym" display
-  String _formatWorkingHours(int totalMinutes) {
-    final hours = totalMinutes ~/ 60;
-    final minutes = totalMinutes % 60;
-    if (hours > 0 && minutes > 0) return '${hours}h ${minutes}m';
-    if (hours > 0) return '${hours}h 0m';
-    if (minutes > 0) return '0h ${minutes}m';
-    return '0h 0m';
-  }
-
-  Widget _buildDayStatusCard({
-    required Key key,
-    required String dateLabel,
-    required String status,
-    required IconData icon,
-    required List<Color> gradient,
-    required int minutes,
-    required int logCount,
-    required bool isDarkMode,
-  }) {
-    final workingHours = _formatWorkingHours(minutes);
-
-    return Container(
-      key: key,
-      margin: EdgeInsets.symmetric(horizontal: 2.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: gradient[1].withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 12.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Main title row: Icon + Date
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 44.w,
-                  height: 44.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 24.sp,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(width: 14.w),
+                const Spacer(),
                 Text(
-                  dateLabel,
+                  value,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 22.sp,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 32.sp,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.8,
                     color: Colors.white,
+                    height: 1.05,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.90),
                   ),
                 ),
               ],
-            ),
-
-            SizedBox(height: 10.h),
-
-            // Status tag
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 5.h),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Text(
-                status,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-
-            SizedBox(height: 10.h),
-
-            // Bottom info bar with time and log count
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.access_time_rounded, size: 16.sp, color: Colors.white),
-                  SizedBox(width: 5.w),
-                  Text(
-                    workingHours,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  Container(
-                    width: 1,
-                    height: 16.h,
-                    color: Colors.white.withValues(alpha: 0.4),
-                  ),
-                  SizedBox(width: 10.w),
-                  Icon(Icons.list_alt_rounded, size: 16.sp, color: Colors.white),
-                  SizedBox(width: 5.w),
-                  Text(
-                    '$logCount ${logCount == 1 ? 'log' : 'logs'}',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -1470,30 +1144,374 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     );
   }
 
-}
+  // ---------- Day Status Card ----------
 
-/// Stateful widget that fetches and displays work log entries for a given date
-class _DayEntriesList extends StatefulWidget {
-  final String dateStr;
-  final int staffId;
-  final bool isDarkMode;
-  final Color cardBgColor;
-  final Color titleColor;
-  final Color subtitleColor;
-  final Color dividerColor;
+  ({String status, Color accent, int minutes, int logCount}) _getDayInfo(
+      DateTime date) {
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final isLeave = _leaveDates.contains(dateStr);
+    final logCount = _dailyLogCount[dateStr] ?? 0;
+    final minutes = _dailyMinutes[dateStr] ?? 0;
+    final hasLogged = logCount > 0;
 
-  const _DayEntriesList({
-    required this.dateStr,
-    required this.staffId,
-    required this.isDarkMode,
-    required this.cardBgColor,
-    required this.titleColor,
-    required this.subtitleColor,
-    required this.dividerColor,
-  });
+    if (isLeave) {
+      return (
+        status: 'On Leave',
+        accent: const Color(0xFFF59E0B),
+        minutes: minutes,
+        logCount: logCount,
+      );
+    } else if (hasLogged) {
+      return (
+        status: 'Active',
+        accent: const Color(0xFF10B981),
+        minutes: minutes,
+        logCount: logCount,
+      );
+    } else {
+      return (
+        status: 'Not Logged',
+        accent: const Color(0xFF64748B),
+        minutes: 0,
+        logCount: 0,
+      );
+    }
+  }
 
-  @override
-  State<_DayEntriesList> createState() => _DayEntriesListState();
+  DateTime _dateFromPageIndex(int index) {
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    return todayOnly.subtract(Duration(days: _initialPage - index));
+  }
+
+  Widget _buildSwipeableDayStatus(bool isDarkMode) {
+    final today = DateTime.now();
+    final canGoNext = _selectedDate
+        .isBefore(DateTime(today.year, today.month, today.day));
+
+    return SizedBox(
+      height: 190.h,
+      child: Stack(
+        children: [
+          // Full-width PageView card
+          PageView.builder(
+            controller: _pageController,
+            itemCount: _initialPage + 1,
+            onPageChanged: (index) {
+              setState(() {
+                _selectedDate = _dateFromPageIndex(index);
+              });
+            },
+            itemBuilder: (context, index) {
+              final date = _dateFromPageIndex(index);
+              final dayInfo = _getDayInfo(date);
+              final now = DateTime.now();
+              final isToday = date.year == now.year &&
+                  date.month == now.month &&
+                  date.day == now.day;
+              final dateLabel =
+                  isToday ? 'Today' : DateFormat('EEE, d MMM').format(date);
+
+              return GestureDetector(
+                onTap: () =>
+                    _onDayStatusTapped(date, dayInfo.status),
+                child: _buildDayStatusCard(
+                  dateLabel: dateLabel,
+                  status: dayInfo.status,
+                  accent: dayInfo.accent,
+                  minutes: dayInfo.minutes,
+                  logCount: dayInfo.logCount,
+                  isDarkMode: isDarkMode,
+                ),
+              );
+            },
+          ),
+          // Overlay arrows
+          Positioned(
+            left: 8.w,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: _buildOverlayArrow(
+                icon: Icons.chevron_left_rounded,
+                isDarkMode: isDarkMode,
+                enabled: true,
+                onTap: () => _pageController.previousPage(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeInOut,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 8.w,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: _buildOverlayArrow(
+                icon: Icons.chevron_right_rounded,
+                isDarkMode: isDarkMode,
+                enabled: canGoNext,
+                onTap: canGoNext
+                    ? () => _pageController.nextPage(
+                          duration: const Duration(milliseconds: 280),
+                          curve: Curves.easeInOut,
+                        )
+                    : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverlayArrow({
+    required IconData icon,
+    required bool isDarkMode,
+    required bool enabled,
+    required VoidCallback? onTap,
+  }) {
+    final bgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor =
+        isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final iconColor = enabled
+        ? (isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A))
+        : (isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1));
+
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Container(
+          width: 34.w,
+          height: 34.w,
+          decoration: BoxDecoration(
+            color: bgColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(icon, size: 20.sp, color: iconColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayStatusCard({
+    required String dateLabel,
+    required String status,
+    required Color accent,
+    required int minutes,
+    required int logCount,
+    required bool isDarkMode,
+  }) {
+    final cardBg = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor =
+        isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final titleColor =
+        isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final subtitleColor =
+        isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final dividerColor =
+        isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
+    return Container(
+      height: 190.h,
+      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
+      decoration: BoxDecoration(
+        color: cardBg,
+        border: Border.all(color: borderColor, width: 1),
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: isDarkMode ? 0.18 : 0.12),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  Icons.access_time_rounded,
+                  size: 22.sp,
+                  color: accent,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      dateLabel,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 17.sp,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                        color: titleColor,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Work log summary',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w500,
+                        color: subtitleColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildStatusPill(status: status, accent: accent),
+            ],
+          ),
+          // Center the divider vertically so it runs through the middle of
+          // the overlay arrow buttons (arrows sit on the divider line).
+          const Spacer(),
+          Container(height: 1, color: dividerColor),
+          const Spacer(),
+          // Stats row: HOURS | ENTRIES
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatBlock(
+                  label: 'HOURS',
+                  value: _formatMinutes(minutes),
+                  titleColor: titleColor,
+                  subtitleColor: subtitleColor,
+                ),
+              ),
+              Container(width: 1, height: 36.h, color: dividerColor),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(left: 16.w),
+                  child: _buildStatBlock(
+                    label: 'ENTRIES',
+                    value:
+                        '$logCount ${logCount == 1 ? 'entry' : 'entries'}',
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill({required String status, required Color accent}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6.w,
+            height: 6.w,
+            decoration: BoxDecoration(
+              color: accent,
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: 6.w),
+          Text(
+            status,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w600,
+              color: accent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatBlock({
+    required String label,
+    required String value,
+    required Color titleColor,
+    required Color subtitleColor,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.6,
+            color: subtitleColor,
+          ),
+        ),
+        SizedBox(height: 6.h),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+            color: titleColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatMinutes(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return '${h}h ${m}m';
+  }
+
+  void _onDayStatusTapped(DateTime date, String status) {
+    if (status == 'Not Logged') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => WorkLogEntryFormPage(
+            selectedDate: date,
+            staffId: widget.currentStaff.staffId,
+          ),
+        ),
+      ).then((_) => _fetchDashboardStats());
+    }
+  }
 }
 
 class _DayEntriesListState extends State<_DayEntriesList> {
