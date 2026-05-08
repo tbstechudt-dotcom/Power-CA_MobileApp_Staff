@@ -46,9 +46,9 @@ android {
             // Use debug signing for easier installation (no Play Protect warnings)
             signingConfig = signingConfigs.getByName("debug")
 
-            // Disable minification to prevent crashes
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // Enable minification and resource shrinking for smaller APK
+            isMinifyEnabled = true
+            isShrinkResources = true
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -34,7 +34,7 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -110,10 +110,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      leaveId,
-      'Leave Request ${isApproved ? 'Approved' : 'Rejected'}',
-      '$leaveType ($dateRange) has been ${status.toLowerCase()}',
-      details,
+      id: leaveId,
+      title: 'Leave Request ${isApproved ? 'Approved' : 'Rejected'}',
+      body: '$leaveType ($dateRange) has been ${status.toLowerCase()}',
+      notificationDetails: details,
       payload: 'leave:$leaveId',
     );
 
@@ -154,14 +154,55 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      remId.hashCode,
-      'New Reminder: $title',
-      'For $clientName - Due: $dueDate',
-      details,
+      id: remId.hashCode,
+      title: 'New Reminder: $title',
+      body: 'For $clientName - Due: $dueDate',
+      notificationDetails: details,
       payload: 'pinboard:$remId',
     );
 
     debugPrint('NotificationService: Showed pinboard notification for ID $remId');
+  }
+
+  /// Show a work log reminder notification when user hasn't logged today
+  Future<void> showWorkLogReminderNotification({
+    required String staffName,
+  }) async {
+    if (!_isInitialized) {
+      debugPrint('NotificationService: Not initialized, skipping notification');
+      return;
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      'worklog_reminders',
+      'Work Log Reminders',
+      channelDescription: 'Reminders to log your daily work hours',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      id: 9999,
+      title: 'Work Log Reminder',
+      body: 'Hi $staffName, you haven\'t logged your work hours today. Please update your work diary.',
+      notificationDetails: details,
+      payload: 'worklog:reminder',
+    );
+
+    debugPrint('NotificationService: Showed work log reminder for $staffName');
   }
 
   /// Handle notification tap

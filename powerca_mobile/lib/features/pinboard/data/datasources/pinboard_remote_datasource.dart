@@ -98,7 +98,7 @@ class PinboardRemoteDataSourceImpl implements PinboardRemoteDataSource {
           .single();
 
       final currentUserId = supabaseClient.auth.currentUser?.id;
-      final responseMap = response as Map<String, dynamic>;
+      final responseMap = response;
       final likes = responseMap['pinboard_likes'] as List? ?? [];
       final comments = responseMap['pinboard_comments'] as List? ?? [];
 
@@ -151,7 +151,7 @@ class PinboardRemoteDataSourceImpl implements PinboardRemoteDataSource {
           .select()
           .single();
 
-      return CommentModel.fromJson(response as Map<String, dynamic>);
+      return CommentModel.fromJson(response);
     } catch (e) {
       throw Exception('Failed to add comment: $e');
     }
@@ -217,9 +217,8 @@ class PinboardRemoteDataSourceImpl implements PinboardRemoteDataSource {
           .select()
           .single();
 
-      final responseMap = response as Map<String, dynamic>;
       return PinboardItemModel.fromJson({
-        ...responseMap,
+        ...response,
         'likes_count': 0,
         'is_liked_by_current_user': false,
         'comments_count': 0,

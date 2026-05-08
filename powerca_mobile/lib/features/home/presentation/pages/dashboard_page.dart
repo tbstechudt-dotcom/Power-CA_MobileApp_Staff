@@ -9,6 +9,7 @@ import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/services/app_update_service.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/session_service.dart';
 import '../../../../shared/widgets/update_dialog.dart';
 import '../../../auth/domain/entities/staff.dart';
@@ -39,6 +40,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   bool _isCheckingSession = false;
   bool _isSessionDialogShowing = false;
   bool _isLoginRequestDialogShowing = false;
+  static const int _initialPage = 10000;
+  late PageController _pageController;
 
   // Summary card state
   bool _isLoadingSummary = true;
@@ -56,6 +59,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _pageController = PageController(initialPage: _initialPage);
     _fetchDashboardStats();
     _checkForAppUpdate();
     // Check session validity on first load
@@ -489,6 +493,13 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           _leaveDates = leaveDates;
           _isLoadingSummary = false;
         });
+
+        // Send notification if user hasn't logged today (and not on leave)
+        if (!hasLoggedToday && !isOnLeaveToday) {
+          NotificationService().showWorkLogReminderNotification(
+            staffName: widget.currentStaff.name,
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error fetching dashboard stats: $e');
@@ -758,6 +769,269 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
         // Row 2: Swipeable Day Status (full width)
         _buildSwipeableDayStatus(isDarkMode),
       ],
+    );
+  }
+
+  /// Handle tap on day status card based on current status
+  void _onDayStatusTapped(DateTime date, String status, bool isDarkMode) {
+    if (status == 'Not Logged') {
+      // Navigate directly to work log entry form
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => WorkLogEntryFormPage(
+            selectedDate: date,
+            staffId: widget.currentStaff.staffId,
+          ),
+        ),
+      ).then((_) => _fetchDashboardStats());
+    } else {
+      // Active or On Leave — show bottom sheet with details
+      _showDayDetails(date, isDarkMode);
+    }
+  }
+
+  /// Show bottom sheet with day details and work log entries
+  void _showDayDetails(DateTime date, bool isDarkMode) {
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final dayInfo = _getDayInfo(date);
+    final now = DateTime.now();
+    final isToday = date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+
+    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final dividerColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final cardBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.65,
+          ),
+          decoration: BoxDecoration(
+            color: sheetBgColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                margin: EdgeInsets.only(top: 12.h),
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: dividerColor,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+
+              // Date header
+              Padding(
+                padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 12.h),
+                child: Row(
+                  children: [
+                    // Date circle
+                    Container(
+                      width: 52.w,
+                      height: 52.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: dayInfo.gradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            DateFormat('dd').format(date),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1.1,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('MMM').format(date).toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 14.w),
+                    // Date text
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isToday
+                                ? 'Today, ${DateFormat('d MMMM yyyy').format(date)}'
+                                : DateFormat('EEEE, d MMMM yyyy').format(date),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w700,
+                              color: titleColor,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Row(
+                            children: [
+                              Icon(dayInfo.icon, size: 14.sp, color: dayInfo.gradient[1]),
+                              SizedBox(width: 6.w),
+                              Text(
+                                dayInfo.status,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: dayInfo.gradient[1],
+                                ),
+                              ),
+                              SizedBox(width: 12.w),
+                              Icon(Icons.access_time_rounded, size: 14.sp, color: subtitleColor),
+                              SizedBox(width: 4.w),
+                              Text(
+                                _formatWorkingHours(dayInfo.minutes),
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: subtitleColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // "+New" button for Active days
+                    if (dayInfo.status == 'Active')
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => WorkLogEntryFormPage(
+                                selectedDate: date,
+                                staffId: widget.currentStaff.staffId,
+                              ),
+                            ),
+                          ).then((_) => _fetchDashboardStats());
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_rounded, size: 16.sp, color: Colors.white),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'New',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              Divider(color: dividerColor, height: 1),
+
+              // Entries list
+              Flexible(
+                child: _DayEntriesList(
+                  dateStr: dateStr,
+                  staffId: widget.currentStaff.staffId,
+                  isDarkMode: isDarkMode,
+                  cardBgColor: cardBgColor,
+                  titleColor: titleColor,
+                  subtitleColor: subtitleColor,
+                  dividerColor: dividerColor,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNavButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+    required bool isDarkMode,
+    bool isHighlighted = false,
+  }) {
+    final isDisabled = onTap == null;
+    final bgColor = isHighlighted
+        ? const Color(0xFF2563EB)
+        : isDarkMode
+            ? const Color(0xFF1E293B)
+            : const Color(0xFFF1F5F9);
+    final fgColor = isDisabled
+        ? (isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1))
+        : isHighlighted
+            ? Colors.white
+            : (isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF475569));
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8.r),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (label == 'Prev') Icon(icon, size: 16.sp, color: fgColor),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600,
+                color: fgColor,
+              ),
+            ),
+            if (label != 'Prev') Icon(icon, size: 16.sp, color: fgColor),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1240,4 +1514,274 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   }
 }
 
+class _DayEntriesListState extends State<_DayEntriesList> {
+  List<Map<String, dynamic>> _entries = [];
+  final Map<int, String> _jobNames = {};
+  bool _isLoading = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchEntries();
+  }
+
+  Future<void> _fetchEntries() async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      final response = await supabase
+          .from('workdiary')
+          .select()
+          .eq('staff_id', widget.staffId)
+          .eq('date', widget.dateStr)
+          .order('timefrom', ascending: true);
+
+      final entries = List<Map<String, dynamic>>.from(response);
+
+      // Fetch job names
+      final jobIds = entries
+          .map((e) => e['job_id'])
+          .where((id) => id != null)
+          .toSet()
+          .toList();
+
+      if (jobIds.isNotEmpty) {
+        final jobResponse = await supabase
+            .from('jobshead')
+            .select('job_id, work_desc')
+            .inFilter('job_id', jobIds);
+
+        for (var job in jobResponse) {
+          _jobNames[job['job_id']] = job['work_desc'] ?? 'Unknown';
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _entries = entries;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching day entries: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  String _formatTime(dynamic timeValue) {
+    if (timeValue == null) return '--:--';
+    String timeStr = timeValue.toString();
+    if (timeStr.contains('T')) timeStr = timeStr.split('T')[1];
+    timeStr = timeStr.split('+')[0].split('Z')[0].split('.')[0];
+    final parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      int hour = int.tryParse(parts[0]) ?? 0;
+      final minute = parts[1];
+      final period = hour >= 12 ? 'PM' : 'AM';
+      if (hour == 0) {
+        hour = 12;
+      } else if (hour > 12) {
+        hour = hour - 12;
+      }
+      return '$hour:$minute $period';
+    }
+    return timeStr;
+  }
+
+  String _formatMinutes(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    if (h > 0 && m > 0) return '${h}h ${m}m';
+    if (h > 0) return '${h}h';
+    if (m > 0) return '${m}m';
+    return '0m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Padding(
+        padding: EdgeInsets.all(32.w),
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (_entries.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.all(32.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.event_busy_rounded,
+              size: 40.sp,
+              color: widget.subtitleColor,
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'No work entries for this day',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+                color: widget.subtitleColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      itemCount: _entries.length,
+      separatorBuilder: (_, __) => SizedBox(height: 10.h),
+      itemBuilder: (context, index) {
+        final entry = _entries[index];
+        final jobId = entry['job_id'];
+        final jobName = jobId != null ? _jobNames[jobId] : null;
+        final minutes = (entry['minutes'] as num?)?.toInt() ?? 0;
+        final timeFrom = entry['timefrom'];
+        final timeTo = entry['timeto'];
+        final notes = entry['tasknotes'] ?? '';
+        final hasTimeRange = timeFrom != null && timeTo != null;
+
+        const accentColor = Color(0xFF3B82F6);
+        final timeBgColor = widget.isDarkMode
+            ? const Color(0xFF1E3A5F)
+            : const Color(0xFFEFF6FF);
+
+        return Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: widget.cardBgColor,
+            borderRadius: BorderRadius.circular(14.r),
+            border: Border.all(color: widget.dividerColor, width: 1),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Entry number
+              Container(
+                width: 30.w,
+                height: 30.h,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              // Entry details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Job name
+                    Text(
+                      jobName ?? 'Job #$jobId',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: widget.titleColor,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 6.h),
+                    // Time range
+                    Row(
+                      children: [
+                        if (hasTimeRange) ...[
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 4.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: timeBgColor,
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.schedule_rounded,
+                                  size: 12.sp,
+                                  color: accentColor,
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  '${_formatTime(timeFrom)} - ${_formatTime(timeTo)}',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: accentColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                        ],
+                      ],
+                    ),
+                    // Notes
+                    if (notes.toString().isNotEmpty) ...[
+                      SizedBox(height: 6.h),
+                      Text(
+                        notes.toString(),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w400,
+                          color: widget.subtitleColor,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Duration badge
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  _formatMinutes(minutes),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF10B981),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

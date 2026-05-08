@@ -153,7 +153,6 @@ class _JobsFilteredPageState extends State<JobsFilteredPage> {
     final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : Colors.white;
     final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
     final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
     final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
     final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);

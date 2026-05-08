@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
-import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
 import '../../../auth/domain/entities/staff.dart';
 import 'leave_detail_page.dart';
