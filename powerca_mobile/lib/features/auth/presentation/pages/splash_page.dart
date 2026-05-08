@@ -381,7 +381,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
 
                 // Version text
                 Text(
-                  'Version 1.0.9',
+                  'Version 1.1.0',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12.sp,

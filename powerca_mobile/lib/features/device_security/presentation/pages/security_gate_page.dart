@@ -141,37 +141,44 @@ class _SecurityGatePageState extends State<SecurityGatePage> {
     });
 
     try {
+      debugPrint('[OTP] Step 1: getDeviceInfo() starting...');
       final securityRepository = getIt<DeviceSecurityRepository>();
 
       // Get device info (still needed for device tracking in backend)
       final deviceInfoResult = await securityRepository.getDeviceInfo();
+      debugPrint('[OTP] Step 2: getDeviceInfo() returned');
 
       if (!mounted) return;
 
       deviceInfoResult.fold(
         (failure) {
+          debugPrint('[OTP] getDeviceInfo failure: ${failure.message}');
           setState(() {
             _error = 'Failed to initialize: ${failure.message}';
             _isSendingOtp = false;
           });
         },
         (deviceInfo) async {
+          debugPrint('[OTP] Step 3: sendOtpWithPhone() starting (phone=$phone)...');
           // Send OTP using phone number
           final otpResult = await securityRepository.sendOtpWithPhone(
             phone,
             deviceInfo,
           );
+          debugPrint('[OTP] Step 4: sendOtpWithPhone() returned');
 
           if (!mounted) return;
 
           otpResult.fold(
             (failure) {
+              debugPrint('[OTP] sendOtpWithPhone failure: ${failure.message}');
               setState(() {
                 _error = failure.message;
                 _isSendingOtp = false;
               });
             },
             (otpResponse) {
+              debugPrint('[OTP] Step 5: navigating to /otp-verification');
               // Navigate to OTP verification page
               // Pass phone number for verification (no fingerprint in UI)
               Navigator.pushReplacementNamed(
@@ -189,6 +196,7 @@ class _SecurityGatePageState extends State<SecurityGatePage> {
         },
       );
     } catch (e) {
+      debugPrint('[OTP] Outer catch: $e');
       if (mounted) {
         setState(() {
           _error = 'Failed to send OTP: $e';
