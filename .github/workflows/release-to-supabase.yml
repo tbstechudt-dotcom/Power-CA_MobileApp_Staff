@@ -62,7 +62,7 @@ jobs:
       - name: Insert version to Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           VERSION_NAME: ${{ steps.release_version.outputs.version_name || steps.manual_version.outputs.version_name }}
           VERSION_CODE: ${{ steps.release_version.outputs.version_code || steps.manual_version.outputs.version_code }}
           DOWNLOAD_URL: ${{ steps.release_version.outputs.download_url || steps.manual_version.outputs.download_url }}
@@ -72,8 +72,8 @@ jobs:
 
           # Use UPSERT to handle duplicates (update if version_code exists)
           curl -X POST "$SUPABASE_URL/rest/v1/app_versions" \
-            -H "apikey: $SUPABASE_SERVICE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Content-Type: application/json" \
             -H "Prefer: resolution=merge-duplicates" \
             -d "{
