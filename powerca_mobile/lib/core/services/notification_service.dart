@@ -34,7 +34,7 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.initialize(
-      settings: initSettings,
+      initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -110,10 +110,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      id: leaveId,
-      title: 'Leave Request ${isApproved ? 'Approved' : 'Rejected'}',
-      body: '$leaveType ($dateRange) has been ${status.toLowerCase()}',
-      notificationDetails: details,
+      leaveId,
+      'Leave Request ${isApproved ? 'Approved' : 'Rejected'}',
+      '$leaveType ($dateRange) has been ${status.toLowerCase()}',
+      details,
       payload: 'leave:$leaveId',
     );
 
@@ -154,10 +154,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      id: remId.hashCode,
-      title: 'New Reminder: $title',
-      body: 'For $clientName - Due: $dueDate',
-      notificationDetails: details,
+      remId.hashCode,
+      'New Reminder: $title',
+      'For $clientName - Due: $dueDate',
+      details,
       payload: 'pinboard:$remId',
     );
 
