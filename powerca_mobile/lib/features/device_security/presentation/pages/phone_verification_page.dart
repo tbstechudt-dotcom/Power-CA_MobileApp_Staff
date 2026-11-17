@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
+import '../../../../shared/widgets/auth_sheet.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import '../../domain/entities/device_info.dart';
 import '../bloc/device_security_bloc.dart';
 import '../bloc/device_security_event.dart';
@@ -28,6 +28,7 @@ class PhoneVerificationPage extends StatefulWidget {
 }
 
 class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
+  late final DeviceSecurityBloc _bloc = getIt<DeviceSecurityBloc>();
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
 
@@ -75,7 +76,9 @@ class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
     // Send OTP via BLoC - include staffId for server-side validation
     // This ensures the phone number belongs to the logged-in staff
     if (mounted) {
-      context.read<DeviceSecurityBloc>().add(
+      // Use the bloc owned by this page: the State's own context sits above
+      // the BlocProvider created in build(), so context.read would fail.
+      _bloc.add(
         SendOtpWithPhoneRequested(
           phone: phone,
           deviceInfo: widget.deviceInfo,
@@ -88,7 +91,7 @@ class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => getIt<DeviceSecurityBloc>(),
+      create: (context) => _bloc,
       child: BlocConsumer<DeviceSecurityBloc, DeviceSecurityState>(
         listener: (context, state) {
           if (state is OtpSent) {
@@ -114,291 +117,79 @@ class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
           }
         },
         builder: (context, state) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF8F9FC),
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
-                icon: Icon(
-                  Icons.arrow_back_ios,
-                  color: AppTheme.textPrimaryColor,
-                  size: 20.sp,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            body: SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 24.w),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(height: 20.h),
+          final p = SoftPalette.of(context);
+          return AuthSheet(
+            title: 'Verify your phone',
+            subtitle:
+                "Enter your registered mobile number. We'll send you a 6-digit code.",
+            icon: Icons.smartphone_rounded,
+            note: 'Use the number registered in your staff profile.',
+            showBack: true,
+            onBack: () => Navigator.of(context).pop(),
+            children: [
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Phone number field
+                    const SoftFieldLabel('Mobile number'),
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: softInputDecoration(
+                        context,
+                        hint: 'Enter 10-digit number',
+                        prefixText: '+91',
+                      ),
+                      style: softInputTextStyle(context),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your phone number';
+                        }
+                        if (!_isValidPhone(value)) {
+                          return 'Please enter a valid 10-digit phone number';
+                        }
+                        return null;
+                      },
+                    ),
 
-                      // Icon
+                    // Error message
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 12),
                       Container(
-                        width: 80.w,
-                        height: 80.h,
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+                          color: p.tint(p.danger),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        child: Icon(
-                          Icons.phone_android,
-                          size: 40.sp,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-
-                      SizedBox(height: 24.h),
-
-                      // Title
-                      Text(
-                        'Verify Your Device',
-                        style: GoogleFonts.inter(
-                          fontSize: 24.sp,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimaryColor,
-                        ),
-                      ),
-
-                      SizedBox(height: 12.h),
-
-                      // Description
-                      Text(
-                        'Enter your registered phone number to receive an OTP for device verification.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w400,
-                          color: AppTheme.textSecondaryColor,
-                          height: 1.5,
-                        ),
-                      ),
-
-                      SizedBox(height: 32.h),
-
-                      // Phone number label
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Phone Number',
-                          style: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textPrimaryColor,
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: 8.h),
-
-                      // Phone number field
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(
-                            Icons.phone,
-                            color: AppTheme.primaryColor,
-                            size: 22.sp,
-                          ),
-                          prefixText: '+91 ',
-                          prefixStyle: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textPrimaryColor,
-                          ),
-                          hintText: 'Enter 10-digit number',
-                          hintStyle: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            color: AppTheme.textSecondaryColor,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: AppTheme.borderColor,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: AppTheme.borderColor,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: AppTheme.primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: const BorderSide(
-                              color: Colors.red,
-                            ),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10.w,
-                            vertical: 16.h,
-                          ),
-                        ),
-                        style: GoogleFonts.inter(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.textPrimaryColor,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your phone number';
-                          }
-                          if (!_isValidPhone(value)) {
-                            return 'Please enter a valid 10-digit phone number';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      // Error message
-                      if (_errorMessage != null) ...[
-                        SizedBox(height: 12.h),
-                        Container(
-                          padding: EdgeInsets.all(12.w),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8.r),
-                            border: Border.all(
-                              color: Colors.red.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: Colors.red,
-                                size: 20.sp,
-                              ),
-                              SizedBox(width: 8.w),
-                              Expanded(
-                                child: Text(
-                                  _errorMessage!,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.red[700],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-
-                      SizedBox(height: 32.h),
-
-                      // Info box
-                      Container(
-                        padding: EdgeInsets.all(16.w),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        child: Column(
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  color: Colors.blue,
-                                  size: 20.sp,
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'Important',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.blue[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8.h),
-                            Text(
-                              'Enter the phone number registered in your staff profile. '
-                              'An OTP will be sent to this number for verification.',
-                              style: GoogleFonts.inter(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.blue[700],
-                                height: 1.5,
+                            Icon(Icons.error_outline_rounded, color: p.danger, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: SoftText.body(p, size: 13, color: p.danger),
                               ),
                             ),
                           ],
                         ),
                       ),
-
-                      SizedBox(height: 40.h),
-
-                      // Send OTP button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52.h,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleSendOtp,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            disabledBackgroundColor:
-                                AppTheme.primaryColor.withValues(alpha: 0.5),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                          ),
-                          child: _isLoading
-                              ? SizedBox(
-                                  width: 24.w,
-                                  height: 24.h,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Send OTP',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Icon(
-                                      Icons.arrow_forward,
-                                      color: Colors.white,
-                                      size: 20.sp,
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-
-                      SizedBox(height: 32.h),
                     ],
-                  ),
+
+                    const SizedBox(height: 20),
+
+                    // Send OTP button
+                    SoftPillButton(
+                      label: 'Send OTP',
+                      loading: _isLoading,
+                      onPressed: _isLoading ? null : _handleSendOtp,
+                    ),
+                  ],
                 ),
               ),
-            ),
+            ],
           );
         },
       ),

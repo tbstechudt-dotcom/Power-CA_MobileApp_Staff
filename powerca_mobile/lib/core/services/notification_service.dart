@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Singleton service for managing local notifications
 /// Handles initialization, permission requests, and notification display
@@ -162,6 +164,52 @@ class NotificationService {
     );
 
     debugPrint('NotificationService: Showed pinboard notification for ID $remId');
+  }
+
+  static const int _workLogReminderId = 9001;
+  static const String _workLogReminderKey = 'work_log_reminder_last_shown';
+
+  /// Remind the staff member to log today's work.
+  ///
+  /// Shown at most once per calendar day: the date it was last shown is
+  /// stored in SharedPreferences and later calls on the same day are ignored.
+  Future<void> showWorkLogReminder() async {
+    if (!_isInitialized) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (prefs.getString(_workLogReminderKey) == today) {
+      debugPrint('NotificationService: Work log reminder already shown today');
+      return;
+    }
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'work_log_reminders',
+        'Work Log Reminders',
+        channelDescription: 'Daily reminder to log your work',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+        icon: '@mipmap/ic_launcher',
+      ),
+      iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      _workLogReminderId,
+      "Don't forget your work log",
+      "You haven't logged any work for today yet.",
+      details,
+      payload: 'worklog:$today',
+    );
+    await prefs.setString(_workLogReminderKey, today);
+    debugPrint('NotificationService: Showed work log reminder');
+  }
+
+  /// Remove the work log reminder (e.g. once today's work is logged).
+  Future<void> cancelWorkLogReminder() async {
+    if (!_isInitialized) return;
+    await _flutterLocalNotificationsPlugin.cancel(_workLogReminderId);
   }
 
   /// Handle notification tap

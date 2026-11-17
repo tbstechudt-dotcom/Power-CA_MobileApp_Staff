@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
-import '../../app/theme.dart';
 import '../../core/providers/notification_provider.dart';
-import '../../core/providers/theme_provider.dart';
+import 'soft_page.dart';
 
 /// Reusable bottom sheet for notification settings
 /// Can be used on Leave page and Pinboard page
@@ -50,164 +49,124 @@ class NotificationSettingsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final p = SoftPalette.of(context);
     final notificationProvider = Provider.of<NotificationProvider>(context);
-
-    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final handleColor =
-        isDarkMode ? const Color(0xFF475569) : const Color(0xFFE5E7EB);
-    final titleColor =
-        isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final subtitleColor =
-        isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final cardColor =
-        isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final warningBgColor =
-        isDarkMode ? const Color(0xFF78350F) : const Color(0xFFFEF3C7);
-    final warningBorderColor =
-        isDarkMode ? const Color(0xFFF59E0B) : const Color(0xFFFCD34D);
-    final warningTextColor =
-        isDarkMode ? const Color(0xFFFCD34D) : const Color(0xFFB45309);
 
     final isEnabled = getCurrentValue(notificationProvider);
     final globalEnabled = notificationProvider.notificationsEnabled;
+    final active = isEnabled && globalEnabled;
 
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 20.h),
       decoration: BoxDecoration(
-        color: sheetBgColor,
+        color: p.background,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20.r),
-          topRight: Radius.circular(20.r),
+          topLeft: Radius.circular(28.r),
+          topRight: Radius.circular(28.r),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            width: 40.w,
-            height: 4.h,
-            decoration: BoxDecoration(
-              color: handleColor,
-              borderRadius: BorderRadius.circular(2.r),
-            ),
-          ),
-          SizedBox(height: 20.h),
-
-          // Title
-          Text(
-            '$featureName Notification Settings',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
-              color: titleColor,
-            ),
-          ),
-          SizedBox(height: 8.h),
-
-          // Subtitle
-          Text(
-            'Configure notifications for ${featureName.toLowerCase()} updates',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              color: subtitleColor,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 20.h),
-
-          // Global notifications warning if disabled
-          if (!globalEnabled)
-            Container(
-              padding: EdgeInsets.all(12.w),
-              margin: EdgeInsets.only(bottom: 16.h),
-              decoration: BoxDecoration(
-                color: warningBgColor,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: warningBorderColor),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: p.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: warningTextColor,
-                    size: 20.sp,
-                  ),
-                  SizedBox(width: 8.w),
-                  Expanded(
-                    child: Text(
-                      'Global notifications are disabled. Enable them in Settings first.',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        color: warningTextColor,
+            ),
+            SizedBox(height: 20.h),
+
+            // Title
+            Text(
+              '$featureName Notification Settings',
+              style: SoftText.title(p, size: 19),
+            ),
+            SizedBox(height: 6.h),
+
+            // Subtitle
+            Text(
+              'Configure notifications for ${featureName.toLowerCase()} updates',
+              style: SoftText.body(p, size: 13),
+            ),
+            SizedBox(height: 18.h),
+
+            // Global notifications warning if disabled
+            if (!globalEnabled)
+              Container(
+                padding: EdgeInsets.all(14.w),
+                margin: EdgeInsets.only(bottom: 14.h),
+                decoration: BoxDecoration(
+                  color: p.tint(p.warning),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: p.warning,
+                      size: 20,
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: Text(
+                        'Global notifications are disabled. Enable them in Settings first.',
+                        style: SoftText.body(p, size: 12.5, color: p.ink),
                       ),
                     ),
+                  ],
+                ),
+              ),
+
+            // Toggle card
+            SoftCard(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+              child: Row(
+                children: [
+                  SoftIconBadge(
+                    icon: Icons.notifications_active_rounded,
+                    color: active ? p.accent : p.muted,
+                    size: 40,
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$featureName Notifications',
+                          style: SoftText.heading(p, size: 15),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          featureName == 'Leave'
+                              ? 'Get notified when leave requests are approved or rejected'
+                              : 'Get notified when new reminders are assigned to you',
+                          style: SoftText.caption(p),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: isEnabled,
+                    onChanged: globalEnabled
+                        ? (value) => onChanged(notificationProvider, value)
+                        : null,
+                    activeTrackColor: p.pill,
+                    activeThumbColor: p.onPill,
                   ),
                 ],
               ),
             ),
-
-          // Toggle card
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.notifications_active_rounded,
-                  color: isEnabled && globalEnabled
-                      ? AppTheme.primaryColor
-                      : subtitleColor,
-                  size: 24.sp,
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$featureName Notifications',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w500,
-                          color: titleColor,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        featureName == 'Leave'
-                            ? 'Get notified when leave requests are approved or rejected'
-                            : 'Get notified when new reminders are assigned to you',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12.sp,
-                          color: subtitleColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Switch.adaptive(
-                  value: isEnabled,
-                  onChanged: globalEnabled
-                      ? (value) => onChanged(notificationProvider, value)
-                      : null,
-                  activeColor: AppTheme.primaryColor,
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 20.h),
-        ],
+          ],
+        ),
       ),
     );
   }

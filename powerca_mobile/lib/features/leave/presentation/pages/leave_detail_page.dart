@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/soft_page.dart';
 
 class LeaveDetailPage extends StatelessWidget {
   final Map<String, dynamic> leave;
@@ -17,22 +14,28 @@ class LeaveDetailPage extends StatelessWidget {
     required this.onDeleted,
   });
 
+  static Color _statusColor(SoftPalette p, String? status) {
+    switch (status) {
+      case 'Approved':
+        return p.success;
+      case 'Rejected':
+        return p.danger;
+      default:
+        return p.warning;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final backBtnBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backBtnBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
-    final backBtnIconColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor;
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final p = SoftPalette.of(context);
 
     final fromDate = leave['fromDate'] as DateTime;
     final toDate = leave['toDate'] as DateTime;
     final days = leave['days'] as double;
     final daysDisplay = days == days.toInt() ? days.toInt().toString() : days.toStringAsFixed(1);
     final reason = leave['reason'] as String;
+    final status = leave['status'] as String?;
+    final statusColor = _statusColor(p, status);
 
     // Parse half-day information from the original reason stored in database
     String fromDayType = 'Full Day';
@@ -65,685 +68,165 @@ class LeaveDetailPage extends StatelessWidget {
           .trim();
     }
 
-    return Scaffold(
-      backgroundColor: scaffoldBgColor,
-      body: Column(
+    final isSingleDay = fromDate.year == toDate.year &&
+        fromDate.month == toDate.month &&
+        fromDate.day == toDate.day;
+
+    return SoftScaffold(
+      title: 'Leave Request',
+      subtitle: leave['type'] as String?,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
         children: [
-          // Header area
-          Container(
-            color: headerBgColor,
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-                color: headerBgColor,
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 42.w,
-                        height: 42.h,
-                        decoration: BoxDecoration(
-                          color: backBtnBgColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: backBtnBorderColor,
-                            width: 1,
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.arrow_back_ios_new,
-                            size: 18.sp,
-                            color: backBtnIconColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 16.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Leave Request',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w700,
-                              color: titleColor,
-                            ),
-                          ),
-                          SizedBox(height: 2.h),
-                          Text(
-                            leave['type'],
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w400,
-                              color: subtitleColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Scrollable content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Quick Stats Row (Status & Duration)
-                  Row(
-                    children: [
-                      // Status Card
-                      Expanded(
-                        child: Container(
-                          padding: EdgeInsets.all(16.w),
-                          decoration: BoxDecoration(
-                            color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-                            borderRadius: BorderRadius.circular(12.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40.w,
-                                height: 40.w,
-                                decoration: BoxDecoration(
-                                  color: (leave['statusColor'] as Color).withValues(alpha: isDarkMode ? 0.2 : 0.1),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                ),
-                                child: Icon(
-                                  leave['status'] == 'Approved'
-                                      ? Icons.check_circle_rounded
-                                      : leave['status'] == 'Rejected'
-                                          ? Icons.cancel_rounded
-                                          : Icons.schedule_rounded,
-                                  size: 20.sp,
-                                  color: leave['statusColor'],
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Status',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w400,
-                                        color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                      ),
-                                    ),
-                                    SizedBox(height: 2.h),
-                                    Text(
-                                      leave['status'],
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: leave['statusColor'],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      // Duration Card
-                      Expanded(
-                        child: Container(
-                          padding: EdgeInsets.all(16.w),
-                          decoration: BoxDecoration(
-                            color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-                            borderRadius: BorderRadius.circular(12.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40.w,
-                                height: 40.w,
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? const Color(0xFF6366F1).withValues(alpha: 0.2) : const Color(0xFFEEF2FF),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                ),
-                                child: Icon(
-                                  Icons.timer_outlined,
-                                  size: 20.sp,
-                                  color: const Color(0xFF6366F1),
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Duration',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w400,
-                                        color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                      ),
-                                    ),
-                                    SizedBox(height: 2.h),
-                                    Text(
-                                      '$daysDisplay ${days == 1 ? 'Day' : 'Days'}',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF6366F1),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 16.h),
-
-                  // Date Details Card
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-                      borderRadius: BorderRadius.circular(12.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Padding(
-                          padding: EdgeInsets.all(16.w),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40.w,
-                                height: 40.w,
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? const Color(0xFF0EA5E9).withValues(alpha: 0.2) : const Color(0xFFF0F9FF),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.calendar_today_rounded,
-                                    size: 20.sp,
-                                    color: const Color(0xFF0EA5E9),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Text(
-                                'Date Details',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Divider(height: 1, thickness: 1, color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9)),
-                        // Content
-                        Padding(
-                          padding: EdgeInsets.all(16.w),
-                          child: Column(
-                            children: [
-                              // Check if single day leave
-                              if (fromDate.year == toDate.year &&
-                                  fromDate.month == toDate.month &&
-                                  fromDate.day == toDate.day) ...[
-                                _buildDateItem(
-                                  context: context,
-                                  label: 'Date',
-                                  date: fromDate,
-                                  dayType: fromDayType,
-                                  iconBgColor: isDarkMode ? const Color(0xFF6366F1).withValues(alpha: 0.2) : const Color(0xFFEEF2FF),
-                                  iconColor: const Color(0xFF6366F1),
-                                  showDivider: false,
-                                ),
-                              ] else ...[
-                                _buildDateItem(
-                                  context: context,
-                                  label: 'From',
-                                  date: fromDate,
-                                  dayType: fromDayType,
-                                  iconBgColor: isDarkMode ? const Color(0xFF10B981).withValues(alpha: 0.2) : const Color(0xFFD1FAE5),
-                                  iconColor: const Color(0xFF10B981),
-                                  showDivider: true,
-                                ),
-                                _buildDateItem(
-                                  context: context,
-                                  label: 'To',
-                                  date: toDate,
-                                  dayType: toDayType,
-                                  iconBgColor: isDarkMode ? const Color(0xFFEF4444).withValues(alpha: 0.2) : const Color(0xFFFEE2E2),
-                                  iconColor: const Color(0xFFEF4444),
-                                  showDivider: false,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 16.h),
-
-                  // Reason Card
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-                      borderRadius: BorderRadius.circular(12.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Padding(
-                          padding: EdgeInsets.all(16.w),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40.w,
-                                height: 40.w,
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? const Color(0xFFA855F7).withValues(alpha: 0.2) : const Color(0xFFFDF4FF),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.description_rounded,
-                                    size: 20.sp,
-                                    color: const Color(0xFFA855F7),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Text(
-                                'Reason',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Divider(height: 1, thickness: 1, color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9)),
-                        // Content
-                        Padding(
-                          padding: EdgeInsets.all(16.w),
-                          child: Text(
-                            cleanReason.isEmpty ? 'No reason provided' : cleanReason,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w400,
-                              color: cleanReason.isEmpty
-                                  ? (isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8))
-                                  : (isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
-                              height: 1.6,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 16.h),
-
-                  // Applied On Card
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-                      borderRadius: BorderRadius.circular(12.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(16.w),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40.w,
-                            height: 40.w,
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10.r),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.access_time_rounded,
-                                size: 20.sp,
-                                color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Applied On',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w400,
-                                    color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                  ),
-                                ),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  DateFormat('EEEE, dd MMMM yyyy').format(leave['appliedDate']),
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
-                                  ),
-                                ),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  DateFormat('hh:mm a').format(leave['appliedDate']),
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w400,
-                                    color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 24.h),
-
-                  // Delete Button (only for pending)
-                  if (leave['status'] == 'Pending')
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52.h,
-                      child: ElevatedButton(
-                        onPressed: () => _showDeleteConfirmation(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFEE2E2),
-                          foregroundColor: const Color(0xFFEF4444),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.delete_outline_rounded, size: 20.sp),
-                            SizedBox(width: 8.w),
-                            Text(
-                              'Delete Request',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 15.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  SizedBox(height: 20.h),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateItem({
-    required BuildContext context,
-    required String label,
-    required DateTime date,
-    required String dayType,
-    required Color iconBgColor,
-    required Color iconColor,
-    required bool showDivider,
-  }) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
-    final dividerColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
-
-    return Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 10.h),
-          child: Row(
+          // Quick Stats Row (Status & Duration)
+          Row(
             children: [
-              Container(
-                width: 40.w,
-                height: 40.w,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Center(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: iconColor,
-                    ),
-                  ),
+              Expanded(
+                child: _StatTile(
+                  icon: status == 'Approved'
+                      ? Icons.check_circle_rounded
+                      : status == 'Rejected'
+                          ? Icons.cancel_rounded
+                          : Icons.schedule_rounded,
+                  color: statusColor,
+                  label: 'STATUS',
+                  value: status ?? '',
                 ),
               ),
-              SizedBox(width: 12.w),
+              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      DateFormat('EEEE, dd MMMM yyyy').format(date),
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        color: textPrimaryColor,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                      decoration: BoxDecoration(
-                        color: dayType == 'Full Day'
-                            ? (isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9))
-                            : iconBgColor,
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                      child: Text(
-                        dayType,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w500,
-                          color: dayType == 'Full Day'
-                              ? (isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B))
-                              : iconColor,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: _StatTile(
+                  icon: Icons.timer_outlined,
+                  color: p.accent,
+                  label: 'DURATION',
+                  value: '$daysDisplay ${days == 1 ? 'Day' : 'Days'}',
                 ),
               ),
             ],
           ),
-        ),
-        if (showDivider)
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: dividerColor,
-            indent: 52.w,
-          ),
-      ],
-    );
-  }
 
-  void _showDeleteConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: 40.w,
-              height: 40.w,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-              child: Icon(
-                Icons.warning_amber_rounded,
-                color: const Color(0xFFEF4444),
-                size: 24.sp,
-              ),
+          const SizedBox(height: 14),
+
+          // Date Details Card
+          SoftCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _CardHeader(icon: Icons.calendar_today_rounded, title: 'Date Details'),
+                const SizedBox(height: 6),
+                if (isSingleDay)
+                  _DateItem(
+                    label: 'Date',
+                    date: fromDate,
+                    dayType: fromDayType,
+                    color: p.accent,
+                    showDivider: false,
+                  )
+                else ...[
+                  _DateItem(
+                    label: 'From',
+                    date: fromDate,
+                    dayType: fromDayType,
+                    color: p.success,
+                    showDivider: true,
+                  ),
+                  _DateItem(
+                    label: 'To',
+                    date: toDate,
+                    dayType: toDayType,
+                    color: p.danger,
+                    showDivider: false,
+                  ),
+                ],
+              ],
             ),
-            SizedBox(width: 12.w),
-            Text(
-              'Delete Request?',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-              ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // Reason Card
+          SoftCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _CardHeader(icon: Icons.description_rounded, title: 'Reason'),
+                const SizedBox(height: 12),
+                Text(
+                  cleanReason.isEmpty ? 'No reason provided' : cleanReason,
+                  style: SoftText.body(
+                    p,
+                    color: cleanReason.isEmpty ? p.muted : p.inkSoft,
+                  ).copyWith(height: 1.6),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // Applied On Card
+          SoftCard(
+            child: Row(
+              children: [
+                SoftIconBadge(icon: Icons.access_time_rounded, color: p.muted, size: 40),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('APPLIED ON', style: SoftText.overline(p)),
+                      const SizedBox(height: 4),
+                      Text(
+                        DateFormat('EEEE, dd MMMM yyyy').format(leave['appliedDate']),
+                        style: SoftText.heading(p, size: 14.5),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        DateFormat('hh:mm a').format(leave['appliedDate']),
+                        style: SoftText.caption(p),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Delete Button (only for pending)
+          if (leave['status'] == 'Pending') ...[
+            const SizedBox(height: 24),
+            SoftPillButton(
+              label: 'Delete Request',
+              icon: Icons.delete_outline_rounded,
+              variant: SoftPillVariant.danger,
+              onPressed: () => _showDeleteConfirmation(context),
             ),
           ],
-        ),
-        content: Text(
-          'Are you sure you want to delete this leave request? This action cannot be undone.',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            color: const Color(0xFF64748B),
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF94A3B8),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(dialogContext).pop();
-              await _deleteLeaveRequest(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-            ),
-            child: Text(
-              'Delete',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
+    final confirmed = await showSoftConfirmDialog(
+      context,
+      title: 'Delete Request?',
+      message:
+          'Are you sure you want to delete this leave request? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    );
+    if (!confirmed || !context.mounted) return;
+    await _deleteLeaveRequest(context);
+  }
+
   Future<void> _deleteLeaveRequest(BuildContext context) async {
+    final p = SoftPalette.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
+      builder: (context) => Center(
+        child: CircularProgressIndicator(color: p.accent),
       ),
     );
 
@@ -760,17 +243,17 @@ class LeaveDetailPage extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
+          content: const Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 20.sp),
-              SizedBox(width: 8.w),
-              const Text('Leave request deleted successfully'),
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text('Leave request deleted successfully'),
             ],
           ),
-          backgroundColor: AppTheme.successColor,
+          backgroundColor: p.success,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.r),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       );
@@ -784,13 +267,145 @@ class LeaveDetailPage extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error deleting leave request: ${e.toString()}'),
-          backgroundColor: AppTheme.errorColor,
+          backgroundColor: p.danger,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.r),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       );
     }
+  }
+}
+
+/// Small stat tile (Status / Duration).
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String value;
+
+  const _StatTile({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    return SoftCard(
+      radius: 20,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          SoftIconBadge(icon: icon, color: color, size: 40),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: SoftText.overline(p)),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: SoftText.heading(p, size: 14.5).copyWith(color: color),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Card header: icon badge + title.
+class _CardHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const _CardHeader({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    return Row(
+      children: [
+        SoftIconBadge(icon: icon, color: p.accent, size: 36),
+        const SizedBox(width: 12),
+        Text(title, style: SoftText.heading(p)),
+      ],
+    );
+  }
+}
+
+/// One date line in the Date Details card.
+class _DateItem extends StatelessWidget {
+  final String label;
+  final DateTime date;
+  final String dayType;
+  final Color color;
+  final bool showDivider;
+
+  const _DateItem({
+    required this.label,
+    required this.date,
+    required this.dayType,
+    required this.color,
+    required this.showDivider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    final isFullDay = dayType == 'Full Day';
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: p.tint(color),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  label,
+                  style: SoftText.caption(p, size: 11.5)
+                      .copyWith(color: color, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('EEEE, dd MMMM yyyy').format(date),
+                      style: SoftText.heading(p, size: 14.5),
+                    ),
+                    const SizedBox(height: 6),
+                    SoftStatusPill(
+                      label: dayType,
+                      color: isFullDay ? p.muted : color,
+                      showDot: !isFullDay,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (showDivider) Divider(height: 1, thickness: 1, color: p.border, indent: 56),
+      ],
+    );
   }
 }

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/home_style.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../../auth/domain/entities/staff.dart';
 import '../../../home/presentation/pages/work_log_entry_form_page.dart';
+
 
 class JobDetailPage extends StatefulWidget {
   final Staff currentStaff;
@@ -208,164 +208,105 @@ class _JobDetailPageState extends State<JobDetailPage>
     super.dispose();
   }
 
-  Color _getTaskStatusColor(String status) {
-    switch (status) {
-      case 'C':
-        return const Color(0xFF10B981); // Completed - green
-      case 'P':
-        return const Color(0xFFF59E0B); // Pending - orange
-      case 'W':
-        return const Color(0xFF3B82F6); // Working - blue
-      default:
-        return const Color(0xFF6B7280); // Default - gray
-    }
-  }
-
-  String _getTaskStatusText(String status) {
-    switch (status) {
-      case 'C':
-        return 'Completed';
-      case 'P':
-        return 'Pending';
-      case 'W':
-        return 'In Progress';
-      default:
-        return 'Unknown';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF5F5F5);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
-
-    final dateFormat = DateFormat('dd MMM yyyy');
+    final p = SoftPalette.of(context);
+    final activeBg = p.isDark ? p.accent : const Color(0xFF1E3A8A);
+    const tabLabel = TextStyle(
+      fontFamily: AppTheme.fontFamily,
+      fontSize: 13.5,
+      fontWeight: FontWeight.w600,
+    );
+    final company = (widget.job['company'] ?? '').toString();
+    final jobDesc = (widget.job['job'] ?? 'Job details').toString();
 
     return Scaffold(
-      backgroundColor: scaffoldBgColor,
-      appBar: AppBar(
-        backgroundColor: headerBgColor,
-        elevation: 0,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8.w),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 42.w,
-                height: 42.h,
-                decoration: BoxDecoration(
-                  color: backButtonBgColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: backButtonBorderColor,
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 18.sp,
-                    color: textSecondaryColor,
+      backgroundColor: p.background,
+      body: HomeBackground(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Back
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SoftIconButton(
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: 'Back',
+                    size: 44,
+                    onTap: () => Navigator.pop(context),
                   ),
                 ),
               ),
-            ),
-          ),
-        ),
-        leadingWidth: 58.w,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.job['job'] ?? 'Job Details',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF2563EB),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              '${widget.job['jobNo'] ?? ''} • ${widget.job['company'] ?? ''}',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w400,
-                color: textSecondaryColor,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          // Tab Bar
-          Container(
-            color: headerBgColor,
-            child: TabBar(
-              controller: _tabController,
-              labelColor: AppTheme.primaryColor,
-              unselectedLabelColor: textSecondaryColor,
-              indicatorColor: AppTheme.primaryColor,
-              indicatorWeight: 3,
-              dividerColor: Colors.transparent,
-              labelStyle: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w600,
-              ),
-              unselectedLabelStyle: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w400,
-              ),
-              tabs: const [
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.task_alt, size: 16),
-                      SizedBox(width: 6),
-                      Text('Task Summary'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.calendar_month, size: 16),
-                      SizedBox(width: 6),
-                      Text('Day Summary'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
 
-          // Tab Views
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Task Summary Tab
-                _buildTaskSummaryTab(context, dateFormat),
-                // Day Summary Tab
-                _buildDaySummaryTab(context, dateFormat),
-              ],
-            ),
+              // "Job KJ..." + "CLIENT — description"
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    HomeEyebrow('Job ${widget.job['jobNo'] ?? ''}'),
+                    HomeInlineHeadline(
+                      size: 22,
+                      parts: [
+                        if (company.isNotEmpty) (text: company, strong: true),
+                        (text: company.isNotEmpty ? ' — $jobDesc' : jobDesc, strong: company.isEmpty),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Tab switch
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: p.surface,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: p.border),
+                    boxShadow: p.shadow,
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: p.isDark ? p.background : Colors.white,
+                    unselectedLabelColor: p.inkSoft,
+                    indicator: BoxDecoration(
+                      color: activeBg,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    splashBorderRadius: BorderRadius.circular(999),
+                    labelStyle: tabLabel,
+                    unselectedLabelStyle: tabLabel.copyWith(fontWeight: FontWeight.w500),
+                    tabs: const [
+                      Tab(text: 'Task summary'),
+                      Tab(text: 'Day summary'),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Tab Views
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildTaskSummaryTab(context),
+                    _buildDaySummaryTab(context),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -376,428 +317,175 @@ class _JobDetailPageState extends State<JobDetailPage>
     return '$h:${m.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildTaskSummaryTab(BuildContext context, DateFormat dateFormat) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final headerBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final emptyStateBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF8F9FC);
+  /// Soft card with a title and a caption (empty / error states).
+  Widget _noteCard(SoftPalette p, String title, String message, {VoidCallback? onRetry}) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      children: [
+        SoftCard(
+          radius: 24,
+          padding: const EdgeInsets.fromLTRB(18, 18, 12, 18),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: SoftText.heading(p, size: 17).copyWith(fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 4),
+                    Text(message, style: SoftText.caption(p, size: 12.5)),
+                  ],
+                ),
+              ),
+              if (onRetry != null) TextButton(onPressed: onRetry, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openDailyEntry(Map<String, dynamic> task) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WorkLogEntryFormPage(
+          selectedDate: DateTime.now(),
+          staffId: widget.currentStaff.staffId,
+          preSelectedJobId: widget.job['job_id'] as int?,
+          preSelectedClientId: widget.job['client_id'] as int?,
+          preSelectedJobName: widget.job['job'] as String?,
+          preSelectedClientName: widget.job['company'] as String?,
+          preSelectedTaskId: task['task_id'] as int?,
+          preSelectedTaskName: task['taskName'] as String?,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskSummaryTab(BuildContext context) {
+    final p = SoftPalette.of(context);
 
     if (_isLoadingTasks) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (_tasksError != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
-            SizedBox(height: 16.h),
-            Text(
-              'Error loading tasks',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            TextButton.icon(
-              onPressed: _loadTasks,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
+      return _noteCard(p, "Couldn't load tasks", 'Check your connection and try again.',
+          onRetry: _loadTasks,);
     }
 
     if (_tasks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80.w,
-              height: 80.h,
-              decoration: BoxDecoration(
-                color: emptyStateBgColor,
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Icon(
-                Icons.task_alt,
-                size: 40.sp,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              'No tasks found',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Tasks will appear here when added',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: textSecondaryColor,
-              ),
-            ),
-          ],
-        ),
+      return RefreshIndicator(
+        onRefresh: _loadTasks,
+        child: _noteCard(p, 'No tasks found', 'Tasks will appear here when added.'),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _loadTasks,
-      color: AppTheme.primaryColor,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(12.w),
-        child: Container(
-          decoration: BoxDecoration(
-            color: cardBgColor,
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Table Header
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                decoration: BoxDecoration(
-                  color: headerBgColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12.r),
-                    topRight: Radius.circular(12.r),
-                  ),
-                ),
-                child: Row(
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        itemCount: _tasks.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 14),
+        itemBuilder: (context, index) {
+          final task = _tasks[index];
+          final estHours = (task['estHours'] as num).toDouble();
+          final you = task['loginStaffHours'] as double;
+          final others = task['otherStaffHours'] as double;
+          final actual = task['actHours'] as double;
+          final logged = you + others;
+          final remaining = (estHours - logged).clamp(0.0, double.infinity);
+
+          return SoftCard(
+            radius: 24,
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 3,
-                      child: Text(
-                        'Tasks',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimaryColor,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task['taskName'] as String,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: SoftText.heading(p, size: 16.5).copyWith(fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Estimated ${_formatHours(estHours)} hrs',
+                            style: SoftText.caption(p, size: 12.5),
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(
-                      width: 40.w,
-                      child: Text(
-                        'Est.\nHrs',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimaryColor,
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 40.w,
-                      child: Text(
-                        'Login\nStaff',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimaryColor,
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 40.w,
-                      child: Text(
-                        'Other\nStaff',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimaryColor,
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 40.w,
-                      child: Text(
-                        'Act.\nHrs',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimaryColor,
-                        ),
-                      ),
-                    ),
-                    // Daily Entry action column header
-                    SizedBox(width: 4.w),
-                    SizedBox(
-                      width: 32.w,
-                      child: Text(
-                        'Daily\nEntry',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF3B82F6),
-                        ),
-                      ),
+                    const SizedBox(width: 10),
+                    SoftIconButton(
+                      icon: Icons.add_rounded,
+                      tooltip: 'Daily entry',
+                      size: 42,
+                      onTap: () => _openDailyEntry(task),
                     ),
                   ],
                 ),
-              ),
-              // Table Rows
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _tasks.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: HomeStat(label: 'You', value: _formatHours(you), dot: p.accent)),
+                    Expanded(child: HomeStat(label: 'Others', value: _formatHours(others), dot: p.leave)),
+                    Expanded(child: HomeStat(label: 'Actual', value: _formatHours(actual))),
+                  ],
                 ),
-                itemBuilder: (context, index) {
-                  final task = _tasks[index];
-                  final estHours = task['estHours'] as num;
-                  final loginStaffHours = task['loginStaffHours'] as double;
-                  final otherStaffHours = task['otherStaffHours'] as double;
-                  final actHours = task['actHours'] as double;
-
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
-                    child: Row(
-                      children: [
-                        // Task name
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            task['taskName'] as String,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w500,
-                              color: textPrimaryColor,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        // Est Hours
-                        SizedBox(
-                          width: 40.w,
-                          child: Text(
-                            _formatHours(estHours),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w500,
-                              color: textSecondaryColor,
-                            ),
-                          ),
-                        ),
-                        // Login Staff Hours
-                        SizedBox(
-                          width: 40.w,
-                          child: Text(
-                            _formatHours(loginStaffHours),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF2563EB),
-                            ),
-                          ),
-                        ),
-                        // Other Staff Hours
-                        SizedBox(
-                          width: 40.w,
-                          child: Text(
-                            _formatHours(otherStaffHours),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w500,
-                              color: textSecondaryColor,
-                            ),
-                          ),
-                        ),
-                        // Act Hours
-                        SizedBox(
-                          width: 40.w,
-                          child: Text(
-                            _formatHours(actHours),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w600,
-                              color: actHours > 0 ? const Color(0xFF10B981) : textSecondaryColor,
-                            ),
-                          ),
-                        ),
-                        // Select for Daily Entry button - compact icon
-                        SizedBox(width: 4.w),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => WorkLogEntryFormPage(
-                                  selectedDate: DateTime.now(),
-                                  staffId: widget.currentStaff.staffId,
-                                  preSelectedJobId: widget.job['job_id'] as int?,
-                                  preSelectedClientId: widget.job['client_id'] as int?,
-                                  preSelectedJobName: widget.job['job'] as String?,
-                                  preSelectedClientName: widget.job['company'] as String?,
-                                  preSelectedTaskId: task['task_id'] as int?,
-                                  preSelectedTaskName: task['taskName'] as String?,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            width: 32.w,
-                            height: 32.h,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(8.r),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.add_rounded,
-                              size: 18.sp,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
+                const SizedBox(height: 16),
+                HomeSegmentBar(
+                  height: 20,
+                  segments: logged == 0
+                      ? const []
+                      : [
+                          (value: you, color: p.accent),
+                          (value: others, color: p.leave),
+                          (value: remaining, color: p.border),
+                        ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text('Logged ${_formatHours(logged)}', style: SoftText.caption(p, size: 12)),
+                    const Spacer(),
+                    Text('Est. ${_formatHours(estHours)}', style: SoftText.caption(p, size: 12)),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildDaySummaryTab(BuildContext context, DateFormat dateFormat) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final headerBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final emptyStateBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF8F9FC);
+  Widget _buildDaySummaryTab(BuildContext context) {
+    final p = SoftPalette.of(context);
 
     if (_isLoadingDiary) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (_diaryError != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
-            SizedBox(height: 16.h),
-            Text(
-              'Error loading diary entries',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            TextButton.icon(
-              onPressed: _loadWorkDiary,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
+      return _noteCard(p, "Couldn't load diary entries", 'Check your connection and try again.',
+          onRetry: _loadWorkDiary,);
     }
 
     if (_workDiaryEntries.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80.w,
-              height: 80.h,
-              decoration: BoxDecoration(
-                color: emptyStateBgColor,
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Icon(
-                Icons.calendar_month,
-                size: 40.sp,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              'No diary entries found',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Work diary entries will appear here',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: textSecondaryColor,
-              ),
-            ),
-          ],
-        ),
+      return RefreshIndicator(
+        onRefresh: _loadWorkDiary,
+        child: _noteCard(p, 'No diary entries found', 'Work diary entries will appear here.'),
       );
     }
 
@@ -806,230 +494,96 @@ class _JobDetailPageState extends State<JobDetailPage>
     for (final entry in _workDiaryEntries) {
       totalMinutes += entry['minutes'] as int;
     }
-    final totalHours = totalMinutes ~/ 60;
-    final totalMins = totalMinutes % 60;
-    final totalFormatted = '${totalHours.toString().padLeft(2, '0')}:${totalMins.toString().padLeft(2, '0')}';
+    final totalFormatted =
+        '${(totalMinutes ~/ 60).toString().padLeft(2, '0')}:${(totalMinutes % 60).toString().padLeft(2, '0')}';
+    final count = _workDiaryEntries.length;
 
     return RefreshIndicator(
       onRefresh: _loadWorkDiary,
-      color: AppTheme.primaryColor,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(12.w),
-        child: Container(
-          decoration: BoxDecoration(
-            color: cardBgColor,
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Table Header
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                decoration: BoxDecoration(
-                  color: headerBgColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12.r),
-                    topRight: Radius.circular(12.r),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 80.w,
-                      child: Text(
-                        'Work Date',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        'Task',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        'Work Details',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 50.w,
-                      child: Text(
-                        'hh:mm',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Table Rows
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: _workDiaryEntries.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB),
-                ),
-                itemBuilder: (context, index) {
-                final entry = _workDiaryEntries[index];
-
-                // View only - no navigation
-                return Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 24.h),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Work Date
-                      SizedBox(
-                        width: 80.w,
-                        child: Text(
-                          entry['date'] != null
-                              ? DateFormat('dd/MM/yyyy').format(entry['date'])
-                              : '-',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w500,
-                            color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
-                          ),
-                        ),
-                      ),
-                      // Task
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          entry['taskDesc'] as String,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w500,
-                            color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      // Work Details
-                      Expanded(
-                        flex: 3,
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 4.w),
-                          child: Text(
-                            entry['notes'] as String,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w400,
-                              color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                      // Hours
-                      SizedBox(
-                        width: 50.w,
-                        child: Text(
-                          entry['hoursFormatted'] as String,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF3B82F6),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            // Total Row
-            Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC),
-              border: Border(
-                top: BorderSide(
-                  color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D5DB),
-                  width: 1,
-                ),
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(12.r),
-                bottomRight: Radius.circular(12.r),
-              ),
-            ),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        children: [
+          // Total
+          SoftCard(
+            radius: 24,
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Total hours :',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                      color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF374151),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Total logged', style: SoftText.heading(p, size: 17).copyWith(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 3),
+                      Text(
+                        '$count ${count == 1 ? 'entry' : 'entries'} on this job',
+                        style: SoftText.caption(p, size: 12.5),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(width: 8.w),
-                SizedBox(
-                  width: 50.w,
-                  child: Text(
-                    totalFormatted,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF3B82F6),
-                    ),
-                  ),
-                ),
+                Text('$totalFormatted hrs', style: SoftText.heading(p, size: 17)),
               ],
             ),
           ),
-            ],
+          const SizedBox(height: 14),
+          // Entries (view only)
+          SoftCard(
+            radius: 24,
+            padding: const EdgeInsets.fromLTRB(18, 4, 18, 4),
+            child: Column(
+              children: [
+                for (int i = 0; i < count; i++) ...[
+                  if (i > 0) Divider(height: 1, color: p.border),
+                  _buildDiaryRow(p, _workDiaryEntries[i]),
+                ],
+              ],
+            ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiaryRow(SoftPalette p, Map<String, dynamic> entry) {
+    final date = entry['date'] as DateTime?;
+    final notes = (entry['notes'] as String).trim();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  date != null ? DateFormat('EEE, d MMM yyyy').format(date) : '-',
+                  style: SoftText.heading(p, size: 14.5),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  entry['taskDesc'] as String,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: SoftText.caption(p, size: 12.5),
+                ),
+                if (notes.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    notes,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: SoftText.body(p, size: 13),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(entry['hoursFormatted'] as String, style: SoftText.heading(p, size: 14.5)),
+        ],
       ),
     );
   }

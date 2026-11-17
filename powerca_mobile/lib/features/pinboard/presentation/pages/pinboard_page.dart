@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
+import '../../../../shared/widgets/home_style.dart';
 import '../../../auth/domain/entities/staff.dart';
 import '../../data/datasources/pinboard_remote_datasource.dart';
 import '../../data/repositories/pinboard_repository_impl.dart';
@@ -73,12 +71,10 @@ class _PinboardPageState extends State<PinboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final p = SoftPalette.of(context);
 
     // Update status bar style based on theme
-    _updateStatusBarStyle(isDarkMode);
+    _updateStatusBarStyle(p.isDark);
 
     // Get Supabase client
     final supabaseClient = Supabase.instance.client;
@@ -111,27 +107,26 @@ class _PinboardPageState extends State<PinboardPage> {
       ),
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: scaffoldBgColor,
+        backgroundColor: p.background,
+        extendBody: true,
         drawer: AppDrawer(currentStaff: widget.currentStaff),
-        body: Column(
-          children: [
-            // Status bar area
-            Container(
-              color: headerBgColor,
-              child: SafeArea(
-                bottom: false,
-                child: AppHeader(
-                  currentStaff: widget.currentStaff,
-                  onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
-                ),
+        body: HomeBackground(
+          child: Column(
+            children: [
+              // Header (handles the status bar inset itself)
+              AppHeader(
+                currentStaff: widget.currentStaff,
+                homeStyle: true,
+                showPlace: false,
+                onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
               ),
-            ),
 
-            // Pinboard Main Content
-            Expanded(
-              child: PinboardMainPage(currentStaff: widget.currentStaff),
-            ),
-          ],
+              // Pinboard Main Content
+              Expanded(
+                child: PinboardMainPage(currentStaff: widget.currentStaff),
+              ),
+            ],
+          ),
         ),
         bottomNavigationBar: ModernBottomNavigation(
           currentIndex: 3,

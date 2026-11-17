@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'soft_page.dart';
+
 /// Error Widget
 /// Shows error state with retry option
 class CustomErrorWidget extends StatelessWidget {
@@ -18,7 +20,7 @@ class CustomErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final p = SoftPalette.of(context);
 
     return Center(
       child: Padding(
@@ -27,42 +29,40 @@ class CustomErrorWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Error icon
-            Icon(
-              Icons.error_outline_rounded,
-              size: 80,
-              color: theme.colorScheme.error,
+            SoftIconBadge(
+              icon: Icons.error_outline_rounded,
+              color: p.danger,
+              size: 64,
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
 
             // Error message
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.error,
-              ),
+              style: SoftText.heading(p, size: 17),
             ),
 
             // Description
             if (description != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 description!,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: SoftText.body(p),
               ),
             ],
 
             // Retry button
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
+              const SizedBox(height: 22),
+              SoftPillButton(
+                label: retryLabel ?? 'Retry',
+                icon: Icons.refresh_rounded,
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: Text(retryLabel ?? 'Retry'),
+                expand: false,
+                height: 44,
               ),
             ],
           ],

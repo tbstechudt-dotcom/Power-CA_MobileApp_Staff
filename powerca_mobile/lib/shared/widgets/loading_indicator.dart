@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'soft_page.dart';
+
 /// Loading Indicator Widget
 /// Shows loading state with optional message
 class LoadingIndicator extends StatelessWidget {
@@ -16,6 +18,7 @@ class LoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -24,16 +27,17 @@ class LoadingIndicator extends StatelessWidget {
             width: size,
             height: size,
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                color ?? Theme.of(context).primaryColor,
-              ),
+              strokeWidth: 3,
+              strokeCap: StrokeCap.round,
+              backgroundColor: p.surfaceAlt,
+              valueColor: AlwaysStoppedAnimation<Color>(color ?? p.ink),
             ),
           ),
           if (message != null) ...[
             const SizedBox(height: 16),
             Text(
               message!,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: SoftText.body(p),
               textAlign: TextAlign.center,
             ),
           ],
@@ -56,14 +60,14 @@ class SmallLoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
     return SizedBox(
       width: size,
       height: size,
       child: CircularProgressIndicator(
         strokeWidth: 2,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          color ?? Theme.of(context).primaryColor,
-        ),
+        strokeCap: StrokeCap.round,
+        valueColor: AlwaysStoppedAnimation<Color>(color ?? p.ink),
       ),
     );
   }
