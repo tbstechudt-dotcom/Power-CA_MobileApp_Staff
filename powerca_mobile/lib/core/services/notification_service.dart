@@ -36,7 +36,7 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -112,10 +112,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      leaveId,
-      'Leave Request ${isApproved ? 'Approved' : 'Rejected'}',
-      '$leaveType ($dateRange) has been ${status.toLowerCase()}',
-      details,
+      id: leaveId,
+      title: 'Leave Request ${isApproved ? 'Approved' : 'Rejected'}',
+      body: '$leaveType ($dateRange) has been ${status.toLowerCase()}',
+      notificationDetails: details,
       payload: 'leave:$leaveId',
     );
 
@@ -156,10 +156,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      remId.hashCode,
-      'New Reminder: $title',
-      'For $clientName - Due: $dueDate',
-      details,
+      id: remId.hashCode,
+      title: 'New Reminder: $title',
+      body: 'For $clientName - Due: $dueDate',
+      notificationDetails: details,
       payload: 'pinboard:$remId',
     );
 
@@ -196,10 +196,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      _workLogReminderId,
-      "Don't forget your work log",
-      "You haven't logged any work for today yet.",
-      details,
+      id: _workLogReminderId,
+      title: "Don't forget your work log",
+      body: "You haven't logged any work for today yet.",
+      notificationDetails: details,
       payload: 'worklog:$today',
     );
     await prefs.setString(_workLogReminderKey, today);
@@ -209,7 +209,7 @@ class NotificationService {
   /// Remove the work log reminder (e.g. once today's work is logged).
   Future<void> cancelWorkLogReminder() async {
     if (!_isInitialized) return;
-    await _flutterLocalNotificationsPlugin.cancel(_workLogReminderId);
+    await _flutterLocalNotificationsPlugin.cancel(id: _workLogReminderId);
   }
 
   /// Handle notification tap
