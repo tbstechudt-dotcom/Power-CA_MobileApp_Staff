@@ -77,6 +77,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   bool _isCheckingSession = false;
   bool _isSessionDialogShowing = false;
   bool _isLoginRequestDialogShowing = false;
+  static const int _initialPage = 10000;
+  late PageController _pageController;
 
   // Work log summary state
   static const int _weeksBack = 8;
