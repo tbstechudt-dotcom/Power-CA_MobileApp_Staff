@@ -27,37 +27,52 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Release text and assets are passed through env vars (never pasted
+      # into the script), so markdown, quotes and backticks in the release
+      # notes can't break the shell or the JSON.
       - name: Set version info (from release)
         if: github.event_name == 'release'
         id: release_version
+        env:
+          RELEASE_ASSETS: ${{ toJson(github.event.release.assets) }}
+          RELEASE_BODY: ${{ github.event.release.body }}
         run: |
-          # Extract version from pubspec.yaml
-          VERSION=$(grep "^version:" powerca_mobile/pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
-          VERSION_CODE=$(grep "^version:" powerca_mobile/pubspec.yaml | sed 's/version: //' | cut -d'+' -f2)
+          # Version name and code come from pubspec.yaml (e.g. 2.0.0+11)
+          VERSION=$(grep "^version:" powerca_mobile/pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d '[:space:]')
+          VERSION_CODE=$(grep "^version:" powerca_mobile/pubspec.yaml | sed 's/version: //' | cut -d'+' -f2 | tr -d '[:space:]')
 
-          # Get APK URL from release assets
-          APK_URL=$(echo '${{ toJson(github.event.release.assets) }}' | jq -r '.[] | select(.name | endswith(".apk")) | .browser_download_url' | head -1)
-
+          APK_URL=$(printf '%s' "$RELEASE_ASSETS" | jq -r '.[] | select(.name | endswith(".apk")) | .browser_download_url' | head -1)
           if [ -z "$APK_URL" ]; then
-            echo "No APK found in release assets!"
+            echo "::error::No APK found in release assets!"
             exit 1
           fi
 
-          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
-          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
-          echo "download_url=$APK_URL" >> $GITHUB_OUTPUT
-          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
-          echo "${{ github.event.release.body }}" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "version_name=$VERSION"
+            echo "version_code=$VERSION_CODE"
+            echo "download_url=$APK_URL"
+            echo "release_notes<<__NOTES_EOF__"
+            printf '%s\n' "${RELEASE_BODY:-Version $VERSION}"
+            echo "__NOTES_EOF__"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set version info (manual)
         if: github.event_name == 'workflow_dispatch'
         id: manual_version
+        env:
+          IN_NAME: ${{ github.event.inputs.version_name }}
+          IN_CODE: ${{ github.event.inputs.version_code }}
+          IN_URL: ${{ github.event.inputs.download_url }}
+          IN_NOTES: ${{ github.event.inputs.release_notes }}
         run: |
-          echo "version_name=${{ github.event.inputs.version_name }}" >> $GITHUB_OUTPUT
-          echo "version_code=${{ github.event.inputs.version_code }}" >> $GITHUB_OUTPUT
-          echo "download_url=${{ github.event.inputs.download_url }}" >> $GITHUB_OUTPUT
-          echo "release_notes=${{ github.event.inputs.release_notes }}" >> $GITHUB_OUTPUT
+          {
+            echo "version_name=$IN_NAME"
+            echo "version_code=$IN_CODE"
+            echo "download_url=$IN_URL"
+            echo "release_notes<<__NOTES_EOF__"
+            printf '%s\n' "$IN_NOTES"
+            echo "__NOTES_EOF__"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Insert version to Supabase
         env:
@@ -70,18 +85,22 @@ jobs:
         run: |
           echo "Syncing version $VERSION_NAME (code: $VERSION_CODE) to Supabase..."
 
-          # Use UPSERT to handle duplicates (update if version_code exists)
-          curl -X POST "$SUPABASE_URL/rest/v1/app_versions" \
+          # Build the JSON with jq so any text in the notes is escaped safely.
+          PAYLOAD=$(jq -n \
+            --arg name "$VERSION_NAME" \
+            --argjson code "$VERSION_CODE" \
+            --arg url "$DOWNLOAD_URL" \
+            --arg notes "$RELEASE_NOTES" \
+            '{version_name: $name, version_code: $code, download_url: $url, release_notes: $notes, is_force_update: false}')
+
+          # --fail-with-body: a Supabase error now fails this step instead of
+          # being printed and reported as success.
+          curl --fail-with-body -sS -X POST "$SUPABASE_URL/rest/v1/app_versions" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Content-Type: application/json" \
-            -H "Prefer: resolution=merge-duplicates" \
-            -d "{
-              \"version_name\": \"$VERSION_NAME\",
-              \"version_code\": $VERSION_CODE,
-              \"download_url\": \"$DOWNLOAD_URL\",
-              \"release_notes\": \"$RELEASE_NOTES\",
-              \"is_force_update\": false
-            }"
+            -H "Prefer: resolution=merge-duplicates,return=representation" \
+            -d "$PAYLOAD"
 
+          echo ""
           echo "Version $VERSION_NAME synced to Supabase!"
