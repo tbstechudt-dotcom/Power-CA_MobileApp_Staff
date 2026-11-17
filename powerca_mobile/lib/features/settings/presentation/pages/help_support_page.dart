@@ -1,981 +1,550 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/home_style.dart';
+import '../../../../shared/widgets/soft_page.dart';
 
-/// Help & Support page with FAQs, guides, and contact options
-class HelpSupportPage extends StatefulWidget {
+// ---------------------------------------------------------------------------
+// Content
+// ---------------------------------------------------------------------------
+
+const String _supportEmail = 'contact@powerca.in';
+const String _supportPhoneLabel = '+91 98422 24635';
+const String _supportPhone = '+919842224635';
+const String _supportWebsiteLabel = 'www.powerca.in';
+const String _supportWebsite = 'https://www.powerca.in';
+const String _supportHours = 'Mon – Sat, 9:30 AM – 6:00 PM IST · Sunday closed';
+
+typedef _HelpItem = ({String title, String body});
+
+const List<_HelpItem> _faqItems = [
+  (
+    title: 'How do I log my work hours?',
+    body:
+        'Navigate to any job from the Job List, then tap "Add Work Log" to record your work hours. You can specify the date, start time, end time, and add notes about the work performed. Your logged hours will be synced automatically.',
+  ),
+  (
+    title: 'How do I apply for leave?',
+    body:
+        'Go to the Leave Requests section from the bottom navigation. Tap the "+" button to create a new leave request. Select your leave type, specify the dates, and add any relevant notes. Your manager will be notified and can approve or reject your request.',
+  ),
+  (
+    title: 'How do I book a client meeting?',
+    body:
+        'On the Home page, tap "Add meeting" in the Appointments card. Choose whether you are meeting an existing client or a new contact (you can create a new contact from the picker), pick Direct or Virtual, set the date, time and duration, and add the purpose or agenda. Tap Save - the meeting then appears in your Appointments list on Home.',
+  ),
+  (
+    title: 'How do I record a meeting\'s outcome?',
+    body:
+        'Open the meeting from the Appointments list on Home and switch to the Outcome tab (it unlocks once the meeting has been saved). Enter the actual time spent and the key person you met, then save. Once the outcome is recorded, the appointment details are locked.',
+  ),
+  (
+    title: 'Can I reschedule or cancel a meeting?',
+    body:
+        'Yes. To reschedule, open the meeting, go to the Outcome tab and turn on "Reschedule this meeting", then choose the new date and time - a new appointment is created for that date. To cancel, open the meeting and tap "Cancel meeting" at the bottom of the Appointment tab.',
+  ),
+  (
+    title: 'What do the job status colors mean?',
+    body: 'Jobs are color-coded by status:\n'
+        '- Blue (In Progress): Work is currently ongoing\n'
+        '- Green (Completed): Job has been finished\n'
+        '- Orange (Pending): Awaiting assignment or start\n'
+        '- Red (On Hold): Job is temporarily paused\n'
+        '- Gray (Draft): Job is not yet active',
+  ),
+  (
+    title: 'How do I complete a task checklist?',
+    body:
+        'Open a job and navigate to the Tasks tab. You\'ll see a list of tasks with checkboxes. Tap on each task to mark it as complete. The job progress percentage updates automatically based on completed tasks.',
+  ),
+  (
+    title: 'Why can\'t I see certain jobs?',
+    body:
+        'You can only see jobs that are assigned to you or your team. If you believe a job should be visible to you, please contact your administrator to verify your assignment.',
+  ),
+  (
+    title: 'How do I update my profile information?',
+    body:
+        'Profile information is managed by your organization\'s administrator through the desktop application. If you need to update your details (phone number, email, etc.), please contact your HR department or admin.',
+  ),
+  (
+    title: 'What is the Pinboard?',
+    body:
+        'The Pinboard is your organization\'s notice board for announcements, events, and important updates. You can view posts, like them, and add comments. Categories help organize different types of announcements.',
+  ),
+  (
+    title: 'How does data sync work?',
+    body:
+        'The app automatically syncs your data with the server when you have an internet connection. Work logs, task completions, and leave requests are uploaded immediately. If you\'re offline, changes are saved locally and synced when connectivity is restored.',
+  ),
+  (
+    title: 'How do I enable/disable notifications?',
+    body:
+        'Go to Settings from your profile menu. Under the Notifications section, you can toggle notifications on or off globally, and also control specific notification types like leave updates and pinboard reminders.',
+  ),
+  (
+    title: 'What should I do if the app is running slow?',
+    body: 'Try these steps:\n'
+        '1. Close and reopen the app\n'
+        '2. Check your internet connection\n'
+        '3. Clear the app cache from your device settings\n'
+        '4. Ensure your app is updated to the latest version\n'
+        '5. If issues persist, contact support',
+  ),
+];
+
+/// Feature guides; the dot color is resolved from the soft palette.
+const List<_HelpItem> _featureGuides = [
+  (
+    title: 'Dashboard',
+    body:
+        'Your home screen showing today\'s summary, pending tasks, upcoming deadlines, and quick access to recent jobs.',
+  ),
+  (
+    title: 'Job Management',
+    body:
+        'View all assigned jobs, track progress, complete task checklists, and log work hours for each job.',
+  ),
+  (
+    title: 'Work Diary',
+    body:
+        'Record daily work entries with start/end times. Track total hours worked per job and generate timesheets.',
+  ),
+  (
+    title: 'Leave Requests',
+    body:
+        'Apply for leave, view leave balance, track request status (pending, approved, rejected), and see leave history.',
+  ),
+  (
+    title: 'Pinboard',
+    body:
+        'Stay updated with company announcements, events, policies, and team updates. Engage with likes and comments.',
+  ),
+  (
+    title: 'Appointments',
+    body:
+        'Book meetings with existing clients or new contacts, in person (Direct) or online (Virtual). Your upcoming meetings show on Home; open one to edit it, record the outcome (time spent and key person met), reschedule it or cancel it.',
+  ),
+];
+
+Color _featureColor(SoftPalette p, int index) {
+  switch (index) {
+    case 0:
+      return p.accent;
+    case 1:
+      return p.success;
+    case 2:
+      return p.leave;
+    case 3:
+      return p.warning;
+    case 4:
+      return p.danger;
+    default:
+      // Appointments: teal, matching the "Work Done" accent used elsewhere.
+      return p.isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488);
+  }
+}
+
+const List<_HelpItem> _troubleshootingTips = [
+  (
+    title: 'Connection issues',
+    body: 'Check your internet connection and try switching between WiFi and mobile data.',
+  ),
+  (
+    title: 'Sync problems',
+    body:
+        'Pull down to refresh on any list screen. If data doesn\'t update, sign out and sign back in.',
+  ),
+  (
+    title: 'App running slow',
+    body:
+        'Close other apps running in background. Clear app cache from device settings if needed.',
+  ),
+  (
+    title: 'Login issues',
+    body:
+        'Ensure you\'re using the correct username. Contact your admin if your account is locked.',
+  ),
+  (
+    title: 'Not receiving notifications',
+    body:
+        'Check notification permissions in device settings and ensure notifications are enabled in app settings.',
+  ),
+  (
+    title: 'Appointments not loading',
+    body:
+        'If the Appointments card on Home shows "Couldn\'t load appointments", check your internet connection and tap the card to retry. If it keeps failing, sign out and sign back in, then contact support.',
+  ),
+];
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+
+/// Help & Support page with contact options, FAQs, guides and quick fixes.
+class HelpSupportPage extends StatelessWidget {
   const HelpSupportPage({super.key});
 
   @override
-  State<HelpSupportPage> createState() => _HelpSupportPageState();
-}
-
-class _HelpSupportPageState extends State<HelpSupportPage> {
-  // Track expanded FAQ items
-  final Set<int> _expandedFaqIndices = {};
-
-  // FAQ Data
-  final List<Map<String, String>> _faqItems = [
-    {
-      'question': 'How do I log my work hours?',
-      'answer':
-          'Navigate to any job from the Job List, then tap "Add Work Log" to record your work hours. You can specify the date, start time, end time, and add notes about the work performed. Your logged hours will be synced automatically.',
-    },
-    {
-      'question': 'How do I apply for leave?',
-      'answer':
-          'Go to the Leave Requests section from the bottom navigation. Tap the "+" button to create a new leave request. Select your leave type, specify the dates, and add any relevant notes. Your manager will be notified and can approve or reject your request.',
-    },
-    {
-      'question': 'What do the job status colors mean?',
-      'answer':
-          'Jobs are color-coded by status:\n'
-          '- Blue (In Progress): Work is currently ongoing\n'
-          '- Green (Completed): Job has been finished\n'
-          '- Orange (Pending): Awaiting assignment or start\n'
-          '- Red (On Hold): Job is temporarily paused\n'
-          '- Gray (Draft): Job is not yet active',
-    },
-    {
-      'question': 'How do I complete a task checklist?',
-      'answer':
-          'Open a job and navigate to the Tasks tab. You\'ll see a list of tasks with checkboxes. Tap on each task to mark it as complete. The job progress percentage updates automatically based on completed tasks.',
-    },
-    {
-      'question': 'Why can\'t I see certain jobs?',
-      'answer':
-          'You can only see jobs that are assigned to you or your team. If you believe a job should be visible to you, please contact your administrator to verify your assignment.',
-    },
-    {
-      'question': 'How do I update my profile information?',
-      'answer':
-          'Profile information is managed by your organization\'s administrator through the desktop application. If you need to update your details (phone number, email, etc.), please contact your HR department or admin.',
-    },
-    {
-      'question': 'What is the Pinboard?',
-      'answer':
-          'The Pinboard is your organization\'s notice board for announcements, events, and important updates. You can view posts, like them, and add comments. Categories help organize different types of announcements.',
-    },
-    {
-      'question': 'How does data sync work?',
-      'answer':
-          'The app automatically syncs your data with the server when you have an internet connection. Work logs, task completions, and leave requests are uploaded immediately. If you\'re offline, changes are saved locally and synced when connectivity is restored.',
-    },
-    {
-      'question': 'How do I enable/disable notifications?',
-      'answer':
-          'Go to Settings from your profile menu. Under the Notifications section, you can toggle notifications on or off globally, and also control specific notification types like leave updates and pinboard reminders.',
-    },
-    {
-      'question': 'What should I do if the app is running slow?',
-      'answer':
-          'Try these steps:\n'
-          '1. Close and reopen the app\n'
-          '2. Check your internet connection\n'
-          '3. Clear the app cache from your device settings\n'
-          '4. Ensure your app is updated to the latest version\n'
-          '5. If issues persist, contact support',
-    },
-  ];
-
-  // Feature Guide Data
-  final List<Map<String, dynamic>> _featureGuides = [
-    {
-      'title': 'Dashboard',
-      'icon': Icons.dashboard_rounded,
-      'color': Color(0xFF3B82F6),
-      'description':
-          'Your home screen showing today\'s summary, pending tasks, upcoming deadlines, and quick access to recent jobs.',
-    },
-    {
-      'title': 'Job Management',
-      'icon': Icons.list_alt_rounded,
-      'color': Color(0xFF10B981),
-      'description':
-          'View all assigned jobs, track progress, complete task checklists, and log work hours for each job.',
-    },
-    {
-      'title': 'Work Diary',
-      'icon': Icons.access_time_rounded,
-      'color': Color(0xFF8B5CF6),
-      'description':
-          'Record daily work entries with start/end times. Track total hours worked per job and generate timesheets.',
-    },
-    {
-      'title': 'Leave Requests',
-      'icon': Icons.event_note_rounded,
-      'color': Color(0xFFF59E0B),
-      'description':
-          'Apply for leave, view leave balance, track request status (pending, approved, rejected), and see leave history.',
-    },
-    {
-      'title': 'Pinboard',
-      'icon': Icons.push_pin_rounded,
-      'color': Color(0xFFEF4444),
-      'description':
-          'Stay updated with company announcements, events, policies, and team updates. Engage with likes and comments.',
-    },
-  ];
-
-  @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDark = themeProvider.isDarkMode;
+    final p = SoftPalette.of(context);
 
-    // Theme-aware colors
-    final headerColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final surfaceColor =
-        isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
-    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor =
-        isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
-    final titleColor =
-        isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final subtitleColor =
-        isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final iconColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final backBtnBgColor = isDark ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backBtnBorderColor = isDark ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
-    final backBtnIconColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-
-    return Scaffold(
-      backgroundColor: headerColor,
-      appBar: AppBar(
-        backgroundColor: headerColor,
-        elevation: 0,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8.w),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 42.w,
-                height: 42.h,
-                decoration: BoxDecoration(
-                  color: backBtnBgColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: backBtnBorderColor,
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 18.sp,
-                    color: backBtnIconColor,
-                  ),
-                ),
-              ),
-            ),
+    return HomeSubPage(
+      eyebrow: 'Help & support',
+      headline: const [
+        (text: 'How can we ', strong: false),
+        (text: 'help', strong: true),
+        (text: '?', strong: false),
+      ],
+      children: [
+        HomeSectionCard(
+          title: 'Contact',
+          subtitle: _supportHours,
+          trailing: HomeRoundAction(
+            icon: Icons.north_east_rounded,
+            tooltip: 'Visit website',
+            onTap: () => _HelpLinks.website(context),
           ),
-        ),
-        title: Text(
-          'Help & Support',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: titleColor,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Container(
-        color: surfaceColor,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.w),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Quick Actions Section
-              _buildSectionHeader('Quick Actions', titleColor),
-              SizedBox(height: 12.h),
-              _buildQuickActionsCard(
-                isDark: isDark,
-                cardColor: cardColor,
-                borderColor: borderColor,
-                titleColor: titleColor,
-                subtitleColor: subtitleColor,
-                iconColor: iconColor,
+              _HelpRow(
+                first: true,
+                label: 'Email support',
+                caption: _supportEmail,
+                onTap: () => _HelpLinks.email(context),
               ),
-
-              SizedBox(height: 24.h),
-
-              // Feature Guides Section
-              _buildSectionHeader('Feature Guides', titleColor),
-              SizedBox(height: 12.h),
-              _buildFeatureGuidesCard(
-                isDark: isDark,
-                cardColor: cardColor,
-                borderColor: borderColor,
-                titleColor: titleColor,
-                subtitleColor: subtitleColor,
+              _HelpRow(
+                label: 'Call support',
+                caption: _supportPhoneLabel,
+                onTap: () => _HelpLinks.phone(context),
               ),
-
-              SizedBox(height: 24.h),
-
-              // FAQ Section
-              _buildSectionHeader('Frequently Asked Questions', titleColor),
-              SizedBox(height: 12.h),
-              _buildFaqSection(
-                isDark: isDark,
-                cardColor: cardColor,
-                borderColor: borderColor,
-                titleColor: titleColor,
-                subtitleColor: subtitleColor,
+              _HelpRow(
+                label: 'Visit website',
+                caption: _supportWebsiteLabel,
+                onTap: () => _HelpLinks.website(context),
               ),
-
-              SizedBox(height: 24.h),
-
-              // Contact Support Section
-              _buildSectionHeader('Contact Support', titleColor),
-              SizedBox(height: 12.h),
-              _buildContactSupportCard(
-                isDark: isDark,
-                cardColor: cardColor,
-                borderColor: borderColor,
-                titleColor: titleColor,
-                subtitleColor: subtitleColor,
-                iconColor: iconColor,
+              const SizedBox(height: 10),
+              Text(
+                'We usually reply within 24 business hours. For urgent issues, please call.',
+                style: SoftText.caption(p, size: 12.5).copyWith(height: 1.45),
               ),
-
-              SizedBox(height: 24.h),
-
-              // Troubleshooting Tips Section
-              _buildSectionHeader('Troubleshooting Tips', titleColor),
-              SizedBox(height: 12.h),
-              _buildTroubleshootingCard(
-                isDark: isDark,
-                cardColor: cardColor,
-                borderColor: borderColor,
-                titleColor: titleColor,
-                subtitleColor: subtitleColor,
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  HomeBluePill(
+                    label: 'Email us',
+                    icon: Icons.mail_outline_rounded,
+                    onTap: () => _HelpLinks.email(context),
+                  ),
+                  HomeBluePill(
+                    label: 'Call',
+                    icon: Icons.phone_outlined,
+                    onTap: () => _HelpLinks.phone(context),
+                  ),
+                ],
               ),
-
-              SizedBox(height: 32.h),
+              const SizedBox(height: 4),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, Color titleColor) {
-    return Padding(
-      padding: EdgeInsets.only(left: 4.w),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 13.sp,
-          fontWeight: FontWeight.w600,
-          color: titleColor.withValues(alpha: 0.6),
-          letterSpacing: 0.5,
+        HomeSectionCard(
+          title: 'Frequently asked questions',
+          subtitle: '${_faqItems.length} answers',
+          child: Column(
+            children: [
+              for (int i = 0; i < _faqItems.length; i++)
+                _HelpRow(
+                  first: i == 0,
+                  label: _faqItems[i].title,
+                  onTap: () => _openDetail(context, _HelpKind.faq, i),
+                ),
+            ],
+          ),
         ),
-      ),
+        HomeSectionCard(
+          title: 'Feature guides',
+          subtitle: 'What each part of the app does',
+          child: Column(
+            children: [
+              for (int i = 0; i < _featureGuides.length; i++)
+                _HelpRow(
+                  first: i == 0,
+                  dot: _featureColor(p, i),
+                  label: _featureGuides[i].title,
+                  onTap: () => _openDetail(context, _HelpKind.feature, i),
+                ),
+            ],
+          ),
+        ),
+        HomeSectionCard(
+          title: 'Troubleshooting',
+          subtitle: 'Quick fixes for common problems',
+          child: Column(
+            children: [
+              for (int i = 0; i < _troubleshootingTips.length; i++)
+                _HelpRow(
+                  first: i == 0,
+                  label: _troubleshootingTips[i].title,
+                  onTap: () => _openDetail(context, _HelpKind.troubleshooting, i),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
+}
 
-  Widget _buildQuickActionsCard({
-    required bool isDark,
-    required Color cardColor,
-    required Color borderColor,
-    required Color titleColor,
-    required Color subtitleColor,
-    required Color iconColor,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        children: [
-          _buildQuickActionItem(
-            icon: Icons.email_outlined,
-            iconColor: const Color(0xFF3B82F6),
-            title: 'Email Support',
-            subtitle: 'contact@powerca.in',
-            onTap: () => _launchEmail('contact@powerca.in'),
-            showDivider: true,
-            dividerColor: borderColor,
-            titleColor: titleColor,
-            subtitleColor: subtitleColor,
-          ),
-          _buildQuickActionItem(
-            icon: Icons.phone_outlined,
-            iconColor: const Color(0xFF10B981),
-            title: 'Call Support',
-            subtitle: '+91 98422 24635',
-            onTap: () => _launchPhone('+919842224635'),
-            showDivider: true,
-            dividerColor: borderColor,
-            titleColor: titleColor,
-            subtitleColor: subtitleColor,
-          ),
-          _buildQuickActionItem(
-            icon: Icons.language_rounded,
-            iconColor: const Color(0xFF8B5CF6),
-            title: 'Visit Website',
-            subtitle: 'www.powerca.in',
-            onTap: () => _launchUrl('https://www.powerca.in'),
-            showDivider: false,
-            dividerColor: borderColor,
-            titleColor: titleColor,
-            subtitleColor: subtitleColor,
-          ),
-        ],
-      ),
-    );
+// ---------------------------------------------------------------------------
+// Detail page (FAQ / feature guide / troubleshooting)
+// ---------------------------------------------------------------------------
+
+enum _HelpKind { faq, feature, troubleshooting }
+
+void _openDetail(BuildContext context, _HelpKind kind, int index, {bool replace = false}) {
+  final route = MaterialPageRoute<void>(
+    builder: (_) => _HelpDetailPage(kind: kind, index: index),
+  );
+  if (replace) {
+    Navigator.of(context).pushReplacement(route);
+  } else {
+    Navigator.of(context).push(route);
+  }
+}
+
+class _HelpDetailPage extends StatelessWidget {
+  final _HelpKind kind;
+  final int index;
+
+  const _HelpDetailPage({required this.kind, required this.index});
+
+  List<_HelpItem> get _items {
+    switch (kind) {
+      case _HelpKind.faq:
+        return _faqItems;
+      case _HelpKind.feature:
+        return _featureGuides;
+      case _HelpKind.troubleshooting:
+        return _troubleshootingTips;
+    }
   }
 
-  Widget _buildQuickActionItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    required bool showDivider,
-    required Color dividerColor,
-    required Color titleColor,
-    required Color subtitleColor,
-  }) {
-    return Column(
+  String get _eyebrow {
+    switch (kind) {
+      case _HelpKind.faq:
+        return 'Help · FAQ';
+      case _HelpKind.feature:
+        return 'Help · Feature guide';
+      case _HelpKind.troubleshooting:
+        return 'Help · Troubleshooting';
+    }
+  }
+
+  String get _othersTitle {
+    switch (kind) {
+      case _HelpKind.faq:
+        return 'Related questions';
+      case _HelpKind.feature:
+        return 'Other features';
+      case _HelpKind.troubleshooting:
+        return 'Other fixes';
+    }
+  }
+
+  /// Indices of the other entries to suggest: the next three (wrapping) for
+  /// FAQs and fixes, every other guide for features.
+  List<int> get _otherIndices {
+    final items = _items;
+    final count = kind == _HelpKind.feature ? items.length - 1 : 3;
+    return [
+      for (int k = 1; k <= count && k < items.length; k++) (index + k) % items.length,
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    final item = _items[index];
+    final others = _otherIndices;
+
+    return HomeSubPage(
+      eyebrow: _eyebrow,
+      headline: [(text: item.title, strong: true)],
       children: [
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12.r),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-            child: Row(
-              children: [
-                Container(
-                  width: 40.w,
-                  height: 40.h,
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 20.sp,
-                    color: iconColor,
-                  ),
-                ),
-                SizedBox(width: 14.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w500,
-                          color: titleColor,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w400,
-                          color: subtitleColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 16.sp,
-                  color: subtitleColor,
-                ),
-              ],
+        SoftCard(
+          radius: 26,
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          child: SizedBox(
+            width: double.infinity,
+            child: Text(
+              item.body,
+              style: SoftText.body(p, size: 14).copyWith(height: 1.55),
             ),
           ),
         ),
-        if (showDivider)
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: dividerColor,
-            indent: 70.w,
+        if (others.isNotEmpty)
+          HomeSectionCard(
+            title: _othersTitle,
+            child: Column(
+              children: [
+                for (int i = 0; i < others.length; i++)
+                  _HelpRow(
+                    first: i == 0,
+                    dot: kind == _HelpKind.feature ? _featureColor(p, others[i]) : null,
+                    label: _items[others[i]].title,
+                    onTap: () => _openDetail(context, kind, others[i], replace: true),
+                  ),
+              ],
+            ),
           ),
-      ],
-    );
-  }
-
-  Widget _buildFeatureGuidesCard({
-    required bool isDark,
-    required Color cardColor,
-    required Color borderColor,
-    required Color titleColor,
-    required Color subtitleColor,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        children: _featureGuides.asMap().entries.map((entry) {
-          final index = entry.key;
-          final guide = entry.value;
-          final isLast = index == _featureGuides.length - 1;
-
-          return _buildFeatureGuideItem(
-            icon: guide['icon'] as IconData,
-            iconColor: guide['color'] as Color,
-            title: guide['title'] as String,
-            description: guide['description'] as String,
-            showDivider: !isLast,
-            dividerColor: borderColor,
-            titleColor: titleColor,
-            subtitleColor: subtitleColor,
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildFeatureGuideItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String description,
-    required bool showDivider,
-    required Color dividerColor,
-    required Color titleColor,
-    required Color subtitleColor,
-  }) {
-    return Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40.w,
-                height: 40.h,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20.sp,
-                  color: iconColor,
-                ),
+        HomeSectionCard(
+          title: 'Still need help?',
+          subtitle: 'Our team usually replies within 24 business hours',
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: HomeBluePill(
+                label: 'Email us',
+                icon: Icons.mail_outline_rounded,
+                onTap: () => _HelpLinks.email(context),
               ),
-              SizedBox(width: 14.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w600,
-                        color: titleColor,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w400,
-                        color: subtitleColor,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-        if (showDivider)
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: dividerColor,
-            indent: 70.w,
-          ),
       ],
     );
   }
+}
 
-  Widget _buildFaqSection({
-    required bool isDark,
-    required Color cardColor,
-    required Color borderColor,
-    required Color titleColor,
-    required Color subtitleColor,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        children: _faqItems.asMap().entries.map((entry) {
-          final index = entry.key;
-          final faq = entry.value;
-          final isExpanded = _expandedFaqIndices.contains(index);
-          final isLast = index == _faqItems.length - 1;
+// ---------------------------------------------------------------------------
+// Shared row
+// ---------------------------------------------------------------------------
 
-          return _buildFaqItem(
-            index: index,
-            question: faq['question']!,
-            answer: faq['answer']!,
-            isExpanded: isExpanded,
-            showDivider: !isLast,
-            dividerColor: borderColor,
-            titleColor: titleColor,
-            subtitleColor: subtitleColor,
-            isDark: isDark,
-          );
-        }).toList(),
-      ),
-    );
-  }
+/// Chevron row inside a [HomeSectionCard]: optional colored dot, ink label,
+/// optional caption, with a divider above unless [first].
+class _HelpRow extends StatelessWidget {
+  final String label;
+  final String? caption;
+  final Color? dot;
+  final VoidCallback? onTap;
+  final bool first;
 
-  Widget _buildFaqItem({
-    required int index,
-    required String question,
-    required String answer,
-    required bool isExpanded,
-    required bool showDivider,
-    required Color dividerColor,
-    required Color titleColor,
-    required Color subtitleColor,
-    required bool isDark,
-  }) {
+  const _HelpRow({
+    required this.label,
+    this.caption,
+    this.dot,
+    this.onTap,
+    this.first = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
     return Column(
       children: [
+        if (!first) Divider(height: 1, color: p.border),
         InkWell(
-          onTap: () {
-            setState(() {
-              if (isExpanded) {
-                _expandedFaqIndices.remove(index);
-              } else {
-                _expandedFaqIndices.add(index);
-              }
-            });
-          },
-          borderRadius: BorderRadius.circular(12.r),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            padding: EdgeInsets.symmetric(vertical: caption != null ? 15 : 13),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 28.w,
-                  height: 28.h,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8.r),
+                if (dot != null) ...[
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
                   ),
-                  child: Center(
-                    child: Text(
-                      'Q',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12.w),
+                  const SizedBox(width: 14),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        question,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                          color: titleColor,
-                          height: 1.4,
-                        ),
-                      ),
-                      if (isExpanded) ...[
-                        SizedBox(height: 10.h),
-                        Container(
-                          padding: EdgeInsets.all(12.w),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF0F172A)
-                                : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          child: Text(
-                            answer,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w400,
-                              color: subtitleColor,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
+                      Text(label, style: SoftText.body(p, size: 15, color: p.ink)),
+                      if (caption != null) ...[
+                        const SizedBox(height: 3),
+                        Text(caption!, style: SoftText.caption(p, size: 12)),
                       ],
                     ],
                   ),
                 ),
-                SizedBox(width: 8.w),
-                AnimatedRotation(
-                  turns: isExpanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 24.sp,
-                    color: subtitleColor,
-                  ),
-                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, size: 20, color: p.muted),
               ],
             ),
           ),
         ),
-        if (showDivider)
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: dividerColor,
-            indent: 56.w,
-          ),
       ],
     );
   }
+}
 
-  Widget _buildContactSupportCard({
-    required bool isDark,
-    required Color cardColor,
-    required Color borderColor,
-    required Color titleColor,
-    required Color subtitleColor,
-    required Color iconColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48.w,
-                height: 48.h,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  Icons.support_agent_rounded,
-                  size: 26.sp,
-                  color: const Color(0xFF10B981),
-                ),
-              ),
-              SizedBox(width: 14.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Need More Help?',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: titleColor,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      'Our support team is here to help',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w400,
-                        color: subtitleColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'Support Hours',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              color: titleColor,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          _buildSupportHoursRow(
-            'Monday - Saturday',
-            '9:30 AM - 6:00 PM IST',
-            subtitleColor,
-          ),
-          SizedBox(height: 4.h),
-          _buildSupportHoursRow(
-            'Sunday',
-            'Closed',
-            subtitleColor,
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'Response Time',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              color: titleColor,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            'We typically respond within 24 business hours. For urgent issues, please call our support hotline.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w400,
-              color: subtitleColor,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+// ---------------------------------------------------------------------------
+// URL launcher helpers
+// ---------------------------------------------------------------------------
 
-  Widget _buildSupportHoursRow(String day, String hours, Color textColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          day,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w400,
-            color: textColor,
-          ),
-        ),
-        Text(
-          hours,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w500,
-            color: textColor,
-          ),
-        ),
-      ],
-    );
-  }
+/// Links call launchUrl directly instead of gating on canLaunchUrl, which
+/// returns false on Android 11+ unless the scheme is declared in <queries>
+/// (see AndroidManifest.xml). Any failure shows an error snackbar.
+class _HelpLinks {
+  static Future<void> email(BuildContext context) => _launchEmail(context, _supportEmail);
 
-  Widget _buildTroubleshootingCard({
-    required bool isDark,
-    required Color cardColor,
-    required Color borderColor,
-    required Color titleColor,
-    required Color subtitleColor,
-  }) {
-    final tips = [
-      {
-        'icon': Icons.wifi_off_rounded,
-        'title': 'Connection Issues',
-        'tip': 'Check your internet connection and try switching between WiFi and mobile data.',
-      },
-      {
-        'icon': Icons.sync_problem_rounded,
-        'title': 'Sync Problems',
-        'tip': 'Pull down to refresh on any list screen. If data doesn\'t update, sign out and sign back in.',
-      },
-      {
-        'icon': Icons.memory_rounded,
-        'title': 'App Running Slow',
-        'tip': 'Close other apps running in background. Clear app cache from device settings if needed.',
-      },
-      {
-        'icon': Icons.login_rounded,
-        'title': 'Login Issues',
-        'tip': 'Ensure you\'re using the correct username. Contact your admin if your account is locked.',
-      },
-      {
-        'icon': Icons.notifications_off_rounded,
-        'title': 'Not Receiving Notifications',
-        'tip': 'Check notification permissions in device settings and ensure notifications are enabled in app settings.',
-      },
-    ];
+  static Future<void> phone(BuildContext context) => _launchPhone(context, _supportPhone);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        children: tips.asMap().entries.map((entry) {
-          final index = entry.key;
-          final tip = entry.value;
-          final isLast = index == tips.length - 1;
+  static Future<void> website(BuildContext context) => _launchUrl(context, _supportWebsite);
 
-          return Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 40.w,
-                      height: 40.h,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      child: Icon(
-                        tip['icon'] as IconData,
-                        size: 20.sp,
-                        color: const Color(0xFFF59E0B),
-                      ),
-                    ),
-                    SizedBox(width: 14.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            tip['title'] as String,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                              color: titleColor,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            tip['tip'] as String,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w400,
-                              color: subtitleColor,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isLast)
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: borderColor,
-                  indent: 70.w,
-                ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // URL Launcher Methods
-  Future<void> _launchEmail(String email) async {
+  static Future<void> _launchEmail(BuildContext context, String email) async {
     final Uri emailUri = Uri(
       scheme: 'mailto',
       path: email,
-      queryParameters: {
-        'subject': 'PowerCA App Support Request',
-      },
+      // Encode manually: queryParameters would turn spaces into '+'.
+      query: 'subject=${Uri.encodeComponent('PowerCA App Support Request')}',
     );
-
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open email app'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    await _openLink(context, emailUri, 'Could not open an email app');
   }
 
-  Future<void> _launchPhone(String phone) async {
+  static Future<void> _launchPhone(BuildContext context, String phone) async {
     final Uri phoneUri = Uri(
       scheme: 'tel',
-      path: phone,
+      path: phone.replaceAll(RegExp(r'[^0-9+]'), ''),
     );
-
-    if (await canLaunchUrl(phoneUri)) {
-      await launchUrl(phoneUri);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open phone app'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    await _openLink(context, phoneUri, 'Could not open the phone dialer');
   }
 
-  Future<void> _launchUrl(String url) async {
-    final Uri uri = Uri.parse(url);
+  static Future<void> _launchUrl(BuildContext context, String url) async {
+    await _openLink(
+      context,
+      Uri.parse(url),
+      'Could not open the website',
+      mode: LaunchMode.externalApplication,
+    );
+  }
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open website'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+  static Future<void> _openLink(
+    BuildContext context,
+    Uri uri,
+    String errorMessage, {
+    LaunchMode mode = LaunchMode.platformDefault,
+  }) async {
+    bool opened = false;
+    try {
+      opened = await launchUrl(uri, mode: mode);
+    } catch (e) {
+      debugPrint('HelpSupport: failed to open $uri: $e');
+    }
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 }

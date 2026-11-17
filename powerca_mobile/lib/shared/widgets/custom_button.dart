@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme.dart';
+import 'soft_page.dart';
+
 /// Custom Button Widget
-/// Consistent button styling across the app
+/// Consistent soft (stadium) button styling across the app
 class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
@@ -30,64 +33,69 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isOutlined) {
-      return SizedBox(
-        width: width ?? double.infinity,
-        height: height,
-        child: OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
-          style: OutlinedButton.styleFrom(
-            padding: padding,
-            backgroundColor: backgroundColor,
-          ),
-          child: _buildChild(context),
-        ),
-      );
-    }
+    final p = SoftPalette.of(context);
+    final enabled = onPressed != null && !isLoading;
+    final bg = backgroundColor ?? (isOutlined ? p.surface : p.pill);
+    final fg = textColor ?? (isOutlined ? p.ink : p.onPill);
+    final side = isOutlined ? BorderSide(color: p.border) : BorderSide.none;
 
     return SizedBox(
       width: width ?? double.infinity,
       height: height,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          padding: padding,
-          backgroundColor: backgroundColor,
-          foregroundColor: textColor,
+      child: Opacity(
+        opacity: enabled || isLoading ? 1 : 0.45,
+        child: Material(
+          color: bg,
+          shape: StadiumBorder(side: side),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: enabled ? onPressed : null,
+            child: Padding(
+              padding: padding ?? const EdgeInsets.symmetric(horizontal: 22),
+              child: Center(child: _buildChild(fg)),
+            ),
+          ),
         ),
-        child: _buildChild(context),
       ),
     );
   }
 
-  Widget _buildChild(BuildContext context) {
+  Widget _buildChild(Color fg) {
     if (isLoading) {
       return SizedBox(
         height: 20,
         width: 20,
         child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            isOutlined
-                ? Theme.of(context).primaryColor
-                : Colors.white,
-          ),
+          strokeWidth: 2.2,
+          valueColor: AlwaysStoppedAnimation<Color>(fg),
         ),
       );
     }
+
+    final label = Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontFamily: AppTheme.fontFamily,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: fg,
+      ),
+    );
 
     if (icon != null) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 20),
+          Icon(icon, size: 18, color: fg),
           const SizedBox(width: 8),
-          Text(text),
+          Flexible(child: label),
         ],
       );
     }
 
-    return Text(text);
+    return label;
   }
 }

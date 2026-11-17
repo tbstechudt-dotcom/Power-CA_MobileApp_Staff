@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/providers/work_hours_provider.dart';
 import '../../../../core/services/priority_service.dart';
+import '../../../../shared/widgets/home_style.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import 'work_log_list_page.dart';
 
 class WorkLogEntryFormPage extends StatefulWidget {
@@ -373,16 +374,6 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       initialDate: _selectedDate ?? today,
       firstDate: today, // Only allow current date and future dates
       lastDate: DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppTheme.primaryColor,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -394,16 +385,6 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppTheme.primaryColor,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -611,7 +592,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               content: Text(
                 'Time overlap! You already have an entry from ${overlap['fromTime']} to ${overlap['toTime']}',
               ),
-              backgroundColor: Colors.orange,
+              backgroundColor: SoftPalette.of(context).warning,
               duration: const Duration(seconds: 4),
             ),
           );
@@ -667,9 +648,9 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Work log entry created successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Work log entry created successfully'),
+            backgroundColor: SoftPalette.of(context).success,
           ),
         );
 
@@ -703,7 +684,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating work log: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: SoftPalette.of(context).danger,
           ),
         );
       }
@@ -712,600 +693,331 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor;
-    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final p = SoftPalette.of(context);
+    final headerDate = _selectedDate ?? DateTime.now();
 
-    return Scaffold(
-      backgroundColor: scaffoldBgColor,
-      appBar: AppBar(
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8.w),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 42.w,
-                height: 42.h,
-                decoration: BoxDecoration(
-                  color: backButtonBgColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: backButtonBorderColor,
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 18.sp,
-                    color: textSecondaryColor,
-                  ),
-                ),
-              ),
+    Widget card(List<Widget> children) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: SoftCard(
+            radius: 26,
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
             ),
           ),
-        ),
-        leadingWidth: 58.w,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Create Work Log Entry',
-              style: TextStyle(color: textPrimaryColor),
-            ),
-            if (_hasPriorities)
-              Text(
-                'Showing ${_priorityJobIds.length} priority jobs',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFFEF4444),
-                ),
-              ),
-          ],
-        ),
-        backgroundColor: headerBgColor,
-        foregroundColor: textPrimaryColor,
-        elevation: 0,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.only(
-                left: 20.w,
-                right: 20.w,
-                top: 20.w,
-                bottom: 20.w + MediaQuery.of(context).padding.bottom,
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        );
+
+    return Scaffold(
+      backgroundColor: p.background,
+      body: HomeBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header: back, title + date, Priority pill
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                child: Row(
                   children: [
-                    // Priority Selection Banner (always show - staff can add/edit priorities anytime)
-                    _buildPrioritySelectionBanner(),
-
-                    // Date Selector
-                    _buildSectionTitle('Select Date'),
-                    SizedBox(height: 8.h),
-                    _buildDateSelector(),
-                    SizedBox(height: 20.h),
-
-                    // Work Hours Section with Mode Toggle and Info Icon
-                    _buildWorkHoursSectionTitle(),
-                    SizedBox(height: 8.h),
-                    _buildWorkHoursModeToggle(),
-                    SizedBox(height: 12.h),
-                    // Show either Time Range or Hours/Minutes input based on mode
-                    if (_useTimeRangeMode) ...[
-                      Row(
+                    SoftIconButton(
+                      icon: Icons.arrow_back_rounded,
+                      tooltip: 'Back',
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(child: _buildTimeSelector(true)),
-                          SizedBox(width: 12.w),
-                          Expanded(child: _buildTimeSelector(false)),
+                          Text('Log work', style: SoftText.heading(p, size: 19)),
+                          const SizedBox(height: 2),
+                          Text(
+                            DateFormat('EEEE, d MMMM').format(headerDate),
+                            style: SoftText.caption(p, size: 12.5),
+                          ),
                         ],
                       ),
-                      if (_fromTime != null && _toTime != null) ...[
-                        SizedBox(height: 8.h),
-                        Text(
-                          'Total Hours: ${_formatMinutesToHours(_getTotalMinutes())}',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                      ],
-                    ] else ...[
-                      _buildHoursMinutesInput(),
-                      if (_hasValidWorkHours()) ...[
-                        SizedBox(height: 8.h),
-                        Text(
-                          'Total Hours: ${_formatMinutesToHours(_getTotalMinutes())}',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                      ],
-                    ],
-                    SizedBox(height: 20.h),
-
-                    // Client Selector
-                    _buildSectionTitle('Select Client'),
-                    SizedBox(height: 8.h),
-                    _buildClientDropdown(),
-                    SizedBox(height: 20.h),
-
-                    // Job Selector
-                    _buildSectionTitle('Select Job'),
-                    SizedBox(height: 8.h),
-                    _buildJobDropdown(),
-                    SizedBox(height: 20.h),
-
-                    // Recurrent Selector (Required)
-                    _buildSectionTitle('Recurrent'),
-                    SizedBox(height: 8.h),
-                    _buildRecurrentDropdown(),
-                    SizedBox(height: 20.h),
-
-                    // Task Selector (Required)
-                    _buildSectionTitle('Select Task'),
-                    SizedBox(height: 8.h),
-                    _buildTaskDropdown(),
-                    SizedBox(height: 20.h),
-
-                    // Work Description with character counter
-                    _buildDescriptionSectionTitle(),
-                    SizedBox(height: 8.h),
-                    _buildDescriptionField(),
-                    SizedBox(height: 32.h),
-
-                    // Submit Button
-                    _buildSubmitButton(),
+                    ),
+                    HomeOutlinePill(
+                      label: _hasPriorities
+                          ? 'Priority · ${_priorityJobIds.length}'
+                          : 'Priority',
+                      icon: _hasPriorities ? Icons.star_rounded : Icons.star_outline_rounded,
+                      onTap: _isLoading ? null : _showPrioritySelectionDialog,
+                    ),
                   ],
                 ),
               ),
-            ),
-    );
-  }
 
-  Widget _buildSectionTitle(String title) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    return Text(
-      title,
-      style: TextStyle(
-        fontFamily: 'Inter',
-        fontSize: 14.sp,
-        fontWeight: FontWeight.w600,
-        color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Card 1: date and work hours
+                              card([
+                                const SoftFieldLabel('Date', required: true),
+                                SoftPickerField(
+                                  value: _selectedDate != null
+                                      ? DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate!)
+                                      : null,
+                                  placeholder: 'Select a date',
+                                  icon: Icons.calendar_today_outlined,
+                                  filled: true,
+                                  trailing: false,
+                                  onTap: _selectDate,
+                                ),
+                                const SizedBox(height: 18),
+
+                                // Work hours title with info icon + mode toggle
+                                _buildWorkHoursSectionTitle(),
+                                const SizedBox(height: 14),
+                                // Either a time range or hours / minutes
+                                if (_useTimeRangeMode)
+                                  Row(
+                                    children: [
+                                      Expanded(child: _buildTimeSelector(true)),
+                                      const SizedBox(width: 12),
+                                      Expanded(child: _buildTimeSelector(false)),
+                                    ],
+                                  )
+                                else
+                                  _buildHoursMinutesInput(),
+                                if (_hasValidWorkHours()) ...[
+                                  const SizedBox(height: 12),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: SoftStatusPill(
+                                      label:
+                                          'Total Hours: ${_formatMinutesToHours(_getTotalMinutes())}',
+                                      color: p.accent,
+                                      icon: Icons.timer_outlined,
+                                    ),
+                                  ),
+                                ],
+                              ]),
+
+                              // Card 2: client, job, recurrence, task
+                              card([
+                                const SoftFieldLabel('Client', required: true),
+                                _buildClientDropdown(),
+                                const SizedBox(height: 18),
+                                SoftFieldLabel(
+                                  'Job',
+                                  required: true,
+                                  enabled: _selectedClientId != null,
+                                ),
+                                _buildJobDropdown(),
+                                const SizedBox(height: 18),
+                                SoftFieldLabel(
+                                  'Recurrent',
+                                  required: true,
+                                  enabled: _selectedJobId != null && _recurrentPeriods.isNotEmpty,
+                                ),
+                                _buildRecurrentDropdown(),
+                                const SizedBox(height: 18),
+                                SoftFieldLabel(
+                                  'Task',
+                                  required: true,
+                                  enabled: _selectedRecurrent != null,
+                                ),
+                                _buildTaskDropdown(),
+                              ]),
+
+                              // Card 3: description
+                              card([
+                                SoftFieldLabel(
+                                  'Work description',
+                                  required: true,
+                                  hint: '${_descriptionController.text.length}/200',
+                                ),
+                                _buildDescriptionField(),
+                              ]),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+
+              // Save button
+              if (!_isLoading)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                  child: SoftPillButton(
+                    label: 'Save work log',
+                    variant: SoftPillVariant.blue,
+                    height: 54,
+                    loading: _isSubmitting,
+                    onPressed: _isSubmitting ? null : _submitForm,
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildWorkHoursSectionTitle() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final iconColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+    final p = SoftPalette.of(context);
 
     return Row(
+        children: [
+          Text(
+            'Work hours',
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+              color: p.ink,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Tooltip(
+            message: 'You can change the default\ninput method in Settings',
+            preferBelow: false,
+            verticalOffset: 20,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: p.pill,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            textStyle: SoftText.body(p, size: 12, color: p.onPill),
+            triggerMode: TooltipTriggerMode.tap,
+            showDuration: const Duration(seconds: 3),
+            child: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
+          ),
+          const Spacer(),
+          _buildWorkHoursModeToggle(),
+        ],
+    );
+  }
+
+  /// Segmented toggle between Time Range and Hours/Minutes input modes.
+  /// The default option (from settings) appears first.
+  Widget _buildWorkHoursModeToggle() {
+    final p = SoftPalette.of(context);
+    final workHoursProvider = Provider.of<WorkHoursProvider>(context, listen: false);
+
+    // Check which mode is the default from settings
+    final isHoursMinutesDefault = workHoursProvider.isHoursMinutesDefault;
+
+    final fromToChip = _ModeChip(
+      label: 'From–To',
+      icon: Icons.schedule_rounded,
+      selected: _useTimeRangeMode,
+      onTap: () => setState(() => _useTimeRangeMode = true),
+    );
+
+    final hoursMinChip = _ModeChip(
+      label: 'Hrs/Min',
+      icon: Icons.timer_outlined,
+      selected: !_useTimeRangeMode,
+      onTap: () => setState(() => _useTimeRangeMode = false),
+    );
+
+    // Order chips based on default setting - default option comes first
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: softFieldFill(p),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: p.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: isHoursMinutesDefault
+            ? [hoursMinChip, fromToChip]
+            : [fromToChip, hoursMinChip],
+      ),
+    );
+  }
+
+  /// Build Hours and Minutes direct input fields
+  Widget _buildHoursMinutesInput() {
+    return Row(
       children: [
-        Text(
-          'Work Hours',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: titleColor,
+        Expanded(
+          child: _buildNumberInput(
+            label: 'Hours',
+            controller: _hoursController,
+            max: 12,
+            icon: Icons.schedule_rounded,
           ),
         ),
-        SizedBox(width: 6.w),
-        Tooltip(
-          message: 'You can change the default\ninput method in Settings',
-          preferBelow: false,
-          verticalOffset: 20,
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-          decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF334155) : const Color(0xFF1F2937),
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          textStyle: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12.sp,
-            fontWeight: FontWeight.w400,
-            color: Colors.white,
-          ),
-          triggerMode: TooltipTriggerMode.tap,
-          showDuration: const Duration(seconds: 3),
-          child: Icon(
-            Icons.info_outline_rounded,
-            size: 16.sp,
-            color: iconColor,
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildNumberInput(
+            label: 'Minutes',
+            controller: _minutesController,
+            max: 59,
+            icon: Icons.timer_outlined,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDateSelector() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
-
-    return InkWell(
-      onTap: _selectDate,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        decoration: BoxDecoration(
-          color: fieldBgColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: fieldBorderColor),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_today,
-              size: 20.sp,
-              color: AppTheme.primaryColor,
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Text(
-                _selectedDate != null
-                    ? DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate!)
-                    : 'Select a date',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w400,
-                  color: _selectedDate != null ? textColor : placeholderColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build toggle for switching between Time Range and Hours/Minutes input modes
-  /// The default option (from settings) appears first
-  Widget _buildWorkHoursModeToggle() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final workHoursProvider = Provider.of<WorkHoursProvider>(context, listen: false);
-    final inactiveBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
-    final inactiveTextColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF64748B);
-    final activeBgColor = AppTheme.primaryColor;
-    final activeTextColor = Colors.white;
-
-    // Check which mode is the default from settings
-    final isHoursMinutesDefault = workHoursProvider.isHoursMinutesDefault;
-
-    // Build From/To Time chip
-    Widget fromToChip = GestureDetector(
-      onTap: () {
-        setState(() {
-          _useTimeRangeMode = true;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: _useTimeRangeMode ? activeBgColor : inactiveBgColor,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: _useTimeRangeMode ? activeBgColor : Colors.transparent,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.schedule,
-              size: 14.sp,
-              color: _useTimeRangeMode ? activeTextColor : inactiveTextColor,
-            ),
-            SizedBox(width: 6.w),
-            Text(
-              'From / To',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w600,
-                color: _useTimeRangeMode ? activeTextColor : inactiveTextColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    // Build Hours/Minutes chip
-    Widget hoursMinChip = GestureDetector(
-      onTap: () {
-        setState(() {
-          _useTimeRangeMode = false;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: !_useTimeRangeMode ? activeBgColor : inactiveBgColor,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: !_useTimeRangeMode ? activeBgColor : Colors.transparent,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.timer_outlined,
-              size: 14.sp,
-              color: !_useTimeRangeMode ? activeTextColor : inactiveTextColor,
-            ),
-            SizedBox(width: 6.w),
-            Text(
-              'Hours / Min',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w600,
-                color: !_useTimeRangeMode ? activeTextColor : inactiveTextColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    // Order chips based on default setting - default option comes first
-    return Row(
-      children: isHoursMinutesDefault
-          ? [hoursMinChip, SizedBox(width: 10.w), fromToChip]
-          : [fromToChip, SizedBox(width: 10.w), hoursMinChip],
-    );
-  }
-
-  /// Build Hours and Minutes direct input fields - like From/To time style
-  Widget _buildHoursMinutesInput() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
-    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-
-    return Row(
+  Widget _buildNumberInput({
+    required String label,
+    required TextEditingController controller,
+    required int max,
+    required IconData icon,
+  }) {
+    final p = SoftPalette.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Hours input
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Hours',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w500,
-                  color: labelColor,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              Theme(
-                data: Theme.of(context).copyWith(
-                  textSelectionTheme: TextSelectionThemeData(
-                    cursorColor: textColor,
-                    selectionColor: textColor.withValues(alpha: 0.2),
-                    selectionHandleColor: textColor,
-                  ),
-                ),
-                child: TextField(
-                  controller: _hoursController,
-                  keyboardType: TextInputType.number,
-                  cursorColor: textColor,
-                  maxLength: 2,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    _RangeTextInputFormatter(min: 0, max: 12),
-                  ],
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: textColor,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '0',
-                    counterText: '',
-                    hintStyle: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                      color: placeholderColor,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.schedule,
-                      size: 18.sp,
-                      color: AppTheme.primaryColor,
-                    ),
-                    filled: true,
-                    fillColor: fieldBgColor,
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                      borderSide: BorderSide(color: fieldBorderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                      borderSide: BorderSide(color: AppTheme.primaryColor),
-                    ),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                    isDense: true,
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-            ],
+        SoftFieldLabel(label, required: true),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          cursorColor: p.ink,
+          maxLength: 2,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            _RangeTextInputFormatter(min: 0, max: max),
+          ],
+          style: softInputTextStyle(context),
+          decoration: softInputDecoration(
+            context,
+            hint: '0',
+            icon: icon,
+            counterText: '',
+            filled: true,
           ),
-        ),
-        SizedBox(width: 12.w),
-        // Minutes input
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Minutes',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w500,
-                  color: labelColor,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              Theme(
-                data: Theme.of(context).copyWith(
-                  textSelectionTheme: TextSelectionThemeData(
-                    cursorColor: textColor,
-                    selectionColor: textColor.withValues(alpha: 0.2),
-                    selectionHandleColor: textColor,
-                  ),
-                ),
-                child: TextField(
-                  controller: _minutesController,
-                  keyboardType: TextInputType.number,
-                  cursorColor: textColor,
-                  maxLength: 2,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    _RangeTextInputFormatter(min: 0, max: 59),
-                  ],
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: textColor,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '0',
-                    counterText: '',
-                    hintStyle: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                      color: placeholderColor,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.timer_outlined,
-                      size: 18.sp,
-                      color: AppTheme.primaryColor,
-                    ),
-                    filled: true,
-                    fillColor: fieldBgColor,
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                      borderSide: BorderSide(color: fieldBorderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                      borderSide: BorderSide(color: AppTheme.primaryColor),
-                    ),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                    isDense: true,
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-            ],
-          ),
+          onChanged: (_) => setState(() {}),
         ),
       ],
     );
   }
 
   Widget _buildTimeSelector(bool isFromTime) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
-
     final time = isFromTime ? _fromTime : _toTime;
-    final label = isFromTime ? 'From Time' : 'To Time';
 
-    return InkWell(
-      onTap: () => _selectTime(isFromTime),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        decoration: BoxDecoration(
-          color: fieldBgColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: fieldBorderColor),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SoftFieldLabel(isFromTime ? 'Start' : 'End', required: true),
+        SoftPickerField(
+          value: time?.format(context),
+          placeholder: 'Select time',
+          icon: Icons.access_time_rounded,
+          filled: true,
+          trailing: false,
+          onTap: () => _selectTime(isFromTime),
         ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.access_time,
-              size: 20.sp,
-              color: AppTheme.primaryColor,
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w400,
-                      color: placeholderColor,
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    time != null ? time.format(context) : 'Select time',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                      color: time != null ? textColor : placeholderColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
   Widget _buildClientDropdown() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
-
     // Get selected client name for display
     String? selectedClientName;
     if (_selectedClientId != null) {
@@ -1316,61 +1028,90 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       selectedClientName = selectedClient['clientname'] as String?;
     }
 
-    return InkWell(
+    return SoftPickerField(
+      value: selectedClientName,
+      placeholder: 'Select a client',
+      icon: Icons.apartment_rounded,
+      filled: true,
       onTap: () => _showClientSearchDialog(),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        decoration: BoxDecoration(
-          color: fieldBgColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: fieldBorderColor),
+    );
+  }
+
+  /// Shared layout for the searchable client / job / task sheets:
+  /// title + count, search field, then the list (or an empty message).
+  Widget _buildSearchSheetBody({
+    required String title,
+    required String countLabel,
+    required String searchHint,
+    required TextEditingController searchController,
+    required String searchQuery,
+    required ValueChanged<String> onQueryChanged,
+    required String emptyText,
+    required ScrollController scrollController,
+    required int itemCount,
+    required IndexedWidgetBuilder itemBuilder,
+    double bottomPadding = 16,
+  }) {
+    final p = SoftPalette.of(context);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: Row(
+            children: [
+              Expanded(child: Text(title, style: SoftText.title(p, size: 20))),
+              Text(countLabel, style: SoftText.caption(p)),
+            ],
+          ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                selectedClientName ?? 'Select a client',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w400,
-                  color: selectedClientName != null ? textColor : placeholderColor,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: TextField(
+            controller: searchController,
+            autofocus: true,
+            cursorColor: p.ink,
+            onChanged: onQueryChanged,
+            style: softInputTextStyle(context),
+            decoration: softInputDecoration(
+              context,
+              hint: searchHint,
+              icon: Icons.search_rounded,
+              pill: true,
+              dense: true,
+              suffix: searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.close_rounded, size: 18, color: p.muted),
+                      onPressed: () {
+                        searchController.clear();
+                        onQueryChanged('');
+                      },
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        Expanded(
+          child: itemCount == 0
+              ? SoftMessage(icon: Icons.search_off_rounded, title: emptyText)
+              : ListView.builder(
+                  controller: scrollController,
+                  padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPadding),
+                  itemCount: itemCount,
+                  itemBuilder: itemBuilder,
                 ),
-              ),
-            ),
-            Icon(
-              Icons.arrow_drop_down,
-              color: placeholderColor,
-              size: 24.sp,
-            ),
-          ],
         ),
-      ),
+      ],
     );
   }
 
   /// Show searchable client selection dialog
   Future<void> _showClientSearchDialog() async {
-    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
-    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final handleColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
-    final searchFieldBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
-    final borderColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[100];
-
     String searchQuery = '';
     final searchController = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: sheetBgColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
-      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -1395,211 +1136,52 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               builder: (context, scrollController) {
                 return Stack(
                   children: [
-                    Column(
-                  children: [
-                    // Handle bar
-                    Container(
-                      margin: EdgeInsets.only(top: 8.h),
-                      width: 36.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: handleColor,
-                        borderRadius: BorderRadius.circular(2.r),
-                      ),
-                    ),
-                    // Header
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Select Client',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimaryColor,
-                            ),
-                          ),
-                          Text(
-                            '${filteredClients.length} clients',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w400,
-                              color: textSecondaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Search Field
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 8.h),
-                      child: TextField(
-                        controller: searchController,
-                        autofocus: true,
-                        onChanged: (value) {
-                          setModalState(() {
-                            searchQuery = value;
-                          });
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search client name...',
-                          hintStyle: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14.sp,
-                            color: textSecondaryColor,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            size: 20.sp,
-                            color: textSecondaryColor,
-                          ),
-                          suffixIcon: searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
-                                  onPressed: () {
-                                    searchController.clear();
-                                    setModalState(() {
-                                      searchQuery = '';
-                                    });
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: searchFieldBgColor,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          color: searchTextColor,
-                        ),
-                      ),
-                    ),
-                    Divider(height: 1, color: dividerColor),
-                    // Client list
-                    Expanded(
-                      child: filteredClients.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.search_off,
-                                    size: 48.sp,
-                                    color: isDarkMode ? const Color(0xFF475569) : Colors.grey[300],
-                                  ),
-                                  SizedBox(height: 12.h),
-                                  Text(
-                                    'No clients found',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: textSecondaryColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: scrollController,
-                              padding: EdgeInsets.symmetric(vertical: 8.h),
-                              itemCount: filteredClients.length,
-                              itemBuilder: (context, index) {
-                                final client = filteredClients[index];
-                                final clientId = client['client_id'] as int;
-                                final clientName = client['clientname'] ?? 'Unknown Client';
-                                final isSelected = clientId == _selectedClientId;
+                    _buildSearchSheetBody(
+                      title: 'Select Client',
+                      countLabel: '${filteredClients.length} clients',
+                      searchHint: 'Search client name...',
+                      searchController: searchController,
+                      searchQuery: searchQuery,
+                      onQueryChanged: (value) => setModalState(() => searchQuery = value),
+                      emptyText: 'No clients found',
+                      scrollController: scrollController,
+                      itemCount: filteredClients.length,
+                      // Leave room for the floating Priority button
+                      bottomPadding: 88,
+                      itemBuilder: (context, index) {
+                        final client = filteredClients[index];
+                        final clientId = client['client_id'] as int;
+                        final clientName = client['clientname'] ?? 'Unknown Client';
+                        final isSelected = clientId == _selectedClientId;
 
-                                return InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedClientId = clientId;
-                                      _selectedJobId = null;
-                                      _selectedTaskId = null;
-                                      _tasks = [];
-                                    });
-                                    Navigator.pop(context);
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
-                                      border: Border(
-                                        bottom: BorderSide(color: borderColor!, width: 0.5),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            clientName,
-                                            style: TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 14.sp,
-                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                              color: isSelected ? AppTheme.primaryColor : textPrimaryColor,
-                                            ),
-                                          ),
-                                        ),
-                                        if (isSelected)
-                                          Icon(
-                                            Icons.check_circle,
-                                            color: AppTheme.primaryColor,
-                                            size: 20.sp,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                        return _PickerTile(
+                          title: clientName,
+                          selected: isSelected,
+                          onTap: () {
+                            setState(() {
+                              _selectedClientId = clientId;
+                              _selectedJobId = null;
+                              _selectedTaskId = null;
+                              _tasks = [];
+                            });
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
                     ),
-                  ],
-                ),
                     // Floating button to jump to the priority selection sheet.
                     // Centered at the bottom of the sheet, full-width minus margins.
                     Positioned(
-                      left: 24.w,
-                      right: 24.w,
-                      bottom: 16.h,
-                      child: SizedBox(
-                        height: 52.h,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _showPrioritySelectionDialog();
-                          },
-                          icon: Icon(
-                            Icons.star_rounded,
-                            size: 20.sp,
-                            color: Colors.white,
-                          ),
-                          label: Text(
-                            'Priority',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28.r),
-                            ),
-                          ),
-                        ),
+                      left: 24,
+                      right: 24,
+                      bottom: 16,
+                      child: SoftPillButton(
+                        label: 'Priority',
+                        icon: Icons.star_rounded,
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showPrioritySelectionDialog();
+                        },
                       ),
                     ),
                   ],
@@ -1613,13 +1195,6 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildJobDropdown() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
-    final disabledBgColor = isDarkMode ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.grey[100];
-
     final isEnabled = _selectedClientId != null;
 
     // Get jobs for the selected client from the pre-grouped structure
@@ -1649,68 +1224,26 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       hintText = 'Select a job';
     }
 
-    return Opacity(
-      opacity: isEnabled ? 1.0 : 0.5,
-      child: InkWell(
-        onTap: !isEnabled || filteredJobs.isEmpty
-            ? null
-            : () => _showJobSearchDialog(filteredJobs),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-          decoration: BoxDecoration(
-            color: isEnabled ? fieldBgColor : disabledBgColor,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: fieldBorderColor),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  selectedJobDisplay ?? hintText,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w400,
-                    color: selectedJobDisplay != null ? textColor : placeholderColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(
-                Icons.arrow_drop_down,
-                color: placeholderColor,
-                size: 24.sp,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return SoftPickerField(
+      value: selectedJobDisplay,
+      placeholder: hintText,
+      icon: Icons.work_outline_rounded,
+      filled: true,
+      enabled: isEnabled,
+      onTap: !isEnabled || filteredJobs.isEmpty
+          ? null
+          : () => _showJobSearchDialog(filteredJobs),
     );
   }
 
   /// Show searchable job selection dialog
   Future<void> _showJobSearchDialog(List<Map<String, dynamic>> jobs) async {
-    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
-    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final handleColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
-    final searchFieldBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
-    final borderColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[100];
-
     String searchQuery = '';
     final searchController = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: sheetBgColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
-      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -1735,197 +1268,43 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               maxChildSize: 0.9,
               expand: false,
               builder: (context, scrollController) {
-                return Column(
-                  children: [
-                    // Handle bar
-                    Container(
-                      margin: EdgeInsets.only(top: 8.h),
-                      width: 36.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: handleColor,
-                        borderRadius: BorderRadius.circular(2.r),
-                      ),
-                    ),
-                    // Header
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Select Job',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimaryColor,
-                            ),
-                          ),
-                          Text(
-                            '${filteredJobs.length} jobs',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w400,
-                              color: textSecondaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Search Field
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 8.h),
-                      child: TextField(
-                        controller: searchController,
-                        autofocus: true,
-                        onChanged: (value) {
-                          setModalState(() {
-                            searchQuery = value;
-                          });
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search job name or ID...',
-                          hintStyle: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14.sp,
-                            color: textSecondaryColor,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            size: 20.sp,
-                            color: textSecondaryColor,
-                          ),
-                          suffixIcon: searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
-                                  onPressed: () {
-                                    searchController.clear();
-                                    setModalState(() {
-                                      searchQuery = '';
-                                    });
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: searchFieldBgColor,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          color: searchTextColor,
-                        ),
-                      ),
-                    ),
-                    Divider(height: 1, color: dividerColor),
-                    // Job list
-                    Expanded(
-                      child: filteredJobs.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.search_off,
-                                    size: 48.sp,
-                                    color: isDarkMode ? const Color(0xFF475569) : Colors.grey[300],
-                                  ),
-                                  SizedBox(height: 12.h),
-                                  Text(
-                                    'No jobs found',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: textSecondaryColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: scrollController,
-                              padding: EdgeInsets.symmetric(vertical: 8.h),
-                              itemCount: filteredJobs.length,
-                              itemBuilder: (context, index) {
-                                final job = filteredJobs[index];
-                                final jobId = job['job_id'] as int;
-                                final jobUid = job['job_uid'] ?? 'N/A';
-                                final jobDesc = job['work_desc'] ?? 'Unknown Job';
-                                final isSelected = jobId == _selectedJobId;
+                return _buildSearchSheetBody(
+                  title: 'Select Job',
+                  countLabel: '${filteredJobs.length} jobs',
+                  searchHint: 'Search job name or ID...',
+                  searchController: searchController,
+                  searchQuery: searchQuery,
+                  onQueryChanged: (value) => setModalState(() => searchQuery = value),
+                  emptyText: 'No jobs found',
+                  scrollController: scrollController,
+                  itemCount: filteredJobs.length,
+                  itemBuilder: (context, index) {
+                    final job = filteredJobs[index];
+                    final jobId = job['job_id'] as int;
+                    final jobUid = job['job_uid'] ?? 'N/A';
+                    final jobDesc = job['work_desc'] ?? 'Unknown Job';
+                    final isSelected = jobId == _selectedJobId;
 
-                                return InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedJobId = jobId;
-                                      _selectedTaskId = null;
-                                      _selectedRecurrent = null;
-                                      _selectedRecperId = null;
-                                      _tasks = [];
-                                      _recurrentPeriods = [];
-                                    });
-                                    Navigator.pop(context);
-                                    _loadTasksForJob(jobId);
-                                    _loadRecurrentPeriodsForJob(jobId);
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
-                                      border: Border(
-                                        bottom: BorderSide(color: borderColor!, width: 0.5),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                jobDesc,
-                                                style: TextStyle(
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 14.sp,
-                                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                                  color: isSelected ? AppTheme.primaryColor : textPrimaryColor,
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              SizedBox(height: 2.h),
-                                              Text(
-                                                jobUid,
-                                                style: TextStyle(
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 12.sp,
-                                                  fontWeight: FontWeight.w400,
-                                                  color: textSecondaryColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        if (isSelected)
-                                          Icon(
-                                            Icons.check_circle,
-                                            color: AppTheme.primaryColor,
-                                            size: 20.sp,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
+                    return _PickerTile(
+                      title: jobDesc,
+                      subtitle: jobUid,
+                      titleMaxLines: 2,
+                      selected: isSelected,
+                      onTap: () {
+                        setState(() {
+                          _selectedJobId = jobId;
+                          _selectedTaskId = null;
+                          _selectedRecurrent = null;
+                          _selectedRecperId = null;
+                          _tasks = [];
+                          _recurrentPeriods = [];
+                        });
+                        Navigator.pop(context);
+                        _loadTasksForJob(jobId);
+                        _loadRecurrentPeriodsForJob(jobId);
+                      },
+                    );
+                  },
                 );
               },
             );
@@ -1936,12 +1315,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildRecurrentDropdown() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
-    final disabledBgColor = isDarkMode ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.grey[100];
+    final p = SoftPalette.of(context);
 
     // Enable dropdown only if job is selected and recurrent periods are loaded
     final isEnabled = _selectedJobId != null && _recurrentPeriods.isNotEmpty;
@@ -1957,55 +1331,26 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     }
 
     return Opacity(
-      opacity: isEnabled ? 1.0 : 0.5,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
-        decoration: BoxDecoration(
-          color: isEnabled ? fieldBgColor : disabledBgColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: fieldBorderColor),
-        ),
+      opacity: isEnabled ? 1.0 : 0.6,
+      child: InputDecorator(
+        decoration: softInputDecoration(context, icon: Icons.repeat_rounded, filled: true)
+            .copyWith(contentPadding: const EdgeInsets.fromLTRB(0, 1, 12, 1)),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: _selectedRecurrent,
-            hint: Text(
-              hintText,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w400,
-                color: placeholderColor,
-              ),
-            ),
+            hint: Text(hintText, style: SoftText.body(p, color: p.muted)),
             isExpanded: true,
-            icon: Icon(
-              Icons.arrow_drop_down,
-              color: placeholderColor,
-              size: 24.sp,
-            ),
-            dropdownColor: fieldBgColor,
-            borderRadius: BorderRadius.circular(12.r),
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w400,
-              color: textColor,
-            ),
+            icon: Icon(Icons.expand_more_rounded, color: p.muted, size: 20),
+            dropdownColor: p.surface,
+            borderRadius: BorderRadius.circular(16),
+            style: softInputTextStyle(context),
             items: isEnabled
                 ? _recurrentPeriods.map((period) {
                     final recperIdStr = period['recper_id'].toString();
                     final recurPeriod = period['recur_period'] as String? ?? 'Unknown';
                     return DropdownMenuItem<String>(
                       value: recperIdStr, // Use recper_id as value
-                      child: Text(
-                        recurPeriod, // Display recur_period text
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w400,
-                          color: textColor,
-                        ),
-                      ),
+                      child: Text(recurPeriod), // Display recur_period text
                     );
                   }).toList()
                 : null,
@@ -2025,13 +1370,6 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
   }
 
   Widget _buildTaskDropdown() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final placeholderColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF8F8E90);
-    final disabledBgColor = isDarkMode ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.grey[100];
-
     final isEnabled = _selectedRecurrent != null;
 
     // Get selected task name for display
@@ -2054,66 +1392,26 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
       hintText = 'Select a task';
     }
 
-    return Opacity(
-      opacity: isEnabled ? 1.0 : 0.5,
-      child: InkWell(
-        onTap: !isEnabled || _tasks.isEmpty
-            ? null
-            : () => _showTaskSearchDialog(),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-          decoration: BoxDecoration(
-            color: isEnabled ? fieldBgColor : disabledBgColor,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: fieldBorderColor),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  selectedTaskName ?? hintText,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w400,
-                    color: selectedTaskName != null ? textColor : placeholderColor,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.arrow_drop_down,
-                color: placeholderColor,
-                size: 24.sp,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return SoftPickerField(
+      value: selectedTaskName,
+      placeholder: hintText,
+      icon: Icons.task_alt_rounded,
+      filled: true,
+      enabled: isEnabled,
+      onTap: !isEnabled || _tasks.isEmpty
+          ? null
+          : () => _showTaskSearchDialog(),
     );
   }
 
   /// Show searchable task selection dialog
   Future<void> _showTaskSearchDialog() async {
-    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
-    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final handleColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
-    final searchFieldBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
-    final borderColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[100];
-
     String searchQuery = '';
     final searchController = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: sheetBgColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
-      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -2136,172 +1434,33 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
               maxChildSize: 0.9,
               expand: false,
               builder: (context, scrollController) {
-                return Column(
-                  children: [
-                    // Handle bar
-                    Container(
-                      margin: EdgeInsets.only(top: 8.h),
-                      width: 36.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: handleColor,
-                        borderRadius: BorderRadius.circular(2.r),
-                      ),
-                    ),
-                    // Header
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Select Task',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimaryColor,
-                            ),
-                          ),
-                          Text(
-                            '${filteredTasks.length} tasks',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w400,
-                              color: textSecondaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Search Field
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 8.h),
-                      child: TextField(
-                        controller: searchController,
-                        autofocus: true,
-                        onChanged: (value) {
-                          setModalState(() {
-                            searchQuery = value;
-                          });
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search task name...',
-                          hintStyle: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14.sp,
-                            color: textSecondaryColor,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            size: 20.sp,
-                            color: textSecondaryColor,
-                          ),
-                          suffixIcon: searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
-                                  onPressed: () {
-                                    searchController.clear();
-                                    setModalState(() {
-                                      searchQuery = '';
-                                    });
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: searchFieldBgColor,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          color: searchTextColor,
-                        ),
-                      ),
-                    ),
-                    Divider(height: 1, color: dividerColor),
-                    // Task list
-                    Expanded(
-                      child: filteredTasks.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.search_off,
-                                    size: 48.sp,
-                                    color: isDarkMode ? const Color(0xFF475569) : Colors.grey[300],
-                                  ),
-                                  SizedBox(height: 12.h),
-                                  Text(
-                                    'No tasks found',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: textSecondaryColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: scrollController,
-                              padding: EdgeInsets.symmetric(vertical: 8.h),
-                              itemCount: filteredTasks.length,
-                              itemBuilder: (context, index) {
-                                final task = filteredTasks[index];
-                                final taskId = task['task_id'] as int;
-                                final taskDesc = task['task_desc'] ?? 'Unknown Task';
-                                final isSelected = taskId == _selectedTaskId;
+                return _buildSearchSheetBody(
+                  title: 'Select Task',
+                  countLabel: '${filteredTasks.length} tasks',
+                  searchHint: 'Search task name...',
+                  searchController: searchController,
+                  searchQuery: searchQuery,
+                  onQueryChanged: (value) => setModalState(() => searchQuery = value),
+                  emptyText: 'No tasks found',
+                  scrollController: scrollController,
+                  itemCount: filteredTasks.length,
+                  itemBuilder: (context, index) {
+                    final task = filteredTasks[index];
+                    final taskId = task['task_id'] as int;
+                    final taskDesc = task['task_desc'] ?? 'Unknown Task';
+                    final isSelected = taskId == _selectedTaskId;
 
-                                return InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedTaskId = taskId;
-                                    });
-                                    Navigator.pop(context);
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.08) : Colors.transparent,
-                                      border: Border(
-                                        bottom: BorderSide(color: borderColor!, width: 0.5),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            taskDesc,
-                                            style: TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 14.sp,
-                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                              color: isSelected ? AppTheme.primaryColor : textPrimaryColor,
-                                            ),
-                                          ),
-                                        ),
-                                        if (isSelected)
-                                          Icon(
-                                            Icons.check_circle,
-                                            color: AppTheme.primaryColor,
-                                            size: 20.sp,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
+                    return _PickerTile(
+                      title: taskDesc,
+                      selected: isSelected,
+                      onTap: () {
+                        setState(() {
+                          _selectedTaskId = taskId;
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
                 );
               },
             );
@@ -2311,127 +1470,36 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     );
   }
 
-  Widget _buildDescriptionSectionTitle() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    // Blue color for counter
-    const counterColor = Color(0xFF3B82F6);
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Work Description',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: titleColor,
-          ),
-        ),
-        Text(
-          '${_descriptionController.text.length}/200',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w500,
-            color: counterColor,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildDescriptionField() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final hintColor = isDarkMode ? const Color(0xFF64748B) : AppTheme.textDisabledColor;
+    final p = SoftPalette.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: fieldBgColor,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: fieldBorderColor),
-      ),
-      child: Scrollbar(
-        controller: _descriptionScrollController,
-        thumbVisibility: false,
-        interactive: true,
-        thickness: 4,
-        radius: Radius.circular(4.r),
-        child: TextFormField(
-          controller: _descriptionController,
-          scrollController: _descriptionScrollController,
-          minLines: 4,
-          maxLines: 4,
-          maxLength: 200,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Describe the work performed...',
-            hintStyle: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w400,
-              color: hintColor,
-            ),
-            filled: true,
-            fillColor: fieldBgColor,
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.all(16.w),
-            counterText: '', // Hide default counter
-          ),
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w400,
-            color: textColor,
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter a work description';
-            }
-            return null;
-          },
+    return Scrollbar(
+      controller: _descriptionScrollController,
+      thumbVisibility: false,
+      interactive: true,
+      thickness: 4,
+      radius: const Radius.circular(4),
+      child: TextFormField(
+        controller: _descriptionController,
+        scrollController: _descriptionScrollController,
+        minLines: 4,
+        maxLines: 4,
+        maxLength: 200,
+        cursorColor: p.ink,
+        onChanged: (_) => setState(() {}),
+        style: softInputTextStyle(context),
+        decoration: softInputDecoration(
+          context,
+          hint: 'Describe the work performed...',
+          counterText: '', // Hide default counter
+          filled: true,
         ),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _submitForm,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
-          padding: EdgeInsets.symmetric(vertical: 14.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          elevation: 0,
-        ),
-        child: _isSubmitting
-            ? SizedBox(
-                width: 20.w,
-                height: 20.h,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                'Create Work Log Entry',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  height: 1.2,
-                ),
-              ),
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return 'Please enter a work description';
+          }
+          return null;
+        },
       ),
     );
   }
@@ -2538,13 +1606,8 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     required String searchQuery,
     required Set<int> tempSelectedIds,
     required void Function(int jobId) onToggleJob,
-    required Color cardBgColor,
-    required Color cardBorderColor,
-    required Color checkboxBgColor,
-    required Color checkboxBorderColor,
-    required Color textPrimaryColor,
-    required Color textSecondaryColor,
   }) {
+    final p = SoftPalette.of(context);
     final matches = <Map<String, dynamic>>[];
     for (final config in _statusConfigs) {
       final status = config['status'] as String;
@@ -2558,15 +1621,11 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     if (matches.isEmpty) {
       return [
         Padding(
-          padding: EdgeInsets.symmetric(vertical: 32.h),
+          padding: const EdgeInsets.symmetric(vertical: 32),
           child: Center(
             child: Text(
               'No jobs match "$searchQuery"',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.sp,
-                color: textSecondaryColor,
-              ),
+              style: SoftText.body(p, size: 13, color: p.muted),
             ),
           ),
         ),
@@ -2575,145 +1634,23 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
 
     return matches.map((match) {
       final job = match['job'] as Map<String, dynamic>;
-      final statusName = match['status'] as String;
-      final color = match['color'] as Color;
       final jobId = job['job_id'] as int;
-      final isSelected = tempSelectedIds.contains(jobId);
-      final clientName = _getClientNameById(job['client_id']);
 
-      return InkWell(
+      return _PriorityJobRow(
+        job: job,
+        clientName: _getClientNameById(job['client_id']),
+        color: match['color'] as Color,
+        selected: tempSelectedIds.contains(jobId),
+        statusLabel: match['status'] as String,
+        boxed: true,
         onTap: () => onToggleJob(jobId),
-        borderRadius: BorderRadius.circular(12.r),
-        child: Container(
-          margin: EdgeInsets.only(bottom: 8.h),
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-          decoration: BoxDecoration(
-            color: cardBgColor,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(
-              color: isSelected ? color.withValues(alpha: 0.5) : cardBorderColor,
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 22.w,
-                height: 22.h,
-                decoration: BoxDecoration(
-                  color: isSelected ? color : checkboxBgColor,
-                  borderRadius: BorderRadius.circular(6.r),
-                  border: Border.all(
-                    color: isSelected ? color : checkboxBorderColor,
-                    width: 1.5,
-                  ),
-                ),
-                child: isSelected
-                    ? Icon(Icons.check, size: 14.sp, color: Colors.white)
-                    : null,
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      job['work_desc'] ?? 'Unknown Job',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.sp,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: textPrimaryColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 2.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.business_rounded,
-                          size: 12.sp,
-                          color: textSecondaryColor,
-                        ),
-                        SizedBox(width: 4.w),
-                        Expanded(
-                          child: Text(
-                            clientName.isNotEmpty
-                                ? clientName
-                                : 'No client assigned',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w500,
-                              color: clientName.isNotEmpty
-                                  ? AppTheme.primaryColor
-                                  : textSecondaryColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      job['job_uid'] ?? 'N/A',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                        color: textSecondaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 8.w),
-              // Status badge anchored to the right corner.
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10.r),
-                  border: Border.all(
-                    color: color.withValues(alpha: 0.3),
-                    width: 0.5,
-                  ),
-                ),
-                child: Text(
-                  statusName,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       );
     }).toList();
   }
 
-  /// Show priority job selection dialog
+  /// Show priority job selection sheet
   Future<void> _showPrioritySelectionDialog() async {
-    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
-    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final handleColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
-    final searchFieldBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final cardBorderColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[200];
-    final expandedBgColor = isDarkMode ? const Color(0xFF0F172A) : Colors.grey[50];
-    final checkboxBgColor = isDarkMode ? const Color(0xFF334155) : Colors.white;
-    final checkboxBorderColor = isDarkMode ? const Color(0xFF475569) : Colors.grey[300];
+    final p = SoftPalette.of(context);
 
     Set<int> tempSelectedIds = Set<int>.from(_selectedPriorityJobIds);
     String? expandedStatus;
@@ -2723,101 +1660,162 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: sheetBgColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
-      ),
+      backgroundColor: p.background,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            void toggleJob(int jobId) {
+              setModalState(() {
+                if (tempSelectedIds.contains(jobId)) {
+                  tempSelectedIds.remove(jobId);
+                } else {
+                  tempSelectedIds.add(jobId);
+                }
+              });
+            }
+
+            // One white card with a row per status; tapping a row expands
+            // its jobs underneath.
+            Widget statusCard() {
+              final rows = <Widget>[];
+              for (int i = 0; i < _statusConfigs.length; i++) {
+                final config = _statusConfigs[i];
+                final status = config['status'] as String;
+                final color = config['color'] as Color;
+                final jobs = _getFilteredJobsByStatus(status, searchQuery);
+                final isExpanded = expandedStatus == status;
+                final selectedInCategory =
+                    jobs.where((j) => tempSelectedIds.contains(j['job_id'])).length;
+                final empty = jobs.isEmpty;
+
+                if (i > 0) rows.add(Divider(height: 1, color: p.border));
+                rows.add(
+                  InkWell(
+                    onTap: empty
+                        ? null
+                        : () => setModalState(() {
+                              expandedStatus = isExpanded ? null : status;
+                            }),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  status,
+                                  style: SoftText.body(p, size: 15, color: empty ? p.inkSoft : p.ink)
+                                      .copyWith(fontWeight: FontWeight.w500),
+                                ),
+                                if (selectedInCategory > 0)
+                                  Text(
+                                    '$selectedInCategory selected',
+                                    style: SoftText.caption(p, size: 11.5).copyWith(color: p.accent),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Text('${jobs.length}', style: SoftText.heading(p, size: 15)),
+                          const SizedBox(width: 8),
+                          AnimatedRotation(
+                            turns: isExpanded ? 0.25 : 0,
+                            duration: const Duration(milliseconds: 180),
+                            child: Icon(Icons.chevron_right_rounded, size: 20, color: p.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+                if (isExpanded && jobs.isNotEmpty) {
+                  rows.add(
+                    ColoredBox(
+                      color: p.background,
+                      child: Column(
+                        children: jobs.map((job) {
+                          final jobId = job['job_id'] as int;
+                          return _PriorityJobRow(
+                            job: job,
+                            clientName: _getClientNameById(job['client_id']),
+                            color: color,
+                            selected: tempSelectedIds.contains(jobId),
+                            onTap: () => toggleJob(jobId),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  );
+                }
+              }
+              return SoftCard(
+                radius: 22,
+                padding: EdgeInsets.zero,
+                child: Column(children: rows),
+              );
+            }
+
             return DraggableScrollableSheet(
-              initialChildSize: 0.75,
+              initialChildSize: 0.8,
               minChildSize: 0.5,
               maxChildSize: 0.95,
               expand: false,
               builder: (context, scrollController) {
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Handle bar
-                    Container(
-                      margin: EdgeInsets.only(top: 8.h),
-                      width: 36.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: handleColor,
-                        borderRadius: BorderRadius.circular(2.r),
-                      ),
-                    ),
                     // Header
                     Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(
-                                Icons.star_rounded,
-                                color: const Color(0xFFEF4444),
-                                size: 20.sp,
+                              Expanded(
+                                child: Text('Priority jobs', style: SoftText.heading(p, size: 20)),
                               ),
-                              SizedBox(width: 8.w),
                               Text(
-                                'Select Priority Jobs',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: textPrimaryColor,
-                                ),
+                                '${tempSelectedIds.length} selected',
+                                style: SoftText.caption(p, size: 13),
                               ),
                             ],
                           ),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              '${tempSelectedIds.length} selected',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.primaryColor,
-                              ),
-                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Pick jobs to show first when you log work',
+                            style: SoftText.caption(p, size: 12.5),
                           ),
                         ],
                       ),
                     ),
-                    Divider(height: 1, color: dividerColor),
                     // Search Field
                     Padding(
-                      padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 4.h),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
                       child: TextField(
                         controller: searchController,
+                        cursorColor: p.ink,
                         onChanged: (value) {
                           setModalState(() {
                             searchQuery = value;
                           });
                         },
-                        decoration: InputDecoration(
-                          hintText: 'Search by client, job description...',
-                          hintStyle: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13.sp,
-                            color: textSecondaryColor,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            size: 20.sp,
-                            color: textSecondaryColor,
-                          ),
-                          suffixIcon: searchQuery.isNotEmpty
+                        style: softInputTextStyle(context),
+                        decoration: softInputDecoration(
+                          context,
+                          hint: 'Search by client or job',
+                          icon: Icons.search_rounded,
+                          pill: true,
+                          suffix: searchQuery.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18.sp, color: textSecondaryColor),
+                                  icon: Icon(Icons.close_rounded, size: 18, color: p.muted),
                                   onPressed: () {
                                     searchController.clear();
                                     setModalState(() {
@@ -2826,302 +1824,56 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
                                   },
                                 )
                               : null,
-                          filled: true,
-                          fillColor: searchFieldBgColor,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10.r),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13.sp,
-                          color: searchTextColor,
                         ),
                       ),
                     ),
-                    // Status categories with jobs (no search) OR
-                    // flat job list with status badges (when searching).
+                    // Status card (no search) OR flat job list with status
+                    // badges (when searching).
                     Expanded(
                       child: ListView(
                         controller: scrollController,
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                         children: searchQuery.isNotEmpty
                             ? _buildFlatSearchResults(
                                 searchQuery: searchQuery,
                                 tempSelectedIds: tempSelectedIds,
-                                onToggleJob: (jobId) {
-                                  setModalState(() {
-                                    if (tempSelectedIds.contains(jobId)) {
-                                      tempSelectedIds.remove(jobId);
-                                    } else {
-                                      tempSelectedIds.add(jobId);
-                                    }
-                                  });
-                                },
-                                cardBgColor: cardBgColor,
-                                cardBorderColor: cardBorderColor!,
-                                checkboxBgColor: checkboxBgColor,
-                                checkboxBorderColor: checkboxBorderColor!,
-                                textPrimaryColor: textPrimaryColor,
-                                textSecondaryColor: textSecondaryColor,
+                                onToggleJob: toggleJob,
                               )
-                            : _statusConfigs.map((config) {
-                          final status = config['status'] as String;
-                          final icon = config['icon'] as IconData;
-                          final color = config['color'] as Color;
-                          final jobs = _getFilteredJobsByStatus(status, searchQuery);
-                          final isExpanded = expandedStatus == status;
-                          final selectedInCategory = jobs.where((j) => tempSelectedIds.contains(j['job_id'])).length;
-
-                          return Container(
-                            margin: EdgeInsets.only(bottom: 8.h),
-                            decoration: BoxDecoration(
-                              color: cardBgColor,
-                              borderRadius: BorderRadius.circular(12.r),
-                              border: Border.all(
-                                color: isExpanded ? color.withValues(alpha: 0.5) : cardBorderColor!,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                // Category header
-                                InkWell(
-                                  onTap: () {
-                                    setModalState(() {
-                                      expandedStatus = isExpanded ? null : status;
-                                    });
-                                  },
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.w),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 36.w,
-                                          height: 36.h,
-                                          decoration: BoxDecoration(
-                                            color: color.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(8.r),
-                                          ),
-                                          child: Icon(icon, size: 18.sp, color: color),
-                                        ),
-                                        SizedBox(width: 12.w),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                status,
-                                                style: TextStyle(
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 14.sp,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: textPrimaryColor,
-                                                ),
-                                              ),
-                                              Text(
-                                                '${jobs.length} jobs${selectedInCategory > 0 ? ' • $selectedInCategory selected' : ''}',
-                                                style: TextStyle(
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 11.sp,
-                                                  fontWeight: FontWeight.w400,
-                                                  color: selectedInCategory > 0 ? color : textSecondaryColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Icon(
-                                          isExpanded ? Icons.expand_less : Icons.expand_more,
-                                          color: textSecondaryColor,
-                                          size: 20.sp,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                // Expanded job list
-                                if (isExpanded && jobs.isNotEmpty)
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: expandedBgColor,
-                                      borderRadius: BorderRadius.only(
-                                        bottomLeft: Radius.circular(12.r),
-                                        bottomRight: Radius.circular(12.r),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      children: jobs.map((job) {
-                                        final jobId = job['job_id'] as int;
-                                        final isSelected = tempSelectedIds.contains(jobId);
-
-                                        return InkWell(
-                                          onTap: () {
-                                            setModalState(() {
-                                              if (isSelected) {
-                                                tempSelectedIds.remove(jobId);
-                                              } else {
-                                                tempSelectedIds.add(jobId);
-                                              }
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                                            decoration: BoxDecoration(
-                                              border: Border(
-                                                top: BorderSide(color: dividerColor!, width: 0.5),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  width: 22.w,
-                                                  height: 22.h,
-                                                  decoration: BoxDecoration(
-                                                    color: isSelected ? color : checkboxBgColor,
-                                                    borderRadius: BorderRadius.circular(6.r),
-                                                    border: Border.all(
-                                                      color: isSelected ? color : checkboxBorderColor!,
-                                                      width: 1.5,
-                                                    ),
-                                                  ),
-                                                  child: isSelected
-                                                      ? Icon(Icons.check, size: 14.sp, color: Colors.white)
-                                                      : null,
-                                                ),
-                                                SizedBox(width: 10.w),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        job['work_desc'] ?? 'Unknown Job',
-                                                        style: TextStyle(
-                                                          fontFamily: 'Inter',
-                                                          fontSize: 13.sp,
-                                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                                          color: textPrimaryColor,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                      // Client name row - always show
-                                                      Row(
-                                                        children: [
-                                                          Icon(
-                                                            Icons.business_rounded,
-                                                            size: 12.sp,
-                                                            color: textSecondaryColor,
-                                                          ),
-                                                          SizedBox(width: 4.w),
-                                                          Expanded(
-                                                            child: Text(
-                                                              _getClientNameById(job['client_id']).isNotEmpty
-                                                                  ? _getClientNameById(job['client_id'])
-                                                                  : 'No client assigned',
-                                                              style: TextStyle(
-                                                                fontFamily: 'Inter',
-                                                                fontSize: 11.sp,
-                                                                fontWeight: FontWeight.w500,
-                                                                color: _getClientNameById(job['client_id']).isNotEmpty
-                                                                    ? AppTheme.primaryColor
-                                                                    : textSecondaryColor,
-                                                              ),
-                                                              maxLines: 1,
-                                                              overflow: TextOverflow.ellipsis,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      SizedBox(height: 2.h),
-                                                      // Job UID row
-                                                      Text(
-                                                        job['job_uid'] ?? 'N/A',
-                                                        style: TextStyle(
-                                                          fontFamily: 'Inter',
-                                                          fontSize: 12.sp,
-                                                          fontWeight: FontWeight.w500,
-                                                          color: textSecondaryColor,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+                            : [statusCard()],
                       ),
                     ),
                     // Bottom action bar
-                    Container(
+                    Padding(
                       padding: EdgeInsets.fromLTRB(
-                        16.w,
-                        12.h,
-                        16.w,
-                        16.h + MediaQuery.of(context).padding.bottom,
-                      ),
-                      decoration: BoxDecoration(
-                        color: sheetBgColor,
-                        border: Border(top: BorderSide(color: dividerColor!)),
+                        12,
+                        8,
+                        20,
+                        12 + MediaQuery.of(context).padding.bottom,
                       ),
                       child: Row(
                         children: [
-                          // Clear button
                           TextButton(
                             onPressed: tempSelectedIds.isEmpty
                                 ? null
-                                : () {
-                                    setModalState(() => tempSelectedIds.clear());
-                                  },
-                            child: Text(
-                              'Clear',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w500,
-                                color: tempSelectedIds.isEmpty ? textSecondaryColor : Colors.red,
-                              ),
+                                : () => setModalState(() => tempSelectedIds.clear()),
+                            style: TextButton.styleFrom(
+                              foregroundColor: p.danger,
+                              disabledForegroundColor: p.muted,
                             ),
+                            child: const Text('Clear'),
                           ),
-                          SizedBox(width: 8.w),
-                          // Save button
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: ElevatedButton(
+                            child: SoftPillButton(
+                              label: 'Save priorities',
+                              variant: SoftPillVariant.blue,
+                              height: 50,
                               onPressed: tempSelectedIds.isEmpty
                                   ? null
                                   : () async {
                                       Navigator.pop(context);
                                       await _savePrioritySelections(tempSelectedIds);
                                     },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                disabledBackgroundColor: isDarkMode ? const Color(0xFF334155) : Colors.grey[300],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10.r),
-                                ),
-                                padding: EdgeInsets.symmetric(vertical: 14.h),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                'Save Priorities',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                  height: 1.2,
-                                ),
-                              ),
                             ),
                           ),
                         ],
@@ -3157,7 +1909,7 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${selectedJobIds.length} priority jobs saved'),
-            backgroundColor: Colors.green,
+            backgroundColor: SoftPalette.of(context).success,
           ),
         );
       }
@@ -3167,103 +1919,245 @@ class _WorkLogEntryFormPageState extends State<WorkLogEntryFormPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error saving priorities: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: SoftPalette.of(context).danger,
           ),
         );
       }
     }
   }
 
-  /// Build priority selection banner - minimalistic design
-  /// Shows different text based on whether priorities are already set
-  Widget _buildPrioritySelectionBanner() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final hasPriorities = _priorityJobIds.isNotEmpty;
-    final priorityCount = _priorityJobIds.length;
+}
 
-    // Dark mode colors for banner
-    final priorityBgColor = hasPriorities
-        ? (isDarkMode ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4))
-        : (isDarkMode ? const Color(0xFF7F1D1D) : const Color(0xFFFEF2F2));
-    final priorityBorderColor = hasPriorities
-        ? (isDarkMode ? const Color(0xFF10B981) : const Color(0xFFBBF7D0))
-        : (isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFFECACA));
-    final titleColor = hasPriorities
-        ? (isDarkMode ? const Color(0xFF34D399) : const Color(0xFF059669))
-        : (isDarkMode ? const Color(0xFFF87171) : const Color(0xFFDC2626));
-    final subtitleColor = hasPriorities
-        ? (isDarkMode ? const Color(0xFF6EE7B7) : const Color(0xFF047857))
-        : (isDarkMode ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C));
+/// Pill toggle used for the work-hours input mode (From / To vs Hours / Min).
+class _ModeChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
 
-    return InkWell(
-      onTap: _showPrioritySelectionDialog,
-      borderRadius: BorderRadius.circular(10.r),
-      child: Container(
-        margin: EdgeInsets.only(bottom: 16.h),
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: priorityBgColor,
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: priorityBorderColor,
+  const _ModeChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    final activeBg = p.isDark ? p.accent : const Color(0xFF1E3A8A);
+    final fg = selected ? (p.isDark ? p.background : Colors.white) : p.inkSoft;
+    return Material(
+      color: selected ? activeBg : Colors.transparent,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: fg),
+              const SizedBox(width: 6),
+              Text(label, style: SoftText.heading(p, size: 13).copyWith(color: fg)),
+            ],
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36.w,
-              height: 36.h,
-              decoration: BoxDecoration(
-                color: hasPriorities
-                    ? const Color(0xFF10B981).withValues(alpha: isDarkMode ? 0.25 : 0.15)
-                    : const Color(0xFFEF4444).withValues(alpha: isDarkMode ? 0.25 : 0.15),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Icon(
-                hasPriorities ? Icons.star_rounded : Icons.star_outline_rounded,
-                color: hasPriorities ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                size: 20.sp,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    hasPriorities ? 'Edit Priority Jobs' : 'Set Priority Jobs',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: titleColor,
-                    ),
-                  ),
-                  Text(
-                    hasPriorities
-                        ? '$priorityCount jobs selected • Tap to add more'
-                        : 'Tap to select jobs for quick access',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w400,
-                      color: subtitleColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: hasPriorities ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-              size: 16.sp,
-            ),
-          ],
         ),
       ),
     );
   }
 }
+
+/// Row in the client / job / task picker sheets.
+class _PickerTile extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+  final int? titleMaxLines;
+
+  const _PickerTile({
+    required this.title,
+    required this.selected,
+    required this.onTap,
+    this.subtitle,
+    this.titleMaxLines,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: selected ? p.accentSoft : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: titleMaxLines,
+                        overflow: titleMaxLines == null ? null : TextOverflow.ellipsis,
+                        style: SoftText.heading(p, size: 14.5).copyWith(
+                          color: selected ? p.accent : p.ink,
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(subtitle!, style: SoftText.caption(p)),
+                      ],
+                    ],
+                  ),
+                ),
+                if (selected) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.check_circle_rounded, color: p.accent, size: 20),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Selectable job row in the priority sheet (checkbox, job, client, UID).
+/// [boxed] renders it as its own card (search results); otherwise it is a
+/// divided row inside an expanded status category.
+class _PriorityJobRow extends StatelessWidget {
+  final Map<String, dynamic> job;
+  final String clientName;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+  final String? statusLabel;
+  final bool boxed;
+
+  const _PriorityJobRow({
+    required this.job,
+    required this.clientName,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+    this.statusLabel,
+    this.boxed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    final hasClient = clientName.isNotEmpty;
+
+    final content = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: selected ? color : p.surface,
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(
+              color: selected ? color : p.muted.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+          ),
+          child: selected
+              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+              : null,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                job['work_desc'] ?? 'Unknown Job',
+                style: SoftText.heading(p, size: 13.5).copyWith(
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  Icon(Icons.business_rounded, size: 12, color: p.muted),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      hasClient ? clientName : 'No client assigned',
+                      style: SoftText.caption(p, size: 11.5).copyWith(
+                        color: hasClient ? p.accent : p.muted,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(job['job_uid'] ?? 'N/A', style: SoftText.caption(p)),
+            ],
+          ),
+        ),
+        if (statusLabel != null) ...[
+          const SizedBox(width: 8),
+          SoftStatusPill(label: statusLabel!, color: color, showDot: false),
+        ],
+      ],
+    );
+
+    if (boxed) {
+      final shape = RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: selected ? color.withValues(alpha: 0.5) : p.border),
+      );
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Material(
+          color: p.surface,
+          shape: shape,
+          child: InkWell(
+            customBorder: shape,
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: content,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: p.border, width: 0.5)),
+          ),
+          child: content,
+        ),
+      ),
+    );
+  }
+}
+
 
 /// Custom TextInputFormatter that limits input to a range of values
 class _RangeTextInputFormatter extends TextInputFormatter {

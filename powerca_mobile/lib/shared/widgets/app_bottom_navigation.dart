@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../app/theme.dart';
 import '../../features/auth/domain/entities/staff.dart';
+import 'soft_page.dart';
 
 class AppBottomNavigation extends StatelessWidget {
   final int currentIndex;
@@ -15,17 +16,13 @@ class AppBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
     return Container(
       height: 70.h,
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        color: p.surface,
+        border: Border(top: BorderSide(color: p.border)),
+        boxShadow: p.shadow,
       ),
       child: SafeArea(
         top: false,
@@ -111,29 +108,36 @@ class AppBottomNavigation extends StatelessWidget {
     required int index,
     required VoidCallback onTap,
   }) {
+    final p = SoftPalette.of(context);
     final isSelected = currentIndex == index;
-    final color = isSelected ? AppTheme.primaryColor : const Color(0xFF9E9E9E);
+    final color = isSelected ? p.ink : p.muted;
 
     return InkWell(
       onTap: onTap,
-      splashColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-      highlightColor: AppTheme.primaryColor.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(12.r),
+      borderRadius: BorderRadius.circular(16.r),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? selectedIcon : icon,
-              size: 26.sp,
-              color: color,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: isSelected ? p.pill : Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Icon(
+                isSelected ? selectedIcon : icon,
+                size: 22.sp,
+                color: isSelected ? p.onPill : color,
+              ),
             ),
-            SizedBox(height: 6.h),
+            SizedBox(height: 4.h),
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: AppTheme.fontFamily,
                 fontSize: 11.sp,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: color,

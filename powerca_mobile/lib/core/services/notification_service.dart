@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Singleton service for managing local notifications
 /// Handles initialization, permission requests, and notification display
@@ -164,45 +166,50 @@ class NotificationService {
     debugPrint('NotificationService: Showed pinboard notification for ID $remId');
   }
 
-  /// Show a work log reminder notification when user hasn't logged today
-  Future<void> showWorkLogReminderNotification({
-    required String staffName,
-  }) async {
-    if (!_isInitialized) {
-      debugPrint('NotificationService: Not initialized, skipping notification');
+  static const int _workLogReminderId = 9001;
+  static const String _workLogReminderKey = 'work_log_reminder_last_shown';
+
+  /// Remind the staff member to log today's work.
+  ///
+  /// Shown at most once per calendar day: the date it was last shown is
+  /// stored in SharedPreferences and later calls on the same day are ignored.
+  Future<void> showWorkLogReminder() async {
+    if (!_isInitialized) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (prefs.getString(_workLogReminderKey) == today) {
+      debugPrint('NotificationService: Work log reminder already shown today');
       return;
     }
 
-    const androidDetails = AndroidNotificationDetails(
-      'worklog_reminders',
-      'Work Log Reminders',
-      channelDescription: 'Reminders to log your daily work hours',
-      importance: Importance.high,
-      priority: Priority.high,
-      showWhen: true,
-      icon: '@mipmap/ic_launcher',
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
     const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
+      android: AndroidNotificationDetails(
+        'work_log_reminders',
+        'Work Log Reminders',
+        channelDescription: 'Daily reminder to log your work',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+        icon: '@mipmap/ic_launcher',
+      ),
+      iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      id: 9999,
-      title: 'Work Log Reminder',
-      body: 'Hi $staffName, you haven\'t logged your work hours today. Please update your work diary.',
+      id: _workLogReminderId,
+      title: "Don't forget your work log",
+      body: "You haven't logged any work for today yet.",
       notificationDetails: details,
-      payload: 'worklog:reminder',
+      payload: 'worklog:$today',
     );
+    await prefs.setString(_workLogReminderKey, today);
+    debugPrint('NotificationService: Showed work log reminder');
+  }
 
-    debugPrint('NotificationService: Showed work log reminder for $staffName');
+  /// Remove the work log reminder (e.g. once today's work is logged).
+  Future<void> cancelWorkLogReminder() async {
+    if (!_isInitialized) return;
+    await _flutterLocalNotificationsPlugin.cancel(id: _workLogReminderId);
   }
 
   /// Handle notification tap
