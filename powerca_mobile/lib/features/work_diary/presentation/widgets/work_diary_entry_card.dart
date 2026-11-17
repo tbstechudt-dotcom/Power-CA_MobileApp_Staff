@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../app/theme.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../domain/entities/work_diary_entry.dart';
 
 class WorkDiaryEntryCard extends StatelessWidget {
@@ -18,128 +17,66 @@ class WorkDiaryEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: const Color(0xFFE9F0F8),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+    final p = SoftPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SoftCard(
+        onTap: onTap,
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header: Date and menu
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 14.sp,
-                      color: AppTheme.textSecondaryColor,
-                    ),
-                    SizedBox(width: 6.w),
-                    Text(
-                      entry.formattedDate,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w400,
-                        color: AppTheme.textSecondaryColor,
-                      ),
-                    ),
-                  ],
+                Icon(Icons.calendar_today_rounded, size: 14, color: p.muted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(entry.formattedDate, style: SoftText.caption(p)),
                 ),
-                Row(
-                  children: [
-                    // Hours badge
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 4.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE3EFFF),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Text(
-                        'Act. Hrs: ${entry.formattedHours}',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    // Menu button
-                    InkWell(
-                      onTap: () {
-                        _showMenu(context);
-                      },
-                      child: Icon(
-                        Icons.more_vert,
-                        size: 20.sp,
-                        color: AppTheme.textSecondaryColor,
-                      ),
-                    ),
-                  ],
+                // Hours badge
+                SoftStatusPill(
+                  label: 'Act. Hrs: ${entry.formattedHours}',
+                  color: p.accent,
+                  icon: Icons.schedule_rounded,
+                ),
+                const SizedBox(width: 2),
+                // Menu button
+                IconButton(
+                  onPressed: () {
+                    _showMenu(context);
+                  },
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(Icons.more_vert_rounded, size: 20, color: p.muted),
                 ),
               ],
             ),
 
-            SizedBox(height: 12.h),
+            const SizedBox(height: 8),
 
             // Notes/Description
             if (entry.notes != null && entry.notes!.isNotEmpty)
-              Text(
-                entry.notes!,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w400,
-                  color: AppTheme.textPrimaryColor,
-                  height: 1.5,
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  entry.notes!,
+                  style: SoftText.body(p, color: p.ink).copyWith(height: 1.5),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
 
             // Task name if available
             if (entry.taskName != null && entry.taskName!.isNotEmpty) ...[
-              SizedBox(height: 8.h),
+              const SizedBox(height: 10),
               Row(
                 children: [
-                  Icon(
-                    Icons.task_alt,
-                    size: 14.sp,
-                    color: AppTheme.textSecondaryColor,
-                  ),
-                  SizedBox(width: 6.w),
+                  Icon(Icons.task_alt_rounded, size: 14, color: p.muted),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       entry.taskName!,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w400,
-                        color: AppTheme.textSecondaryColor,
-                      ),
+                      style: SoftText.caption(p),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -154,35 +91,67 @@ class WorkDiaryEntryCard extends StatelessWidget {
   }
 
   void _showMenu(BuildContext context) {
+    final p = SoftPalette.of(context);
     showModalBottomSheet(
       context: context,
-      builder: (context) => Container(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit Entry'),
-              onTap: () {
-                Navigator.pop(context);
-                if (onTap != null) onTap!();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text(
-                'Delete Entry',
-                style: TextStyle(color: Colors.red),
+      backgroundColor: p.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: p.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
-              onTap: () {
-                Navigator.pop(context);
-                if (onDelete != null) onDelete!();
-              },
-            ),
-          ],
+              _menuTile(
+                p,
+                icon: Icons.edit_outlined,
+                label: 'Edit Entry',
+                color: p.ink,
+                onTap: () {
+                  Navigator.pop(context);
+                  if (onTap != null) onTap!();
+                },
+              ),
+              _menuTile(
+                p,
+                icon: Icons.delete_outline_rounded,
+                label: 'Delete Entry',
+                color: p.danger,
+                onTap: () {
+                  Navigator.pop(context);
+                  if (onDelete != null) onDelete!();
+                },
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _menuTile(
+    SoftPalette p, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      leading: SoftIconBadge(icon: icon, color: color, size: 38),
+      title: Text(label, style: SoftText.heading(p, size: 15).copyWith(color: color)),
+      onTap: onTap,
     );
   }
 }

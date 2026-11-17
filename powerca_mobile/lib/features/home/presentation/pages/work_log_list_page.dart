@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import 'work_log_entry_form_page.dart';
 import 'work_log_detail_page.dart';
 
-/// Work Log List Page - Redesigned to match Jobs Page style
+/// Work Log List Page - entries logged for a single day (soft UI)
 class WorkLogListPage extends StatefulWidget {
   final DateTime selectedDate;
   final List<Map<String, dynamic>> entries;
@@ -88,11 +85,10 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
-    // Check if dark mode is enabled
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
+    final p = SoftPalette.of(context);
 
     return PopScope(
       canPop: false,
@@ -101,334 +97,95 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
         Navigator.pop(context, true);
       },
       child: Scaffold(
-        backgroundColor: scaffoldBgColor,
-        body: Column(
-          children: [
-            // Status bar area
-            Container(
-              color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-              child: SafeArea(
-                bottom: false,
-                child: _buildHeader(),
+        backgroundColor: p.background,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              SoftPageHeader(
+                title: 'Work Log',
+                subtitle: DateFormat('EEEE, MMMM d, yyyy').format(widget.selectedDate),
+                onBack: () => Navigator.pop(context, true),
               ),
-            ),
-            Expanded(
+              Expanded(
                 child: _entries.isEmpty
                     ? _buildEmptyState()
                     : RefreshIndicator(
                         onRefresh: () async {
                           await _loadClientAndJobNames();
                         },
-                        color: AppTheme.primaryColor,
-                        child: SingleChildScrollView(
+                        color: p.accent,
+                        child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.all(16.w),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Summary Cards Row
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildSummaryCard(
-                                      title: 'Total Time',
-                                      value: _formatMinutesToHours(_calculateTotalMinutes()),
-                                      icon: Icons.schedule_rounded,
-                                      color: AppTheme.primaryColor,
-                                    ),
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+                          children: [
+                            // Summary tiles
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _SummaryTile(
+                                    label: 'Total time',
+                                    value: _formatMinutesToHours(_calculateTotalMinutes()),
+                                    icon: Icons.schedule_rounded,
+                                    color: p.accent,
                                   ),
-                                  SizedBox(width: 12.w),
-                                  Expanded(
-                                    child: _buildSummaryCard(
-                                      title: 'Entries',
-                                      value: '${_entries.length}',
-                                      icon: Icons.assignment_rounded,
-                                      color: const Color(0xFF10B981),
-                                    ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _SummaryTile(
+                                    label: 'Entries',
+                                    value: '${_entries.length}',
+                                    icon: Icons.assignment_rounded,
+                                    color: p.success,
                                   ),
-                                ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 22),
+                            SoftSectionTitle(
+                              title: 'Work entries',
+                              trailing: Text(
+                                '${_entries.length} ${_entries.length == 1 ? 'entry' : 'entries'}',
+                                style: SoftText.caption(p),
                               ),
-                              const SizedBox(height: 16),
-
-                              // Section Title
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 4.w,
-                                    height: 18.h,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryColor,
-                                      borderRadius: BorderRadius.circular(2.r),
-                                    ),
-                                  ),
-                                  SizedBox(width: 10.w),
-                                  Text(
-                                    'Work Entries',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '${_entries.length} ${_entries.length == 1 ? 'entry' : 'entries'}',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 14.h),
-
-                              // Entries List
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                padding: EdgeInsets.zero,
-                                itemCount: _entries.length,
-                                itemBuilder: (context, index) {
-                                  return _buildEntryCard(_entries[index], index + 1);
-                                },
-                              ),
-                              SizedBox(height: 80.h), // Space for FAB
+                            ),
+                            for (var i = 0; i < _entries.length; i++) ...[
+                              _buildEntryCard(_entries[i], i + 1),
+                              const SizedBox(height: 10),
                             ],
-                          ),
+                          ],
                         ),
                       ),
-            ),
-          ],
-        ),
-        floatingActionButton: _buildFAB(),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final backBtnBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backBtnBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-      color: headerBgColor,
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context, true),
-            child: Container(
-              width: 42.w,
-              height: 42.h,
-              decoration: BoxDecoration(
-                color: backBtnBgColor,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: backBtnBorderColor,
-                  width: 1,
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 18.sp,
-                  color: isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Work Log',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                    color: titleColor,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  DateFormat('EEEE, MMMM d, yyyy').format(widget.selectedDate),
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: subtitleColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final valueColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
-
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: isDarkMode ? 0.15 : 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: isDarkMode ? 0.2 : 0.1),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20.sp,
-                  color: color,
-                ),
-              ),
-              Icon(
-                Icons.trending_up_rounded,
-                size: 16.sp,
-                color: const Color(0xFF10B981),
               ),
             ],
           ),
-          SizedBox(height: 12.h),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w800,
-              color: valueColor,
-            ),
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: labelColor,
-            ),
-          ),
-        ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _addNewEntry(context),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('New Entry'),
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
-
     return Center(
-      child: Padding(
-        padding: EdgeInsets.all(32.w),
+      child: SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: EdgeInsets.all(24.w),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: isDarkMode ? 0.2 : 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.post_add_rounded,
-                size: 48.sp,
-                color: AppTheme.primaryColor,
-              ),
+            const SoftMessage(
+              icon: Icons.post_add_rounded,
+              title: 'No Entries Yet',
+              message: 'Start logging your work for this day',
             ),
-            SizedBox(height: 24.h),
-            Text(
-              'No Entries Yet',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w700,
-                color: titleColor,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Start logging your work for this day',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w400,
-                color: subtitleColor,
-              ),
-            ),
-            SizedBox(height: 24.h),
-            GestureDetector(
-              onTap: () => _addNewEntry(context),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.add_rounded,
-                      size: 18.sp,
-                      color: Colors.white,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Add Entry',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            SoftPillButton(
+              label: 'Add Entry',
+              icon: Icons.add_rounded,
+              expand: false,
+              height: 46,
+              onPressed: () => _addNewEntry(context),
             ),
           ],
         ),
@@ -437,6 +194,7 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
   }
 
   Widget _buildEntryCard(Map<String, dynamic> entry, int index) {
+    final p = SoftPalette.of(context);
     final tasknotes = entry['tasknotes'] ?? '';
     final minutes = entry['minutes'] ?? 0;
     final hours = _formatMinutesToHours(minutes);
@@ -461,21 +219,8 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
       }
     }
 
-    // Check if dark mode is enabled
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-
-    // Theme-aware colors
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final iconBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
-    final dividerColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
-    final timeBgColor = isDarkMode ? const Color(0xFF1E3A5F) : const Color(0xFFEFF6FF);
-    final timeTextColor = isDarkMode ? const Color(0xFFE2E8F0) : const Color(0xFF334155);
-    final chevronColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1);
-
-    return GestureDetector(
+    return SoftCard(
+      padding: const EdgeInsets.all(16),
       onTap: () {
         Navigator.push(
           context,
@@ -491,222 +236,87 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
           ),
         );
       },
-      child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
-        decoration: BoxDecoration(
-          color: cardBgColor,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: borderColor,
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            // Main Content
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Row - Job name and duration badge
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Job info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row - job name and duration
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _isLoadingNames ? 'Loading...' : (jobName ?? 'Job #$jobId'),
+                      style: SoftText.heading(p, size: 15).copyWith(height: 1.3),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (clientId != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.business_rounded, size: 14, color: p.muted),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
                               _isLoadingNames
                                   ? 'Loading...'
-                                  : (jobName ?? 'Job #$jobId'),
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 15.sp,
-                                fontWeight: FontWeight.w600,
-                                color: titleColor,
-                                height: 1.3,
-                              ),
-                              maxLines: 2,
+                                  : (clientName ?? 'Client #$clientId'),
+                              style: SoftText.caption(p, size: 13),
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (clientId != null) ...[
-                              SizedBox(height: 6.h),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(4.w),
-                                    decoration: BoxDecoration(
-                                      color: iconBgColor,
-                                      borderRadius: BorderRadius.circular(4.r),
-                                    ),
-                                    child: Icon(
-                                      Icons.business_rounded,
-                                      size: 12.sp,
-                                      color: subtitleColor,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  Flexible(
-                                    child: Text(
-                                      _isLoadingNames
-                                          ? 'Loading...'
-                                          : (clientName ?? 'Client #$clientId'),
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.w400,
-                                        color: subtitleColor,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      // Duration badge
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          hours,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
                           ),
-                        ),
+                        ],
                       ),
                     ],
-                  ),
-
-                  // Divider
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    child: Container(
-                      height: 1,
-                      color: dividerColor,
-                    ),
-                  ),
-
-                  // Details Section
-                  Row(
-                    children: [
-                      // Time range
-                      if (hasTimeRange) ...[
-                        Container(
-                          padding: EdgeInsets.all(6.w),
-                          decoration: BoxDecoration(
-                            color: timeBgColor,
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
-                          child: Icon(
-                            Icons.schedule_rounded,
-                            size: 14.sp,
-                            color: const Color(0xFF3B82F6),
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w500,
-                            color: timeTextColor,
-                          ),
-                        ),
-                        SizedBox(width: 16.w),
-                      ],
-                      // Date with notes
-                      if (formattedDate.isNotEmpty || tasknotes.isNotEmpty) ...[
-                        Container(
-                          padding: EdgeInsets.all(6.w),
-                          decoration: BoxDecoration(
-                            color: iconBgColor,
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
-                          child: Icon(
-                            Icons.event_note_rounded,
-                            size: 14.sp,
-                            color: subtitleColor,
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Text(
-                            tasknotes.isNotEmpty
-                                ? '$formattedDate - $tasknotes'
-                                : formattedDate,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w400,
-                              color: subtitleColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                      // Chevron
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20.sp,
-                        color: chevronColor,
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFAB() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+              const SizedBox(width: 12),
+              SoftStatusPill(
+                label: hours,
+                color: p.accent,
+                icon: Icons.timer_outlined,
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(height: 1, thickness: 1, color: p.border),
+          ),
+          // Details
+          Row(
+            children: [
+              if (hasTimeRange) ...[
+                Icon(Icons.schedule_rounded, size: 15, color: p.accent),
+                const SizedBox(width: 6),
+                Text(
+                  '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
+                  style: SoftText.body(p, size: 13, color: p.ink)
+                      .copyWith(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(width: 14),
+              ],
+              if (formattedDate.isNotEmpty || tasknotes.isNotEmpty) ...[
+                Icon(Icons.event_note_rounded, size: 15, color: p.muted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    tasknotes.isNotEmpty ? '$formattedDate - $tasknotes' : formattedDate,
+                    style: SoftText.body(p, size: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ] else
+                const Spacer(),
+              Icon(Icons.chevron_right_rounded, size: 20, color: p.muted),
+            ],
           ),
         ],
-      ),
-      child: FloatingActionButton.extended(
-        onPressed: () => _addNewEntry(context),
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 0,
-        icon: Icon(
-          Icons.add_rounded,
-          color: Colors.white,
-          size: 22.sp,
-        ),
-        label: Text(
-          'New Entry',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
       ),
     );
   }
@@ -822,5 +432,50 @@ class _WorkLogListPageState extends State<WorkLogListPage> {
     }
 
     return timeStr;
+  }
+}
+
+/// Small soft stat tile (value + label) used in the summary row.
+class _SummaryTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _SummaryTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    return SoftCard(
+      radius: 20,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          SoftIconBadge(icon: icon, color: color, size: 40),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: SoftText.title(p, size: 20),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(label, style: SoftText.caption(p)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

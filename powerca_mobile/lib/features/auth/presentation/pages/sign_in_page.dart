@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
+import '../../../../shared/widgets/auth_sheet.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import '../../../device_security/domain/repositories/device_security_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../bloc/auth_bloc.dart';
@@ -113,34 +113,43 @@ class _SignInPageContentState extends State<_SignInPageContent> {
     if (!context.mounted) return false;
 
     // Show waiting dialog to user
+    final p = SoftPalette.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Waiting for Approval'),
+        backgroundColor: p.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Waiting for Approval', style: SoftText.heading(p, size: 18)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(),
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: p.ink),
+            ),
             const SizedBox(height: 16),
             Text(
               'Your account is currently logged in on $otherDeviceName.\n\n'
               'A login request has been sent to that device. '
               'Please approve the request on the other device to continue.',
               textAlign: TextAlign.center,
+              style: SoftText.body(p),
             ),
             const SizedBox(height: 8),
             Text(
               'This request will expire in 2 minutes.',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: SoftText.caption(p),
             ),
           ],
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         actions: [
-          TextButton(
+          SoftPillButton(
+            label: 'Cancel',
+            variant: SoftPillVariant.outline,
+            height: 46,
             onPressed: () {
               // Cancel the request
               authRepository.cancelLoginRequest(requestId);
@@ -150,7 +159,6 @@ class _SignInPageContentState extends State<_SignInPageContent> {
                 _isProcessingPermission = false;
               });
             },
-            child: const Text('Cancel'),
           ),
         ],
       ),
@@ -361,239 +369,84 @@ class _SignInPageContentState extends State<_SignInPageContent> {
       builder: (context, state) {
         final isLoading = state is AuthLoading || _isProcessingPermission;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF8F9FC), // Background color from Figma
-          body: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // PowerCA Logo
-                      Image.asset(
-                        'assets/images/Logo/Power CA Logo Only-04.png',
-                        width: 120.w,
-                        height: 100.h,
-                      ),
-
-                      SizedBox(height: 32.h),
-
-                      // Welcome text
-                      Text(
-                        'Welcome Back!',
-                        style: GoogleFonts.inter(
-                          fontSize: 24.sp,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimaryColor,
-                        ),
-                      ),
-
-                      SizedBox(height: 8.h),
-
-                      // Subtitle
-                      Text(
-                        'Enter your details to log in and continue\nwhere you left off.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w400,
-                          color: AppTheme.textMutedColor,
-                          height: 1.5,
-                        ),
-                      ),
-
-                      SizedBox(height: 40.h),
-
-                      // Username label
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Username',
-                          style: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textPrimaryColor,
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: 8.h),
-
-                      // Username field
-                      TextFormField(
-                        controller: _usernameController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter Your Username',
-                          hintStyle: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textMutedColor,
-                          ),
-                          prefixIcon: Icon(Icons.person_outline,
-                            color: AppTheme.textMutedColor,
-                            size: 22.sp,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: const BorderSide(
-                              color: AppTheme.textMutedColor,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: const BorderSide(
-                              color: AppTheme.textMutedColor,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: const BorderSide(
-                              color: AppTheme.primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 16.h),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your username';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      SizedBox(height: 20.h),
-
-                      // Password label
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Password',
-                          style: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textPrimaryColor,
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: 8.h),
-
-                      // Password field
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
-                        decoration: InputDecoration(
-                          hintText: 'Enter Your Password',
-                          hintStyle: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textMutedColor,
-                          ),
-                          prefixIcon: Icon(Icons.lock_outline,
-                            color: AppTheme.textMutedColor,
-                            size: 22.sp,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              color: AppTheme.textMutedColor,
-                              size: 22.sp,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
-                            },
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: const BorderSide(
-                              color: AppTheme.textMutedColor,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: const BorderSide(
-                              color: AppTheme.textMutedColor,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: const BorderSide(
-                              color: AppTheme.primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 16.h),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      SizedBox(height: 32.h),
-
-                      // Sign In button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52.h,
-                        child: ElevatedButton(
-                          onPressed: isLoading ? null : _handleSignIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Sign in',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 15.sp,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Icon(Icons.arrow_forward,
-                                      size: 18.sp,
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-
-                    ],
+        return AuthSheet(
+          title: 'Welcome back',
+          subtitle: 'Sign in with your staff username and password.',
+          icon: Icons.lock_outline_rounded,
+          note: 'Trouble signing in? Contact your office admin.',
+          children: [
+            Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Username field
+                  const SoftFieldLabel('Username'),
+                  TextFormField(
+                    controller: _usernameController,
+                    style: softInputTextStyle(context),
+                    textInputAction: TextInputAction.next,
+                    decoration: softInputDecoration(
+                      context,
+                      hint: 'Enter your username',
+                      icon: Icons.person_outline,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your username';
+                      }
+                      return null;
+                    },
                   ),
-                ),
+
+                  const SizedBox(height: 18),
+
+                  // Password field
+                  const SoftFieldLabel('Password'),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: !_isPasswordVisible,
+                    style: softInputTextStyle(context),
+                    decoration: softInputDecoration(
+                      context,
+                      hint: 'Enter your password',
+                      icon: Icons.lock_outline,
+                      suffix: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: SoftPalette.of(context).muted,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Sign In button
+                  SoftPillButton(
+                    label: 'Sign in',
+                    icon: Icons.arrow_forward_rounded,
+                    loading: isLoading,
+                    onPressed: isLoading ? null : _handleSignIn,
+                  ),
+                ],
               ),
             ),
-          ),
+          ],
         );
       },
     );

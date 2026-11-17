@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 
-import '../../app/theme.dart';
-import '../../core/providers/theme_provider.dart';
 import '../../core/services/app_update_service.dart';
+import 'soft_page.dart';
 
 /// Dialog to show app update available
 class UpdateDialog extends StatefulWidget {
@@ -87,20 +85,41 @@ class _UpdateDialogState extends State<UpdateDialog> {
     }
   }
 
+  Widget _notice(SoftPalette p, IconData icon, String text) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: p.tint(p.danger),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: p.danger),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Text(
+              text,
+              style: SoftText.body(p, size: 12.5, color: p.danger)
+                  .copyWith(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final bgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final borderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final p = SoftPalette.of(context);
 
     return PopScope(
       canPop: !widget.versionInfo.isForceUpdate,
       child: Dialog(
-        backgroundColor: bgColor,
+        backgroundColor: p.surface,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(28),
         ),
         child: Padding(
           padding: EdgeInsets.all(24.w),
@@ -108,127 +127,62 @@ class _UpdateDialogState extends State<UpdateDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Update icon
-              Container(
-                width: 72.w,
-                height: 72.h,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.system_update_rounded,
-                  size: 36.sp,
-                  color: AppTheme.primaryColor,
-                ),
+              SoftIconBadge(
+                icon: Icons.system_update_rounded,
+                color: p.accent,
+                size: 64,
               ),
 
-              SizedBox(height: 20.h),
+              SizedBox(height: 18.h),
 
               // Title
-              Text(
-                'Update Available',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 20.sp,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
-              ),
+              Text('Update Available', style: SoftText.title(p, size: 21)),
 
-              SizedBox(height: 8.h),
+              SizedBox(height: 10.h),
 
               // Version info
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  'v${AppUpdateService.currentVersionName} → v${widget.versionInfo.versionName}',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
+              SoftStatusPill(
+                label:
+                    'v${AppUpdateService.currentVersionName} → v${widget.versionInfo.versionName}',
+                color: p.accent,
+                showDot: false,
               ),
 
-              SizedBox(height: 16.h),
+              SizedBox(height: 18.h),
 
               // Release notes
               if (widget.versionInfo.releaseNotes != null &&
                   widget.versionInfo.releaseNotes!.isNotEmpty) ...[
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(12.w),
+                  padding: EdgeInsets.all(14.w),
                   decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(color: borderColor),
+                    color: p.surfaceAlt,
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "What's New",
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                          color: subtitleColor,
-                        ),
-                      ),
+                      Text("WHAT'S NEW", style: SoftText.overline(p)),
                       SizedBox(height: 6.h),
                       Text(
                         widget.versionInfo.releaseNotes!,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w400,
-                          color: textColor,
-                          height: 1.4,
-                        ),
+                        style: SoftText.body(p, size: 13, color: p.ink),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 16.h),
+                SizedBox(height: 14.h),
               ],
 
               // Force update warning
               if (widget.versionInfo.isForceUpdate) ...[
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_rounded,
-                        size: 20.sp,
-                        color: AppTheme.errorColor,
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: Text(
-                          'This update is required to continue using the app.',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.errorColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                _notice(
+                  p,
+                  Icons.warning_rounded,
+                  'This update is required to continue using the app.',
                 ),
-                SizedBox(height: 16.h),
+                SizedBox(height: 14.h),
               ],
 
               // Download progress
@@ -236,103 +190,44 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 Column(
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(8.r),
+                      borderRadius: BorderRadius.circular(999),
                       child: LinearProgressIndicator(
                         value: _downloadProgress,
-                        backgroundColor: borderColor,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                        backgroundColor: p.surfaceAlt,
+                        valueColor: AlwaysStoppedAnimation<Color>(p.ink),
                         minHeight: 8.h,
                       ),
                     ),
                     SizedBox(height: 8.h),
-                    Text(
-                      _downloadStatus,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                        color: subtitleColor,
-                      ),
-                    ),
+                    Text(_downloadStatus, style: SoftText.caption(p)),
                   ],
                 ),
               ],
 
               // Error message
               if (_errorMessage != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.errorColor,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                SizedBox(height: 16.h),
+                _notice(p, Icons.error_outline_rounded, _errorMessage!),
+                SizedBox(height: 14.h),
               ],
 
               // Buttons
               if (!_isDownloading) ...[
-                SizedBox(height: 8.h),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48.h,
-                  child: ElevatedButton(
-                    onPressed: _startDownload,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.download_rounded,
-                          size: 20.sp,
-                          color: Colors.white,
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Update Now',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                SizedBox(height: 6.h),
+                SoftPillButton(
+                  label: 'Update Now',
+                  icon: Icons.download_rounded,
+                  onPressed: _startDownload,
+                  height: 50,
                 ),
 
                 // Skip button (only for non-force updates)
                 if (!widget.versionInfo.isForceUpdate && widget.onSkip != null) ...[
-                  SizedBox(height: 12.h),
-                  TextButton(
+                  SizedBox(height: 10.h),
+                  SoftPillButton(
+                    label: 'Maybe Later',
+                    variant: SoftPillVariant.outline,
                     onPressed: widget.onSkip,
-                    child: Text(
-                      'Maybe Later',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        color: subtitleColor,
-                      ),
-                    ),
+                    height: 46,
                   ),
                 ],
               ],

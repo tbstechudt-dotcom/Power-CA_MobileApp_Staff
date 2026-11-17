@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/providers/theme_provider.dart';
+import 'soft_page.dart';
+import '../../core/services/company_name_cache.dart';
 import '../../features/auth/domain/entities/staff.dart';
 import '../../features/pinboard/presentation/pages/pinboard_page.dart';
 
@@ -19,11 +18,21 @@ class AppHeader extends StatefulWidget {
   final VoidCallback? onNotificationTap;
   final VoidCallback? onMenuTap;
 
+  /// Home layout: avatar + greeting + name on the left, notification and
+  /// menu buttons on the right, "Concern · Location" underneath. The
+  /// background is transparent so the Home gradient shows through.
+  final bool homeStyle;
+
+  /// In [homeStyle], show the "Concern · Location" line under the name.
+  final bool showPlace;
+
   const AppHeader({
     super.key,
     required this.currentStaff,
     this.onNotificationTap,
     this.onMenuTap,
+    this.homeStyle = false,
+    this.showPlace = true,
   });
 
   @override
@@ -140,6 +149,10 @@ class _AppHeaderState extends State<AppHeader> {
           // Set company name
           if (orgResponse != null) {
             _companyName = orgResponse['orgname'] ?? 'Company';
+            // Remember it for the sign-in screens (shown before login).
+            if (orgResponse['orgname'] != null) {
+              CompanyNameCache.save(orgResponse['orgname'].toString());
+            }
           } else {
             _companyName = 'Company';
           }
@@ -166,139 +179,36 @@ class _AppHeaderState extends State<AppHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final bgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final iconBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF3F4F6);
-    final iconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF4B5563);
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final p = SoftPalette.of(context);
 
-    return Container(
-      padding: EdgeInsets.only(
-        left: 16.w,
-        right: 16.w,
-        top: MediaQuery.of(context).padding.top + 8.h,
-        bottom: 12.h,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Hamburger Menu (Left)
-          GestureDetector(
-            onTap: widget.onMenuTap,
-            child: Container(
-              width: 40.w,
-              height: 40.h,
-              decoration: BoxDecoration(
-                color: iconBgColor,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/icons/powerca icons/hamburger menu.svg',
-                  width: 20.sp,
-                  height: 20.sp,
-                  colorFilter: ColorFilter.mode(
-                    iconColor,
-                    BlendMode.srcIn,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Company Name and Location (Center)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _isLoading ? 'Loading...' : _companyName,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: titleColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-                if (_locationName.isNotEmpty || _isLoading)
-                  SizedBox(height: 2.h),
-                if (_locationName.isNotEmpty || _isLoading)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 12.sp,
-                        color: subtitleColor,
-                      ),
-                      SizedBox(width: 2.w),
-                      Flexible(
-                        child: Text(
-                          _isLoading ? 'Loading...' : _locationName.toUpperCase(),
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w500,
-                            color: subtitleColor,
-                            letterSpacing: 0.5,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-          // Notifications (Right)
-          GestureDetector(
-            onTap: _navigateToPinboard,
-            child: Container(
-              width: 40.w,
-              height: 40.h,
-              decoration: BoxDecoration(
-                color: iconBgColor,
-                shape: BoxShape.circle,
-              ),
+    Widget circle({required Widget child, required VoidCallback? onTap, bool dot = false, String? label}) {
+      return Semantics(
+        button: true,
+        label: label,
+        child: Material(
+          color: p.surface,
+          shape: CircleBorder(side: BorderSide(color: p.border)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(
+              width: 44,
+              height: 44,
               child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  Center(
-                    child: SvgPicture.asset(
-                      'assets/icons/powerca icons/notification.svg',
-                      width: 20.sp,
-                      height: 20.sp,
-                      colorFilter: ColorFilter.mode(
-                        iconColor,
-                        BlendMode.srcIn,
-                      ),
-                    ),
-                  ),
-                  if (_hasNewNotifications)
+                  child,
+                  if (dot)
                     Positioned(
-                      right: 8.w,
-                      top: 8.h,
+                      right: 11,
+                      top: 11,
                       child: Container(
-                        width: 8.w,
-                        height: 8.h,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFEF4444),
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: p.danger,
                           shape: BoxShape.circle,
+                          border: Border.all(color: p.surface, width: 1.5),
                         ),
                       ),
                     ),
@@ -306,6 +216,191 @@ class _AppHeaderState extends State<AppHeader> {
               ),
             ),
           ),
+        ),
+      );
+    }
+
+    if (widget.homeStyle) return _buildHomeHeader(p, circle);
+
+    return Container(
+      color: p.background,
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: MediaQuery.of(context).padding.top + 8,
+        bottom: 6,
+      ),
+      child: Row(
+        children: [
+          // Menu (left)
+          circle(
+            label: 'Menu',
+            onTap: widget.onMenuTap,
+            child: SvgPicture.asset(
+              'assets/icons/powerca icons/hamburger menu.svg',
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(p.ink, BlendMode.srcIn),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Company name and location
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _isLoading ? 'Loading...' : _companyName,
+                  style: SoftText.heading(p, size: 15),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (_locationName.isNotEmpty) ...[
+                  const SizedBox(height: 1),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_outlined, size: 12, color: p.muted),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          _locationName,
+                          style: SoftText.caption(p, size: 11.5),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Notifications (right)
+          circle(
+            label: 'Pinboard',
+            onTap: _navigateToPinboard,
+            dot: _hasNewNotifications,
+            child: SvgPicture.asset(
+              'assets/icons/powerca icons/notification.svg',
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(p.ink, BlendMode.srcIn),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// "TEST USER (DUMMY)" -> "Test User (dummy)"; keeps short all-caps
+  /// words like "LLP" or "CA" as they are.
+  static String _titleCase(String s) {
+    return s.trim().split(RegExp(r'\s+')).map((w) {
+      if (w.isEmpty) return w;
+      final letters = w.replaceAll(RegExp(r'[^A-Za-z]'), '');
+      if (letters.length <= 3 && letters == letters.toUpperCase() && w != '&') {
+        return w;
+      }
+      final i = w.indexOf(RegExp(r'[A-Za-z]'));
+      if (i == -1) return w;
+      return w.substring(0, i) + w[i].toUpperCase() + w.substring(i + 1).toLowerCase();
+    }).join(' ');
+  }
+
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  Widget _buildHomeHeader(
+    SoftPalette p,
+    Widget Function({required Widget child, required VoidCallback? onTap, bool dot, String? label}) circle,
+  ) {
+    final name = _titleCase(widget.currentStaff.name);
+    final initial = name.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+    final place = [
+      if (!_isLoading && _companyName.isNotEmpty) _titleCase(_companyName),
+      if (_locationName.isNotEmpty) _titleCase(_locationName),
+    ].join(' · ');
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: MediaQuery.of(context).padding.top + 10,
+        bottom: 4,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: p.accent, shape: BoxShape.circle),
+                child: Text(
+                  initial.isEmpty ? 'U' : initial[0].toUpperCase(),
+                  style: SoftText.heading(p, size: 18).copyWith(color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_greeting(), style: SoftText.caption(p, size: 12.5)),
+                    const SizedBox(height: 1),
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: SoftText.heading(p, size: 16),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              circle(
+                label: 'Pinboard',
+                onTap: _navigateToPinboard,
+                dot: _hasNewNotifications,
+                child: SvgPicture.asset(
+                  'assets/icons/powerca icons/notification.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: ColorFilter.mode(p.ink, BlendMode.srcIn),
+                ),
+              ),
+              const SizedBox(width: 10),
+              circle(
+                label: 'Menu',
+                onTap: widget.onMenuTap,
+                child: SvgPicture.asset(
+                  'assets/icons/powerca icons/hamburger menu.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: ColorFilter.mode(p.ink, BlendMode.srcIn),
+                ),
+              ),
+            ],
+          ),
+          if (widget.showPlace) ...[
+            const SizedBox(height: 14),
+            Text(
+              _isLoading ? ' ' : place,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: SoftText.caption(p, size: 12.5),
+            ),
+          ] else
+            const SizedBox(height: 14),
         ],
       ),
     );

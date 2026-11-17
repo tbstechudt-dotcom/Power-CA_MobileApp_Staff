@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../app/theme.dart';
 import '../../../../core/services/priority_service.dart';
+import '../../../../shared/widgets/auth_sheet.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import '../../domain/entities/staff.dart';
 
 /// Select Concern & Location Page
@@ -205,169 +205,58 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          'Select Concern & Location',
-          style: GoogleFonts.inter(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF0F172A),
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Card
-              _buildWelcomeCard(),
+    final p = SoftPalette.of(context);
+    return AuthSheet(
+      title: 'Choose your workspace',
+      subtitle: "Select the concern and location you're working from.",
+      subtitleExtra: Text('Signed in as ${widget.currentStaff.name}'),
+      icon: Icons.domain_rounded,
+      children: [
+        // Error Message
+        if (_errorMessage != null) ...[
+          _buildErrorCard(p),
+          const SizedBox(height: 16),
+        ],
 
-              SizedBox(height: 24.h),
+        // Concern Selection
+        _buildSectionLabel('Concern'),
+        _buildConcernDropdown(p),
 
-              // Error Message
-              if (_errorMessage != null) ...[
-                _buildErrorCard(),
-                SizedBox(height: 16.h),
-              ],
+        const SizedBox(height: 16),
 
-              // Concern Selection
-              _buildSectionLabel('Select Concern'),
-              SizedBox(height: 8.h),
-              _buildConcernDropdown(),
+        // Location Selection
+        _buildSectionLabel('Location'),
+        _buildLocationDropdown(p),
 
-              SizedBox(height: 24.h),
+        const SizedBox(height: 24),
 
-              // Location Selection
-              _buildSectionLabel('Select Location'),
-              SizedBox(height: 8.h),
-              _buildLocationDropdown(),
-
-              SizedBox(height: 40.h),
-
-              // Submit Button
-              _buildSubmitButton(),
-            ],
-          ),
-        ),
-      ),
+        // Submit Button
+        _buildSubmitButton(),
+      ],
     );
   }
 
-  Widget _buildWelcomeCard() {
+  Widget _buildErrorCard(SoftPalette p) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(20.w),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryColor,
-            AppTheme.primaryColor.withValues(alpha: 0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48.w,
-                height: 48.h,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.person_rounded,
-                  color: Colors.white,
-                  size: 28.sp,
-                ),
-              ),
-              SizedBox(width: 16.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome!',
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      widget.currentStaff.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'Please select your concern and location to continue.',
-            style: GoogleFonts.inter(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorCard() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.shade200),
+        color: p.tint(p.danger),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red, size: 24.sp),
-          SizedBox(width: 12.w),
+          Icon(Icons.error_outline_rounded, color: p.danger, size: 22),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               _errorMessage!,
-              style: GoogleFonts.inter(
-                fontSize: 13.sp,
-                color: Colors.red.shade700,
-              ),
+              style: SoftText.body(p, size: 13, color: p.danger),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
-            color: Colors.red,
+            icon: const Icon(Icons.refresh_rounded),
+            color: p.danger,
             onPressed: _loadConcerns,
           ),
         ],
@@ -376,222 +265,145 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
   }
 
   Widget _buildSectionLabel(String label) {
-    return Text(
-      label,
-      style: GoogleFonts.inter(
-        fontSize: 14.sp,
-        fontWeight: FontWeight.w600,
-        color: const Color(0xFF080E29),
-      ),
-    );
+    return SoftFieldLabel(label);
   }
 
-  Widget _buildConcernDropdown() {
+  Widget _buildConcernDropdown(SoftPalette p) {
     if (_isLoadingConcerns) {
-      return _buildLoadingContainer();
+      return _buildLoadingContainer(p);
     }
 
     if (_concerns.isEmpty && !_isLoadingConcerns) {
-      return _buildEmptyContainer('No concerns found');
+      return _buildEmptyContainer(p, 'No concerns found');
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return DropdownButtonFormField<Map<String, dynamic>>(
+      value: _selectedConcern,
+      decoration: softInputDecoration(
+        context,
+        hint: 'Select a concern',
+        icon: Icons.apartment_outlined,
       ),
-      child: DropdownButtonFormField<Map<String, dynamic>>(
-        value: _selectedConcern,
-        decoration: InputDecoration(
-          hintText: 'Select a concern',
-          hintStyle: GoogleFonts.inter(
-            fontSize: 14.sp,
-            color: const Color(0xFF94A3B8),
+      dropdownColor: p.surface,
+      borderRadius: BorderRadius.circular(16),
+      icon: Icon(Icons.expand_more_rounded, color: p.muted, size: 22),
+      isExpanded: true,
+      items: _concerns.map((concern) {
+        return DropdownMenuItem<Map<String, dynamic>>(
+          value: concern,
+          child: Text(
+            concern['orgname']?.toString() ?? 'Unknown',
+            overflow: TextOverflow.ellipsis,
+            style: softInputTextStyle(context),
           ),
-          prefixIcon: Icon(
-            Icons.business_rounded,
-            color: AppTheme.primaryColor,
-            size: 22.sp,
-          ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        ),
-        dropdownColor: Colors.white,
-        icon: Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: const Color(0xFF64748B),
-          size: 24.sp,
-        ),
-        isExpanded: true,
-        items: _concerns.map((concern) {
-          return DropdownMenuItem<Map<String, dynamic>>(
-            value: concern,
-            child: Text(
-              concern['orgname']?.toString() ?? 'Unknown',
-              style: GoogleFonts.inter(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF0F172A),
-              ),
-            ),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            _selectedConcern = value;
-            _selectedLocation = null;
-            _locations = [];
-          });
-          if (value != null) {
-            _loadLocations(value['org_id']);
-          }
-        },
-      ),
+        );
+      }).toList(),
+      onChanged: (value) {
+        setState(() {
+          _selectedConcern = value;
+          _selectedLocation = null;
+          _locations = [];
+        });
+        if (value != null) {
+          _loadLocations(value['org_id']);
+        }
+      },
     );
   }
 
-  Widget _buildLocationDropdown() {
+  Widget _buildLocationDropdown(SoftPalette p) {
     if (_isLoadingLocations) {
-      return _buildLoadingContainer();
+      return _buildLoadingContainer(p);
     }
 
     if (_selectedConcern == null) {
-      return _buildDisabledContainer('Select a concern first');
+      return _buildDisabledContainer(p, 'Select a concern first');
     }
 
     if (_locations.isEmpty && !_isLoadingLocations) {
-      return _buildEmptyContainer('No locations found for this concern');
+      return _buildEmptyContainer(p, 'No locations found for this concern');
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return DropdownButtonFormField<Map<String, dynamic>>(
+      value: _selectedLocation,
+      decoration: softInputDecoration(
+        context,
+        hint: 'Select a location',
+        icon: Icons.location_on_outlined,
       ),
-      child: DropdownButtonFormField<Map<String, dynamic>>(
-        value: _selectedLocation,
-        decoration: InputDecoration(
-          hintText: 'Select a location',
-          hintStyle: GoogleFonts.inter(
-            fontSize: 14.sp,
-            color: const Color(0xFF94A3B8),
+      dropdownColor: p.surface,
+      borderRadius: BorderRadius.circular(16),
+      icon: Icon(Icons.expand_more_rounded, color: p.muted, size: 22),
+      isExpanded: true,
+      items: _locations.map((location) {
+        return DropdownMenuItem<Map<String, dynamic>>(
+          value: location,
+          child: Text(
+            location['locname']?.toString() ?? 'Unknown',
+            overflow: TextOverflow.ellipsis,
+            style: softInputTextStyle(context),
           ),
-          prefixIcon: Icon(
-            Icons.location_on_rounded,
-            color: AppTheme.primaryColor,
-            size: 22.sp,
-          ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        ),
-        dropdownColor: Colors.white,
-        icon: Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: const Color(0xFF64748B),
-          size: 24.sp,
-        ),
-        isExpanded: true,
-        items: _locations.map((location) {
-          return DropdownMenuItem<Map<String, dynamic>>(
-            value: location,
-            child: Text(
-              location['locname']?.toString() ?? 'Unknown',
-              style: GoogleFonts.inter(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF0F172A),
-              ),
-            ),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            _selectedLocation = value;
-          });
-        },
-      ),
+        );
+      }).toList(),
+      onChanged: (value) {
+        setState(() {
+          _selectedLocation = value;
+        });
+      },
     );
   }
 
-  Widget _buildLoadingContainer() {
+  Widget _buildLoadingContainer(SoftPalette p) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 16.h),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: p.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: p.border),
       ),
       child: Center(
         child: SizedBox(
-          width: 24.w,
-          height: 24.h,
-          child: const CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-          ),
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2, color: p.ink),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyContainer(String message) {
+  Widget _buildEmptyContainer(SoftPalette p, String message) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.shade200),
+        color: p.tint(p.warning),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 22.sp),
-          SizedBox(width: 12.w),
-          Text(
-            message,
-            style: GoogleFonts.inter(
-              fontSize: 14.sp,
-              color: Colors.orange.shade700,
-            ),
+          Icon(Icons.warning_amber_rounded, color: p.warning, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(message, style: SoftText.body(p, color: p.ink)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDisabledContainer(String message) {
+  Widget _buildDisabledContainer(SoftPalette p, String message) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: p.surfaceAlt,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: p.border),
       ),
       child: Row(
         children: [
-          Icon(Icons.location_on_rounded, color: const Color(0xFF94A3B8), size: 22.sp),
-          SizedBox(width: 12.w),
-          Text(
-            message,
-            style: GoogleFonts.inter(
-              fontSize: 14.sp,
-              color: const Color(0xFF94A3B8),
-            ),
+          Icon(Icons.location_on_rounded, color: p.muted, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(message, style: SoftText.body(p, color: p.muted)),
           ),
         ],
       ),
@@ -602,50 +414,10 @@ class _SelectConcernLocationPageState extends State<SelectConcernLocationPage> {
     final bool isEnabled =
         _selectedConcern != null && _selectedLocation != null && !_isSubmitting;
 
-    return SizedBox(
-      width: double.infinity,
-      height: 52.h,
-      child: ElevatedButton(
-        onPressed: isEnabled ? _submitSelection : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          disabledBackgroundColor: const Color(0xFFCBD5E1),
-          elevation: isEnabled ? 2 : 0,
-          shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: _isSubmitting
-            ? SizedBox(
-                width: 24.w,
-                height: 24.h,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Continue',
-                    style: GoogleFonts.inter(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 20.sp,
-                    color: Colors.white,
-                  ),
-                ],
-              ),
-      ),
+    return SoftPillButton(
+      label: 'Continue',
+      loading: _isSubmitting,
+      onPressed: isEnabled ? _submitSelection : null,
     );
   }
-
 }

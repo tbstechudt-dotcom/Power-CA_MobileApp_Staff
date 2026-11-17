@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/soft_page.dart';
 
 /// A 6-digit OTP input field with individual boxes
 class OtpInputField extends StatefulWidget {
@@ -93,72 +93,58 @@ class _OtpInputFieldState extends State<OtpInputField> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(widget.length, (index) {
-        return Container(
-          width: 48.w,
-          height: 56.h,
-          margin: EdgeInsets.symmetric(horizontal: 4.w),
-          child: KeyboardListener(
-            focusNode: FocusNode(),
-            onKeyEvent: (event) => _onKeyDown(index, event),
-            child: TextField(
-              controller: _controllers[index],
-              focusNode: _focusNodes[index],
-              enabled: widget.enabled,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              maxLength: 1,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 24.sp,
-                fontWeight: FontWeight.w700,
-                color: widget.hasError ? Colors.red : AppTheme.textPrimaryColor,
-              ),
-              decoration: InputDecoration(
-                counterText: '',
-                filled: true,
-                fillColor: widget.enabled
-                    ? Colors.white
-                    : Colors.grey.withValues(alpha: 0.1),
-                contentPadding: EdgeInsets.symmetric(vertical: 12.h),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  borderSide: BorderSide(
-                    color: widget.hasError
-                        ? Colors.red
-                        : AppTheme.borderColor,
-                    width: 1.5,
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  borderSide: BorderSide(
-                    color: widget.hasError
-                        ? Colors.red
-                        : AppTheme.borderColor,
-                    width: 1.5,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  borderSide: BorderSide(
-                    color: widget.hasError
-                        ? Colors.red
-                        : AppTheme.primaryColor,
-                    width: 2,
-                  ),
-                ),
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
-              onChanged: (value) => _onChanged(index, value),
-            ),
-          ),
+    final p = SoftPalette.of(context);
+    OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: c, width: w),
         );
-      }),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Row(
+          children: List.generate(widget.length, (index) {
+            return Expanded(
+              child: Container(
+                height: 58,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                child: KeyboardListener(
+                  focusNode: FocusNode(),
+                  onKeyEvent: (event) => _onKeyDown(index, event),
+                  child: TextField(
+                    controller: _controllers[index],
+                    focusNode: _focusNodes[index],
+                    enabled: widget.enabled,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    maxLength: 1,
+                    cursorColor: p.ink,
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: widget.hasError ? p.danger : p.ink,
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      filled: true,
+                      fillColor: widget.enabled ? p.surface : p.surfaceAlt,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      border: border(widget.hasError ? p.danger : p.border, 1),
+                      enabledBorder: border(widget.hasError ? p.danger : p.border, 1),
+                      disabledBorder: border(p.border, 1),
+                      focusedBorder: border(widget.hasError ? p.danger : p.ink, 1.4),
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    onChanged: (value) => _onChanged(index, value),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
     );
   }
 }

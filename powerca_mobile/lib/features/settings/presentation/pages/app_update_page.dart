@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 
-import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/services/app_update_service.dart';
+import '../../../../shared/widgets/home_style.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../../../shared/widgets/update_dialog.dart';
 
 /// App Update Page - Shows current version and check for updates
@@ -67,470 +66,213 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
     }
   }
 
+  bool get _hasUpdate =>
+      !_isChecking && _errorMessage == null && !_isUpToDate && _latestVersion != null;
+
+  List<({String text, bool strong})> _headline() {
+    const current = 'v${AppUpdateService.currentVersionName}';
+    if (_isChecking) {
+      return const [
+        (text: 'Checking for ', strong: false),
+        (text: 'updates', strong: true),
+        (text: '...', strong: false),
+      ];
+    }
+    if (_errorMessage != null) {
+      return const [
+        (text: 'You\'re on ', strong: false),
+        (text: current, strong: true),
+        (text: ' — ', strong: false),
+        (text: 'check failed.', strong: true),
+      ];
+    }
+    if (_hasUpdate) {
+      return [
+        const (text: 'Version ', strong: false),
+        (text: 'v${_latestVersion!.versionName}', strong: true),
+        const (text: ' is ', strong: false),
+        const (text: 'available.', strong: true),
+      ];
+    }
+    return const [
+      (text: 'You\'re on ', strong: false),
+      (text: current, strong: true),
+      (text: ' — ', strong: false),
+      (text: 'up to date.', strong: true),
+    ];
+  }
+
+  String _cardSubtitle() {
+    if (_isChecking) return 'Checking for updates...';
+    if (_errorMessage != null) return 'Could not reach the update server';
+    if (_hasUpdate) return 'A new version is available';
+    return 'This is the latest version';
+  }
+
+  String _latestLabel() {
+    if (_hasUpdate) return 'v${_latestVersion!.versionName}';
+    if (_isUpToDate) return 'v${AppUpdateService.currentVersionName}';
+    return '—';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final bgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-    final cardColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final borderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-    final backBtnBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backBtnBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
-    final backBtnIconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final p = SoftPalette.of(context);
+    final releaseNotes = _latestVersion?.releaseNotes;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: cardColor,
-        elevation: 0,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8.w),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 42.w,
-                height: 42.h,
-                decoration: BoxDecoration(
-                  color: backBtnBgColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: backBtnBorderColor,
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 18.sp,
-                    color: backBtnIconColor,
-                  ),
-                ),
-              ),
-            ),
+    return HomeSubPage(
+      eyebrow: 'App update',
+      headline: _headline(),
+      children: [
+        HomeSectionCard(
+          title: 'PowerCA Staff',
+          subtitle: _cardSubtitle(),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          trailing: HomeRoundAction(
+            icon: Icons.north_east_rounded,
+            tooltip: _hasUpdate ? 'Download update' : 'Check for updates',
+            onTap: _isChecking
+                ? null
+                : (_hasUpdate ? _showUpdateDialog : _checkForUpdates),
           ),
-        ),
-        title: Text(
-          'App Update',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: textColor,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          children: [
-            // App Info Card
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(24.w),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // App Icon
-                  Container(
-                    width: 80.w,
-                    height: 80.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3B82F6),
-                      borderRadius: BorderRadius.circular(20.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.work_outline_rounded,
-                        size: 40.sp,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  // App Name
-                  Text(
-                    'PowerCA Staff',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.w700,
-                      color: textColor,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  // Current Version
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                    decoration: BoxDecoration(
-                      color: isDarkMode
-                          ? const Color(0xFF334155)
-                          : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    child: Text(
-                      'Version ${AppUpdateService.currentVersionName}',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        color: subtitleColor,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Build ${AppUpdateService.currentVersionCode}',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w400,
-                      color: subtitleColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 16.h),
-
-            // Update Status Card
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                children: [
-                  if (_isChecking) ...[
-                    // Checking state
-                    SizedBox(
-                      width: 40.w,
-                      height: 40.w,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF3B82F6),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Checking for updates...',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w500,
-                        color: textColor,
-                      ),
-                    ),
-                  ] else if (_errorMessage != null) ...[
-                    // Error state
-                    Container(
-                      width: 56.w,
-                      height: 56.w,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.error_outline_rounded,
-                          size: 28.sp,
-                          color: const Color(0xFFDC2626),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      _errorMessage!,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFFDC2626),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    _buildRetryButton(),
-                  ] else if (_isUpToDate) ...[
-                    // Up to date state
-                    Container(
-                      width: 56.w,
-                      height: 56.w,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.check_circle_rounded,
-                          size: 32.sp,
-                          color: const Color(0xFF16A34A),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'You\'re up to date!',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'PowerCA Staff ${AppUpdateService.currentVersionName} is the latest version.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w400,
-                        color: subtitleColor,
-                      ),
-                    ),
-                    SizedBox(height: 20.h),
-                    _buildCheckAgainButton(),
-                  ] else if (_latestVersion != null) ...[
-                    // Update available state
-                    Container(
-                      width: 56.w,
-                      height: 56.w,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDBEAFE),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.system_update_rounded,
-                          size: 28.sp,
-                          color: const Color(0xFF3B82F6),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Update Available!',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Text(
-                        'Version ${_latestVersion!.versionName}',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF3B82F6),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    if (_latestVersion!.releaseNotes != null &&
-                        _latestVersion!.releaseNotes!.isNotEmpty) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(12.w),
-                        decoration: BoxDecoration(
-                          color: isDarkMode
-                              ? const Color(0xFF334155)
-                              : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10.r),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'What\'s New:',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w600,
-                                color: textColor,
-                              ),
-                            ),
-                            SizedBox(height: 6.h),
-                            Text(
-                              _latestVersion!.releaseNotes!,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w400,
-                                color: subtitleColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 20.h),
-                    ],
-                    _buildUpdateButton(),
-                  ],
-                ],
-              ),
-            ),
-
-            SizedBox(height: 16.h),
-
-            // Info Card
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: isDarkMode
-                    ? const Color(0xFF1E3A5F)
-                    : const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(
-                  color: isDarkMode
-                      ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
-                      : const Color(0xFF93C5FD),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    size: 20.sp,
-                    color: const Color(0xFF3B82F6),
-                  ),
-                  SizedBox(width: 12.w),
                   Expanded(
-                    child: Text(
-                      'Updates are downloaded from our secure servers and include the latest features and security improvements.',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w400,
-                        color: isDarkMode
-                            ? const Color(0xFF93C5FD)
-                            : const Color(0xFF1E40AF),
-                      ),
+                    child: HomeStat(
+                      label: 'Current',
+                      value: 'v${AppUpdateService.currentVersionName}',
+                      dot: p.accent,
+                    ),
+                  ),
+                  Expanded(
+                    child: HomeStat(
+                      label: 'Latest',
+                      value: _latestLabel(),
+                      dot: p.muted,
+                    ),
+                  ),
+                  const Expanded(
+                    child: HomeStat(
+                      label: 'Build',
+                      value: '${AppUpdateService.currentVersionCode}',
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+
+              // Error message
+              if (!_isChecking && _errorMessage != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: p.tint(p.danger),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline_rounded, size: 18, color: p.danger),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: SoftText.body(p, size: 13, color: p.danger)
+                              .copyWith(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Release notes for an available update
+              if (_hasUpdate && releaseNotes != null && releaseNotes.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: p.surfaceAlt,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("What's new", style: SoftText.caption(p, size: 12)),
+                      const SizedBox(height: 6),
+                      Text(
+                        releaseNotes,
+                        style: SoftText.body(p, size: 13, color: p.ink),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
+              _buildActionButton(),
+            ],
+          ),
         ),
-      ),
+        HomeSectionCard(
+          title: 'About updates',
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          child: Text(
+            'Updates are downloaded from our secure servers and include the latest features and security improvements.',
+            style: SoftText.caption(p, size: 12.5).copyWith(height: 1.45),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildCheckAgainButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
+  Widget _buildActionButton() {
+    if (_isChecking) {
+      return SoftPillButton(
+        label: 'Check again',
+        icon: Icons.refresh_rounded,
+        variant: SoftPillVariant.blue,
+        loading: true,
+        height: 50,
         onPressed: _checkForUpdates,
-        icon: Icon(
-          Icons.refresh_rounded,
-          size: 18.sp,
-        ),
-        label: Text(
-          'Check Again',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFF3B82F6),
-          padding: EdgeInsets.symmetric(vertical: 14.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          side: const BorderSide(color: Color(0xFF3B82F6)),
-        ),
-      ),
+      );
+    }
+    if (_errorMessage != null) return _buildRetryButton();
+    if (_hasUpdate) return _buildUpdateButton();
+    return _buildCheckAgainButton();
+  }
+
+  Widget _buildCheckAgainButton() {
+    return SoftPillButton(
+      label: 'Check again',
+      icon: Icons.refresh_rounded,
+      variant: SoftPillVariant.blue,
+      height: 50,
+      onPressed: _checkForUpdates,
     );
   }
 
   Widget _buildRetryButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _checkForUpdates,
-        icon: Icon(
-          Icons.refresh_rounded,
-          size: 18.sp,
-        ),
-        label: Text(
-          'Try Again',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFFDC2626),
-          padding: EdgeInsets.symmetric(vertical: 14.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          side: const BorderSide(color: Color(0xFFDC2626)),
-        ),
-      ),
+    return SoftPillButton(
+      label: 'Try again',
+      icon: Icons.refresh_rounded,
+      variant: SoftPillVariant.danger,
+      height: 50,
+      onPressed: _checkForUpdates,
     );
   }
 
   Widget _buildUpdateButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _showUpdateDialog,
-        icon: Icon(
-          Icons.download_rounded,
-          size: 18.sp,
-          color: Colors.white,
-        ),
-        label: Text(
-          'Download Update',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 15.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF3B82F6),
-          padding: EdgeInsets.symmetric(vertical: 14.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          elevation: 0,
-        ),
-      ),
+    return SoftPillButton(
+      label: 'Download update',
+      icon: Icons.download_rounded,
+      variant: SoftPillVariant.blue,
+      height: 50,
+      onPressed: _showUpdateDialog,
     );
   }
 }

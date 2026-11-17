@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/home_style.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import '../../../auth/domain/entities/staff.dart';
 
 class ApplyLeavePage extends StatefulWidget {
@@ -57,112 +57,91 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-
+    final p = SoftPalette.of(context);
     return Scaffold(
-      backgroundColor: scaffoldBgColor,
-      appBar: AppBar(
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8.w),
-          child: Center(
-            child: _buildBackButton(context),
-          ),
-        ),
-        leadingWidth: 58.w,
-        title: _buildAppBarTitle(context),
-        backgroundColor: headerBgColor,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                left: 20.w,
-                right: 20.w,
-                top: 20.w,
-                bottom: 20.w + MediaQuery.of(context).padding.bottom,
+      backgroundColor: p.background,
+      body: HomeBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Back
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SoftIconButton(
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: 'Back',
+                    size: 44,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                ),
               ),
-              child: _buildLeaveApplicationForm(context),
-            ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Eyebrow + headline
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(4, 0, 4, 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            HomeEyebrow('Apply leave'),
+                            HomeInlineHeadline(
+                              size: 23,
+                              parts: [
+                                (text: 'Request', strong: false),
+                                (text: ' time off', strong: true),
+                                (text: ' in a', strong: false),
+                                (text: ' few steps.', strong: true),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildLeaveApplicationForm(context),
+                    ],
+                  ),
+                ),
+              ),
+              // Submit
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                child: SoftPillButton(
+                  label: 'Submit request',
+                  icon: Icons.send_rounded,
+                  variant: SoftPillVariant.blue,
+                  height: 54,
+                  loading: _isSubmitting,
+                  onPressed: _isSubmitting ? null : _submitLeaveRequest,
+                ),
+              ),
+            ],
           ),
-          _buildSubmitButton(context),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildBackButton(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor;
-
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 42.w,
-        height: 42.h,
-        decoration: BoxDecoration(
-          color: backButtonBgColor,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: backButtonBorderColor,
-            width: 1,
+  /// White section card with a title and caption.
+  Widget _section({required String title, required String subtitle, required List<Widget> children}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: HomeSectionCard(
+        title: title,
+        subtitle: subtitle,
+        padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
           ),
         ),
-        child: Center(
-          child: Icon(
-            Icons.arrow_back_ios_new,
-            size: 18.sp,
-            color: textSecondaryColor,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppBarTitle(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textSecondaryColor;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Apply Leave',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w700,
-            color: textPrimaryColor,
-          ),
-        ),
-        Text(
-          'Submit a new leave request',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12.sp,
-            fontWeight: FontWeight.w400,
-            color: textSecondaryColor,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    return Text(
-      title,
-      style: TextStyle(
-        fontFamily: 'Inter',
-        fontSize: 14.sp,
-        fontWeight: FontWeight.w600,
-        color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29),
       ),
     );
   }
@@ -197,23 +176,28 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
         : '';
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Leave Type Dropdown
-        _buildSectionTitle('Leave Type'),
-        SizedBox(height: 8.h),
-        _buildLeaveTypeDropdown(context),
-        SizedBox(height: 20.h),
+        _section(
+          title: 'Leave details',
+          subtitle: 'Type and duration',
+          children: [
+            // Leave Type Dropdown
+            const SoftFieldLabel('Leave type', required: true),
+            _buildLeaveTypeDropdown(context),
+            const SizedBox(height: 18),
 
-        // Leave Duration Toggle
-        _buildSectionTitle('Leave Duration'),
-        SizedBox(height: 8.h),
-        _buildDurationToggle(context),
-        SizedBox(height: 20.h),
-
+            // Leave Duration Toggle
+            const SoftFieldLabel('Leave duration'),
+            _buildDurationToggle(context),
+          ],
+        ),
+        _section(
+          title: 'Dates',
+          subtitle: 'Sundays are not counted',
+          children: [
         // From Date
-        _buildSectionTitle(_isMultiDay ? 'From Date' : 'Date'),
-        SizedBox(height: 8.h),
+        SoftFieldLabel(_isMultiDay ? 'From date' : 'Date', required: true),
         _buildDateSelector(
           context: context,
           date: _fromDate,
@@ -238,9 +222,8 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
         // From Day Type Selector
         if (_fromDate != null) ...[
-          SizedBox(height: 12.h),
-          _buildDayTypeLabel(_isMultiDay ? 'From Date - Day Type' : 'Day Type'),
-          SizedBox(height: 6.h),
+          const SizedBox(height: 12),
+          SoftFieldLabel(_isMultiDay ? 'From date – day type' : 'Day type'),
           _buildDayTypeSelector(
             context: context,
             selectedType: _fromDayType,
@@ -255,9 +238,8 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
         // To Date (only for multi-day)
         if (_isMultiDay) ...[
-          SizedBox(height: 20.h),
-          _buildSectionTitle('To Date'),
-          SizedBox(height: 8.h),
+          const SizedBox(height: 18),
+          const SoftFieldLabel('To date', required: true),
           _buildDateSelector(
             context: context,
             date: _toDate,
@@ -279,9 +261,8 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
           // To Day Type Selector
           if (_fromDate != null && _toDate != null && _fromDate != _toDate) ...[
-            SizedBox(height: 12.h),
-            _buildDayTypeLabel('To Date - Day Type'),
-            SizedBox(height: 6.h),
+            const SizedBox(height: 12),
+            const SoftFieldLabel('To date – day type'),
             _buildDayTypeSelector(
               context: context,
               selectedType: _toDayType,
@@ -297,89 +278,73 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
         // Number of Days Display
         if (numberOfDays != null) ...[
-          SizedBox(height: 16.h),
+          const SizedBox(height: 16),
           _buildDaysDisplay(context, numberOfDays, daysDisplay),
         ],
-
-        SizedBox(height: 20.h),
-
-        // Reason
-        _buildSectionTitle('Reason'),
-        SizedBox(height: 8.h),
-        _buildReasonField(context),
-
-        SizedBox(height: 32.h),
+          ],
+        ),
+        _section(
+          title: 'Reason',
+          subtitle: 'Shared with your office',
+          children: [
+            _buildReasonField(context),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildLeaveTypeDropdown(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final hintColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
-    final iconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
-    final dropdownBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final p = SoftPalette.of(context);
+    final textStyle = softInputTextStyle(context);
 
+    return DropdownButtonFormField<String>(
+      dropdownColor: p.surface,
+      borderRadius: BorderRadius.circular(16),
+      decoration: softInputDecoration(
+        context,
+        hint: 'Select leave type',
+        icon: Icons.category_outlined,
+        filled: true,
+      ),
+      value: _leaveType,
+      icon: Icon(Icons.expand_more_rounded, color: p.muted),
+      style: textStyle,
+      items: ['Sick Leave', 'Casual Leave', 'Earned Leave', 'Emergency Leave']
+          .map((type) => DropdownMenuItem(
+                value: type,
+                child: Text(type, style: textStyle),
+              ),)
+          .toList(),
+      onChanged: (value) {
+        setState(() {
+          _leaveType = value;
+        });
+      },
+    );
+  }
+
+  /// Grey rounded track holding a row of [_SegmentButton]s.
+  Widget _segmentTrack(List<Widget> segments) {
+    final p = SoftPalette.of(context);
     return Container(
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: fieldBgColor,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: fieldBorderColor),
+        color: softFieldFill(p),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: p.border),
       ),
-      child: DropdownButtonFormField<String>(
-        dropdownColor: dropdownBgColor,
-        decoration: InputDecoration(
-          hintText: 'Select leave type',
-          hintStyle: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            color: hintColor,
-          ),
-          prefixIcon: Icon(Icons.category_outlined, color: iconColor),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        ),
-        value: _leaveType,
-        icon: Icon(Icons.arrow_drop_down, color: iconColor),
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 14.sp,
-          color: textColor,
-        ),
-        items: ['Sick Leave', 'Casual Leave', 'Earned Leave', 'Emergency Leave']
-            .map((type) => DropdownMenuItem(
-                  value: type,
-                  child: Text(
-                    type,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      color: textColor,
-                    ),
-                  ),
-                ),)
-            .toList(),
-        onChanged: (value) {
-          setState(() {
-            _leaveType = value;
-          });
-        },
-      ),
+      child: Row(children: segments),
     );
   }
 
   Widget _buildDurationToggle(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-
-    return Row(
-      children: [
+    return _segmentTrack(
+      [
         Expanded(
-          child: InkWell(
+          child: _SegmentButton(
+            label: 'Single day',
+            selected: !_isMultiDay,
             onTap: () {
               setState(() {
                 _isMultiDay = false;
@@ -387,60 +352,17 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
                 _toDayType = 'full';
               });
             },
-            borderRadius: BorderRadius.circular(12.r),
-            child: Container(
-              padding: EdgeInsets.symmetric(vertical: 14.h),
-              decoration: BoxDecoration(
-                color: !_isMultiDay ? AppTheme.primaryColor : fieldBgColor,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(
-                  color: !_isMultiDay ? AppTheme.primaryColor : fieldBorderColor,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  'Single Day',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: !_isMultiDay ? Colors.white : textColor,
-                  ),
-                ),
-              ),
-            ),
           ),
         ),
-        SizedBox(width: 12.w),
         Expanded(
-          child: InkWell(
+          child: _SegmentButton(
+            label: 'Multiple days',
+            selected: _isMultiDay,
             onTap: () {
               setState(() {
                 _isMultiDay = true;
               });
             },
-            borderRadius: BorderRadius.circular(12.r),
-            child: Container(
-              padding: EdgeInsets.symmetric(vertical: 14.h),
-              decoration: BoxDecoration(
-                color: _isMultiDay ? AppTheme.primaryColor : fieldBgColor,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(
-                  color: _isMultiDay ? AppTheme.primaryColor : fieldBorderColor,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  'Multiple Days',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: _isMultiDay ? Colors.white : textColor,
-                  ),
-                ),
-              ),
-            ),
           ),
         ),
       ],
@@ -456,14 +378,11 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
     bool enabled = true,
     DateTime? minDate,
   }) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final disabledBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA);
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final hintColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
-
-    return InkWell(
+    return _DateField(
+      value: date != null ? DateFormat('EEEE, MMMM d, yyyy').format(date) : null,
+      placeholder: hint,
+      enabled: enabled,
+      onClear: date != null ? onClear : null,
       onTap: !enabled
           ? null
           : () async {
@@ -480,74 +399,11 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
                 selectableDayPredicate: (DateTime day) {
                   return day.weekday != DateTime.sunday;
                 },
-                builder: (context, child) {
-                  return Theme(
-                    data: Theme.of(context).copyWith(
-                      colorScheme: ColorScheme.light(
-                        primary: AppTheme.primaryColor,
-                        surface: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-                      ),
-                    ),
-                    child: child!,
-                  );
-                },
               );
               if (selectedDate != null) {
                 onSelect(selectedDate);
               }
             },
-      borderRadius: BorderRadius.circular(12.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        decoration: BoxDecoration(
-          color: enabled ? fieldBgColor : disabledBgColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: fieldBorderColor),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_today,
-              size: 20.sp,
-              color: AppTheme.primaryColor,
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Text(
-                date != null ? DateFormat('EEEE, MMMM d, yyyy').format(date) : hint,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w400,
-                  color: date != null ? textColor : hintColor,
-                ),
-              ),
-            ),
-            if (date != null)
-              GestureDetector(
-                onTap: onClear,
-                child: Icon(
-                  Icons.cancel,
-                  size: 20.sp,
-                  color: hintColor,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDayTypeLabel(String text) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    return Text(
-      text,
-      style: TextStyle(
-        fontFamily: 'Inter',
-        fontSize: 12.sp,
-        fontWeight: FontWeight.w500,
-        color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
-      ),
     );
   }
 
@@ -557,93 +413,44 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
     required Function(String) onChanged,
     required bool enabled,
   }) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final disabledBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA);
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final disabledTextColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
-
     final options = [
       {'value': 'full', 'label': 'Full Day'},
       {'value': 'first_half', 'label': 'First Half'},
       {'value': 'second_half', 'label': 'Second Half'},
     ];
 
-    return Row(
-      children: options.map((option) {
-        final isSelected = selectedType == option['value'];
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 3.w),
-            child: InkWell(
-              onTap: enabled ? () => onChanged(option['value']!) : null,
-              borderRadius: BorderRadius.circular(8.r),
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 10.h),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppTheme.primaryColor
-                      : enabled
-                          ? fieldBgColor
-                          : disabledBgColor,
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppTheme.primaryColor
-                        : fieldBorderColor,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    option['label']!,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w500,
-                      color: isSelected
-                          ? Colors.white
-                          : enabled
-                              ? textColor
-                              : disabledTextColor,
-                    ),
-                  ),
-                ),
-              ),
+    return _segmentTrack(
+      [
+        for (int i = 0; i < options.length; i++) ...[
+          Expanded(
+            child: _SegmentButton(
+              label: options[i]['label']!,
+              selected: selectedType == options[i]['value'],
+              compact: true,
+              onTap: enabled ? () => onChanged(options[i]['value']!) : null,
             ),
           ),
-        );
-      }).toList(),
+        ],
+      ],
     );
   }
 
   Widget _buildDaysDisplay(BuildContext context, double numberOfDays, String daysDisplay) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final bgColor = isDarkMode ? const Color(0xFF064E3B) : AppTheme.successColor.withValues(alpha: 0.1);
-    final textColor = isDarkMode ? const Color(0xFF34D399) : AppTheme.successColor;
+    final p = SoftPalette.of(context);
 
     return Container(
-      padding: EdgeInsets.all(12.w),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10.r),
+        color: p.tint(p.success),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.event_available,
-            size: 18.sp,
-            color: textColor,
-          ),
-          SizedBox(width: 8.w),
+          Icon(Icons.event_available_rounded, size: 18, color: p.success),
+          const SizedBox(width: 8),
           Text(
             'Total: $daysDisplay ${numberOfDays == 1 ? 'day' : 'days'}',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
+            style: SoftText.heading(p, size: 13.5).copyWith(color: p.success),
           ),
         ],
       ),
@@ -651,104 +458,11 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
   }
 
   Widget _buildReasonField(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final fieldBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final fieldBorderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE9F0F8);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final hintColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: fieldBgColor,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: fieldBorderColor),
-      ),
-      child: TextFormField(
-        controller: _reasonController,
-        maxLines: 5,
-        decoration: InputDecoration(
-          hintText: 'Enter reason for leave...',
-          hintStyle: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w400,
-            color: hintColor,
-          ),
-          filled: true,
-          fillColor: fieldBgColor,
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(16.w),
-        ),
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 14.sp,
-          fontWeight: FontWeight.w400,
-          color: textColor,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final bottomBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 12.h + MediaQuery.of(context).padding.bottom),
-      decoration: BoxDecoration(
-        color: bottomBgColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 50.h,
-        child: ElevatedButton(
-          onPressed: _isSubmitting ? null : _submitLeaveRequest,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryColor,
-            disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            elevation: 0,
-          ),
-          child: _isSubmitting
-              ? SizedBox(
-                  width: 20.w,
-                  height: 20.h,
-                  child: const CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.send_rounded,
-                      size: 20.sp,
-                      color: Colors.white,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Submit Request',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
+    return TextFormField(
+      controller: _reasonController,
+      maxLines: 5,
+      style: softInputTextStyle(context),
+      decoration: softInputDecoration(context, hint: 'Enter reason for leave...', filled: true),
     );
   }
 
@@ -848,6 +562,105 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
         content: Text(message),
         backgroundColor: AppTheme.errorColor,
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+/// Stadium segment used for the duration and day-type toggles.
+class _SegmentButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+  final bool compact;
+
+  const _SegmentButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    final enabled = onTap != null;
+    final activeBg = p.isDark ? p.accent : const Color(0xFF1E3A8A);
+    final activeFg = p.isDark ? p.background : Colors.white;
+    return Material(
+      color: selected ? activeBg : Colors.transparent,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: compact ? 10 : 13, horizontal: 6),
+          child: Center(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: SoftText.heading(p, size: compact ? 12.5 : 14).copyWith(
+                color: selected ? activeFg : (enabled ? p.inkSoft : p.muted),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Date trigger that looks like a soft input, with a clear button.
+class _DateField extends StatelessWidget {
+  final String? value;
+  final String placeholder;
+  final bool enabled;
+  final VoidCallback? onTap;
+  final VoidCallback? onClear;
+
+  const _DateField({
+    required this.value,
+    required this.placeholder,
+    required this.enabled,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    final empty = value == null;
+    return Material(
+      color: enabled ? softFieldFill(p) : softFieldFill(p).withValues(alpha: 0.6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today_outlined, size: 20, color: p.muted),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  empty ? placeholder : value!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: empty
+                      ? SoftText.body(p, color: p.muted)
+                      : softInputTextStyle(context),
+                ),
+              ),
+              if (onClear != null)
+                GestureDetector(
+                  onTap: onClear,
+                  child: Icon(Icons.cancel_rounded, size: 20, color: p.muted),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

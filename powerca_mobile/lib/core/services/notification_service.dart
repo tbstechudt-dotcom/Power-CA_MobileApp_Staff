@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Singleton service for managing local notifications
 /// Handles initialization, permission requests, and notification display
@@ -34,7 +36,7 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -110,10 +112,10 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      leaveId,
-      'Leave Request ${isApproved ? 'Approved' : 'Rejected'}',
-      '$leaveType ($dateRange) has been ${status.toLowerCase()}',
-      details,
+      id: leaveId,
+      title: 'Leave Request ${isApproved ? 'Approved' : 'Rejected'}',
+      body: '$leaveType ($dateRange) has been ${status.toLowerCase()}',
+      notificationDetails: details,
       payload: 'leave:$leaveId',
     );
 
@@ -154,14 +156,60 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      remId.hashCode,
-      'New Reminder: $title',
-      'For $clientName - Due: $dueDate',
-      details,
+      id: remId.hashCode,
+      title: 'New Reminder: $title',
+      body: 'For $clientName - Due: $dueDate',
+      notificationDetails: details,
       payload: 'pinboard:$remId',
     );
 
     debugPrint('NotificationService: Showed pinboard notification for ID $remId');
+  }
+
+  static const int _workLogReminderId = 9001;
+  static const String _workLogReminderKey = 'work_log_reminder_last_shown';
+
+  /// Remind the staff member to log today's work.
+  ///
+  /// Shown at most once per calendar day: the date it was last shown is
+  /// stored in SharedPreferences and later calls on the same day are ignored.
+  Future<void> showWorkLogReminder() async {
+    if (!_isInitialized) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (prefs.getString(_workLogReminderKey) == today) {
+      debugPrint('NotificationService: Work log reminder already shown today');
+      return;
+    }
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'work_log_reminders',
+        'Work Log Reminders',
+        channelDescription: 'Daily reminder to log your work',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+        icon: '@mipmap/ic_launcher',
+      ),
+      iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      id: _workLogReminderId,
+      title: "Don't forget your work log",
+      body: "You haven't logged any work for today yet.",
+      notificationDetails: details,
+      payload: 'worklog:$today',
+    );
+    await prefs.setString(_workLogReminderKey, today);
+    debugPrint('NotificationService: Showed work log reminder');
+  }
+
+  /// Remove the work log reminder (e.g. once today's work is logged).
+  Future<void> cancelWorkLogReminder() async {
+    if (!_isInitialized) return;
+    await _flutterLocalNotificationsPlugin.cancel(id: _workLogReminderId);
   }
 
   /// Handle notification tap

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../domain/entities/job.dart';
 import '../bloc/work_diary_bloc.dart';
 import '../bloc/work_diary_event.dart';
@@ -21,45 +20,47 @@ class WorkDiaryListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
     return BlocProvider(
       create: (context) => getIt<WorkDiaryBloc>()
         ..add(LoadEntriesEvent(jobId: job.jobId)),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: _buildAppBar(context),
+      child: SoftScaffold(
+        title: 'Task Entries List',
+        subtitle: job.jobName,
+        onBack: () => Navigator.pop(context),
         body: BlocConsumer<WorkDiaryBloc, WorkDiaryState>(
           listener: (context, state) {
             if (state is WorkDiaryError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),
-                  backgroundColor: AppTheme.errorColor,
+                  backgroundColor: p.danger,
                 ),
               );
             }
 
             if (state is WorkDiaryEntryAdded) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Entry added successfully'),
-                  backgroundColor: Colors.green,
+                SnackBar(
+                  content: const Text('Entry added successfully'),
+                  backgroundColor: p.success,
                 ),
               );
             }
 
             if (state is WorkDiaryEntryDeleted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Entry deleted successfully'),
-                  backgroundColor: Colors.green,
+                SnackBar(
+                  content: const Text('Entry deleted successfully'),
+                  backgroundColor: p.success,
                 ),
               );
             }
           },
           builder: (context, state) {
             if (state is WorkDiaryLoading) {
-              return const Center(
-                child: CircularProgressIndicator(),
+              return Center(
+                child: CircularProgressIndicator(color: p.ink, strokeWidth: 2.4),
               );
             }
 
@@ -79,11 +80,12 @@ class WorkDiaryListPage extends StatelessWidget {
               return Column(
                 children: [
                   // Total hours header
-                  _buildTotalHoursHeader(totalHours),
+                  _buildTotalHoursHeader(p, totalHours),
 
                   // Entries list
                   Expanded(
                     child: RefreshIndicator(
+                      color: p.ink,
                       onRefresh: () async {
                         context.read<WorkDiaryBloc>().add(
                               RefreshEntriesEvent(jobId: job.jobId),
@@ -105,18 +107,18 @@ class WorkDiaryListPage extends StatelessWidget {
                           return false;
                         },
                         child: ListView.builder(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 8.h,
-                          ),
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                           itemCount:
                               entries.length + (state is WorkDiaryLoadingMore ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (index == entries.length) {
                               return Padding(
-                                padding: EdgeInsets.all(16.w),
-                                child: const Center(
-                                  child: CircularProgressIndicator(),
+                                padding: const EdgeInsets.all(16),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: p.ink,
+                                    strokeWidth: 2.4,
+                                  ),
                                 ),
                               );
                             }
@@ -143,192 +145,83 @@ class WorkDiaryListPage extends StatelessWidget {
             return const SizedBox.shrink();
           },
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BlocProvider.value(
-                  value: context.read<WorkDiaryBloc>(),
-                  child: AddWorkDiaryEntryPage(job: job),
+        // Builder gives a context below the BlocProvider above, so
+        // context.read<WorkDiaryBloc>() can find the bloc.
+        floatingActionButton: Builder(
+          builder: (context) => FloatingActionButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<WorkDiaryBloc>(),
+                    child: AddWorkDiaryEntryPage(job: job),
+                  ),
                 ),
-              ),
-            );
-          },
-          backgroundColor: AppTheme.primaryColor,
-          child: Icon(
-            Icons.add,
-            color: Colors.white,
-            size: 28.sp,
+              );
+            },
+            backgroundColor: p.pill,
+            elevation: 2,
+            shape: const CircleBorder(),
+            child: Icon(
+              Icons.add_rounded,
+              color: p.onPill,
+              size: 28,
+            ),
           ),
         ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: Padding(
-        padding: EdgeInsets.only(left: 8.w),
-        child: Center(
-          child: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 42.w,
-              height: 42.h,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8EDF3),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFD1D9E6),
-                  width: 1,
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 18.sp,
-                  color: AppTheme.textSecondaryColor,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      leadingWidth: 58.w,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Task Entries List',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimaryColor,
-            ),
-          ),
-          Text(
-            job.jobName,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w400,
-              color: AppTheme.textSecondaryColor,
-            ),
-          ),
-        ],
-      ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(
-          height: 1.5,
-          color: const Color(0xFFE9F0F8),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTotalHoursHeader(double totalHours) {
+  Widget _buildTotalHoursHeader(SoftPalette p, double totalHours) {
     final hours = totalHours.floor();
     final minutes = ((totalHours - hours) * 60).round();
     final formattedHours =
         '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')} Hrs';
 
-    return Container(
-      margin: EdgeInsets.all(16.w),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE3EFFF),
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Total Hours Logged',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textPrimaryColor,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+      child: SoftCard(
+        child: Row(
+          children: [
+            SoftIconBadge(icon: Icons.timer_outlined, color: p.accent),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('TOTAL HOURS LOGGED', style: SoftText.overline(p)),
+                  const SizedBox(height: 4),
+                  Text(formattedHours, style: SoftText.title(p, size: 22)),
+                ],
+              ),
             ),
-          ),
-          Text(
-            formattedHours,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.primaryColor,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.event_note_outlined,
-            size: 64.sp,
-            color: AppTheme.textSecondaryColor,
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'No entries yet',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textPrimaryColor,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'Tap + to add your first entry',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              color: AppTheme.textSecondaryColor,
-            ),
-          ),
-        ],
-      ),
+    return const SoftMessage(
+      icon: Icons.event_note_outlined,
+      title: 'No entries yet',
+      message: 'Tap + to add your first entry',
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, int wdId) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Entry'),
-        content: const Text('Are you sure you want to delete this entry?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<WorkDiaryBloc>().add(
-                    DeleteEntryEvent(wdId: wdId, jobId: job.jobId),
-                  );
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
+  Future<void> _showDeleteConfirmation(BuildContext context, int wdId) async {
+    final confirmed = await showSoftConfirmDialog(
+      context,
+      title: 'Delete Entry',
+      message: 'Are you sure you want to delete this entry?',
+      confirmLabel: 'Delete',
+      destructive: true,
     );
+    if (!confirmed || !context.mounted) return;
+    context.read<WorkDiaryBloc>().add(
+          DeleteEntryEvent(wdId: wdId, jobId: job.jobId),
+        );
   }
 }

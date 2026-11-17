@@ -1,15 +1,13 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import 'work_log_checklist_page.dart';
 
 /// Model to store attached file information
@@ -280,16 +278,13 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
     }
   }
 
+
+  Color get _danger => SoftPalette.of(context).danger;
+  Color get _success => SoftPalette.of(context).success;
+
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
-    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
+    final p = SoftPalette.of(context);
 
     final tasknotes = widget.entry['tasknotes'] ?? 'No description';
     final minutes = widget.entry['minutes'] ?? 0;
@@ -310,785 +305,276 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         ? 'Loading...'
         : (_taskName.isNotEmpty ? _taskName : 'No task assigned');
 
-    return Scaffold(
-      backgroundColor: scaffoldBgColor,
-      body: Column(
+    final detailRows = <Widget>[
+      if (jobId != null)
+        SoftInfoRow(icon: Icons.folder_rounded, label: 'Job', value: jobDisplay),
+      if (clientId != null)
+        SoftInfoRow(icon: Icons.business_rounded, label: 'Client', value: clientDisplay),
+      if (_taskName.isNotEmpty || _isLoadingNames)
+        SoftInfoRow(icon: Icons.task_alt_rounded, label: 'Task', value: taskDisplay),
+    ];
+
+    return SoftScaffold(
+      title: 'Work Log Details',
+      subtitle: DateFormat('EEEE, MMMM d, yyyy').format(widget.selectedDate),
+      body: Stack(
         children: [
-          // White status bar area with custom header
-          Container(
-            color: headerBgColor,
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-                color: headerBgColor,
+          ListView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              4,
+              20,
+              24 + MediaQuery.of(context).padding.bottom,
+            ),
+            children: [
+              // Entry summary card
+              SoftCard(
+                padding: const EdgeInsets.all(18),
                 child: Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 42.w,
-                        height: 42.h,
-                        decoration: BoxDecoration(
-                          color: backButtonBgColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: backButtonBorderColor,
-                            width: 1,
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.arrow_back_ios_new,
-                            size: 18.sp,
-                            color: textSecondaryColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 16.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Work Log Details',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w700,
-                              color: textPrimaryColor,
-                            ),
+                            'Entry #${widget.entryIndex}',
+                            style: SoftText.title(p, size: 20),
                           ),
-                          SizedBox(height: 2.h),
-                          Text(
-                            DateFormat('EEEE, MMMM d, yyyy').format(widget.selectedDate),
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w400,
-                              color: textSecondaryColor,
+                          if (timeFrom.isNotEmpty && timeTo.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
+                              style: SoftText.caption(p, size: 13),
                             ),
-                          ),
+                          ],
                         ],
                       ),
+                    ),
+                    SoftStatusPill(
+                      label: hours,
+                      color: p.success,
+                      icon: Icons.timer_outlined,
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    left: 16.w,
-                    right: 16.w,
-                    top: 16.w,
-                    bottom: 16.w + MediaQuery.of(context).padding.bottom,
+              const SizedBox(height: 14),
+
+              // Work details card
+              _SectionCard(
+                icon: Icons.work_rounded,
+                color: p.accent,
+                title: 'Work Details',
+                child: Column(
+                  children: [
+                    for (var i = 0; i < detailRows.length; i++) ...[
+                      if (i > 0) Divider(height: 1, thickness: 1, color: p.border),
+                      detailRows[i],
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Description card
+              _SectionCard(
+                icon: Icons.description_rounded,
+                color: p.leave,
+                title: 'Description',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    tasknotes,
+                    style: SoftText.body(p).copyWith(height: 1.6),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Attached files
+              if (_attachedFiles.isNotEmpty) ...[
+                _SectionCard(
+                  icon: Icons.attach_file_rounded,
+                  color: p.danger,
+                  title: 'Attachments',
+                  trailing: SoftStatusPill(
+                    label: '${_attachedFiles.length}',
+                    color: p.danger,
+                    showDot: false,
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-            // Entry Summary Header Card
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: cardBgColor,
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Left side: Entry Title and Time Range
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Entry Title
-                        Text(
-                          'Entry #${widget.entryIndex}',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimaryColor,
-                          ),
-                        ),
-                        if (timeFrom.isNotEmpty && timeTo.isNotEmpty) ...[
-                          SizedBox(height: 4.h),
-                          // Time Range
-                          Text(
-                            '${_formatTimeDisplay(timeFrom)} - ${_formatTimeDisplay(timeTo)}',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w400,
-                              color: textSecondaryColor,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  // Right side: Duration Badge
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.timer_outlined,
-                          size: 16.sp,
-                          color: const Color(0xFF10B981),
-                        ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          hours,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF10B981),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16.h),
-
-            // Work Details Card
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: cardBgColor,
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40.w,
-                          height: 40.w,
-                          decoration: BoxDecoration(
-                            color: isDarkMode ? const Color(0xFF6366F1).withValues(alpha: 0.2) : const Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.circular(10.r),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.work_rounded,
-                              size: 20.sp,
-                              color: const Color(0xFF6366F1),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Text(
-                          'Work Details',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                            color: textPrimaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                  ),
-                  // Details
-                  Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Column(
-                      children: [
-                        // Job
-                        if (jobId != null)
-                          _buildDetailItem(
-                            icon: Icons.folder_rounded,
-                            iconBgColor: isDarkMode ? const Color(0xFF0EA5E9).withValues(alpha: 0.2) : const Color(0xFFF0F9FF),
-                            iconColor: const Color(0xFF0EA5E9),
-                            label: 'Job',
-                            value: jobDisplay,
-                            showDivider: clientId != null || (_taskName.isNotEmpty || _isLoadingNames),
-                            isDarkMode: isDarkMode,
-                          ),
-                        // Client
-                        if (clientId != null)
-                          _buildDetailItem(
-                            icon: Icons.business_rounded,
-                            iconBgColor: isDarkMode ? const Color(0xFFF59E0B).withValues(alpha: 0.2) : const Color(0xFFFEF3C7),
-                            iconColor: const Color(0xFFF59E0B),
-                            label: 'Client',
-                            value: clientDisplay,
-                            showDivider: _taskName.isNotEmpty || _isLoadingNames,
-                            isDarkMode: isDarkMode,
-                          ),
-                        // Task
-                        if (_taskName.isNotEmpty || _isLoadingNames)
-                          _buildDetailItem(
-                            icon: Icons.task_alt_rounded,
-                            iconBgColor: isDarkMode ? const Color(0xFF10B981).withValues(alpha: 0.2) : const Color(0xFFD1FAE5),
-                            iconColor: const Color(0xFF10B981),
-                            label: 'Task',
-                            value: taskDisplay,
-                            showDivider: false,
-                            isDarkMode: isDarkMode,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16.h),
-
-            // Description Card
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: cardBgColor,
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40.w,
-                          height: 40.w,
-                          decoration: BoxDecoration(
-                            color: isDarkMode ? const Color(0xFFA855F7).withValues(alpha: 0.2) : const Color(0xFFFDF4FF),
-                            borderRadius: BorderRadius.circular(10.r),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.description_rounded,
-                              size: 20.sp,
-                              color: const Color(0xFFA855F7),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Text(
-                          'Description',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                            color: textPrimaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                  ),
-                  // Content
-                  Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Text(
-                      tasknotes,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w400,
-                        color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-                        height: 1.6,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16.h),
-
-            // Attached Files Section
-            if (_attachedFiles.isNotEmpty) ...[
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: cardBgColor,
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF64748B).withValues(alpha: isDarkMode ? 0.2 : 0.08),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Padding(
-                      padding: EdgeInsets.all(16.w),
-                      child: Row(
+                    children: List.generate(_attachedFiles.length, (index) {
+                      final file = _attachedFiles[index];
+                      final isImage = file.type == 'image';
+                      return Column(
                         children: [
-                          Container(
-                            width: 40.w,
-                            height: 40.w,
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? const Color(0xFFEF4444).withValues(alpha: 0.2) : const Color(0xFFFEE2E2),
-                              borderRadius: BorderRadius.circular(10.r),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.attach_file_rounded,
-                                size: 20.sp,
-                                color: const Color(0xFFEF4444),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Text(
-                            'Attachments',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimaryColor,
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              '${_attachedFiles.length}',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFFEF4444),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                    ),
-                    // Files List
-                    Padding(
-                      padding: EdgeInsets.all(16.w),
-                      child: Column(
-                        children: List.generate(_attachedFiles.length, (index) {
-                          final file = _attachedFiles[index];
-                          final isImage = file.type == 'image';
-                          return Column(
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.symmetric(vertical: 10.h),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 40.w,
-                                      height: 40.w,
-                                      decoration: BoxDecoration(
-                                        color: isImage
-                                            ? const Color(0xFF6366F1).withValues(alpha: isDarkMode ? 0.2 : 0.1)
-                                            : const Color(0xFF10B981).withValues(alpha: isDarkMode ? 0.2 : 0.1),
-                                        borderRadius: BorderRadius.circular(10.r),
-                                      ),
-                                      child: Icon(
-                                        isImage ? Icons.image_rounded : Icons.insert_drive_file_rounded,
-                                        size: 20.sp,
-                                        color: isImage
-                                            ? const Color(0xFF6366F1)
-                                            : const Color(0xFF10B981),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            file.name,
-                                            style: TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.w500,
-                                              color: textPrimaryColor,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          SizedBox(height: 2.h),
-                                          Text(
-                                            isImage ? 'Image file' : 'Document',
-                                            style: TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 12.sp,
-                                              fontWeight: FontWeight.w400,
-                                              color: textSecondaryColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _attachedFiles.removeAt(index);
-                                        });
-                                      },
-                                      child: Container(
-                                        width: 32.w,
-                                        height: 32.w,
-                                        decoration: BoxDecoration(
-                                          color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8FAFC),
-                                          borderRadius: BorderRadius.circular(8.r),
-                                        ),
-                                        child: Icon(
-                                          Icons.close_rounded,
-                                          size: 16.sp,
-                                          color: textSecondaryColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                SoftIconBadge(
+                                  icon: isImage
+                                      ? Icons.image_rounded
+                                      : Icons.insert_drive_file_rounded,
+                                  color: isImage ? p.accent : p.success,
+                                  size: 38,
                                 ),
-                              ),
-                              if (index < _attachedFiles.length - 1)
-                                Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                                  indent: 52.w,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        file.name,
+                                        style: SoftText.body(p, color: p.ink)
+                                            .copyWith(fontWeight: FontWeight.w500),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isImage ? 'Image file' : 'Document',
+                                        style: SoftText.caption(p),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                            ],
-                          );
-                        }),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 16.h),
-            ],
-
-            // Action Buttons
-            Row(
-              children: [
-                // Attach File Button
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _showAttachFileDialog(context),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: const Color(0xFF6366F1)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.attach_file,
-                            size: 20.sp,
-                            color: const Color(0xFF6366F1),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Attach File',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF6366F1),
+                                SoftIconButton(
+                                  icon: Icons.close_rounded,
+                                  size: 34,
+                                  tooltip: 'Remove',
+                                  onTap: () {
+                                    setState(() {
+                                      _attachedFiles.removeAt(index);
+                                    });
+                                  },
+                                ),
+                              ],
                             ),
                           ),
+                          if (index < _attachedFiles.length - 1)
+                            Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: p.border,
+                              indent: 50,
+                            ),
                         ],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                // Checklist Button
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => WorkLogChecklistPage(
-                            staffId: widget.staffId,
-                            jobId: jobId ?? 0,
-                            selectedDate: widget.selectedDate,
-                          ),
-                        ),
                       );
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(12.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.checklist,
-                            size: 20.sp,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Checklist',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                    }),
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+
+              const SizedBox(height: 6),
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: SoftPillButton(
+                      label: 'Attach File',
+                      icon: Icons.attach_file,
+                      variant: SoftPillVariant.outline,
+                      onPressed: () => _showAttachFileDialog(context),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SoftPillButton(
+                      label: 'Checklist',
+                      icon: Icons.checklist,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WorkLogChecklistPage(
+                              staffId: widget.staffId,
+                              jobId: jobId ?? 0,
+                              selectedDate: widget.selectedDate,
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ),
-                ),
-              ],
-            ),
-                    ],
-                  ),
-                ),
-                // Loading indicator while uploading
-                if (_isUploading)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
+          // Loading indicator while uploading
+          if (_isUploading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.3),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailItem({
-    required IconData icon,
-    required Color iconBgColor,
-    required Color iconColor,
-    required String label,
-    required String value,
-    bool showDivider = true,
-    bool isDarkMode = false,
-  }) {
-    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8);
-    final valueColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
-    final dividerColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
-
-    return Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 10.h),
-          child: Row(
-            children: [
-              Container(
-                width: 40.w,
-                height: 40.w,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Center(
-                  child: Icon(
-                    icon,
-                    size: 20.sp,
-                    color: iconColor,
-                  ),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w400,
-                        color: labelColor,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        color: valueColor,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (showDivider)
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: dividerColor,
-            indent: 52.w,
-          ),
-      ],
-    );
-  }
-
   void _showAttachFileDialog(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
-    final sheetBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final handleColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFE5E7EB);
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final p = SoftPalette.of(context);
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: EdgeInsets.all(20.w),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         decoration: BoxDecoration(
-          color: sheetBgColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.r),
-            topRight: Radius.circular(20.r),
-          ),
+          color: p.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40.w,
-              height: 4.h,
-              decoration: BoxDecoration(
-                color: handleColor,
-                borderRadius: BorderRadius.circular(2.r),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: p.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            SizedBox(height: 20.h),
-            Text(
-              'Attach File',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: titleColor,
+              const SizedBox(height: 18),
+              Text('Attach File', style: SoftText.heading(p)),
+              const SizedBox(height: 18),
+              _buildAttachOption(
+                context,
+                icon: Icons.camera_alt_outlined,
+                label: 'Take Photo',
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _pickImageFromCamera(context);
+                },
               ),
-            ),
-            SizedBox(height: 20.h),
-            _buildAttachOption(
-              context,
-              icon: Icons.camera_alt_outlined,
-              label: 'Take Photo',
-              isDarkMode: isDarkMode,
-              onTap: () async {
-                Navigator.pop(context);
-                await _pickImageFromCamera(context);
-              },
-            ),
-            SizedBox(height: 12.h),
-            _buildAttachOption(
-              context,
-              icon: Icons.photo_library_outlined,
-              label: 'Choose from Gallery',
-              isDarkMode: isDarkMode,
-              onTap: () async {
-                Navigator.pop(context);
-                await _pickImageFromGallery(context);
-              },
-            ),
-            SizedBox(height: 12.h),
-            _buildAttachOption(
-              context,
-              icon: Icons.insert_drive_file_outlined,
-              label: 'Choose Document',
-              isDarkMode: isDarkMode,
-              onTap: () async {
-                Navigator.pop(context);
-                await _pickDocument(context);
-              },
-            ),
-            SizedBox(height: 20.h),
-          ],
+              const SizedBox(height: 10),
+              _buildAttachOption(
+                context,
+                icon: Icons.photo_library_outlined,
+                label: 'Choose from Gallery',
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _pickImageFromGallery(context);
+                },
+              ),
+              const SizedBox(height: 10),
+              _buildAttachOption(
+                context,
+                icon: Icons.insert_drive_file_outlined,
+                label: 'Choose Document',
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _pickDocument(context);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -1123,10 +609,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error accessing camera: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: _danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
         );
@@ -1163,10 +649,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error accessing gallery: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: _danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
         );
@@ -1215,10 +701,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error selecting file: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: _danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
         );
@@ -1226,44 +712,36 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
     }
   }
 
+
   Widget _buildAttachOption(
     BuildContext context, {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-    bool isDarkMode = false,
   }) {
-    final bgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final iconColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final textColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
+    final p = SoftPalette.of(context);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 16.w),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 22.sp,
-              color: iconColor,
-            ),
-            SizedBox(width: 12.w),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: textColor,
+    return Material(
+      color: p.surfaceAlt,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          child: Row(
+            children: [
+              Icon(icon, size: 22, color: p.inkSoft),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: SoftText.body(p, color: p.ink).copyWith(fontWeight: FontWeight.w500),
+                ),
               ),
-            ),
-          ],
+              Icon(Icons.chevron_right_rounded, size: 20, color: p.muted),
+            ],
+          ),
         ),
       ),
     );
@@ -1343,10 +821,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Error: Work diary entry ID not found'),
-            backgroundColor: Colors.red,
+            backgroundColor: _danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
         );
@@ -1411,25 +889,25 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(Icons.cloud_done, color: Colors.white, size: 20),
-                SizedBox(width: 8.w),
-                const Expanded(
+                Icon(Icons.cloud_done, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Expanded(
                   child: Text(
                     'File uploaded successfully!',
                     style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: AppTheme.fontFamily,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
               ],
             ),
-            backgroundColor: const Color(0xFF4CAF50),
+            backgroundColor: _success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(14),
             ),
             duration: const Duration(seconds: 3),
           ),
@@ -1443,10 +921,10 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error uploading file: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: _danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
         );
@@ -1456,5 +934,47 @@ class _WorkLogDetailPageState extends State<WorkLogDetailPage> {
         _isUploading = false;
       });
     }
+  }
+}
+
+/// Soft card with an icon badge + title header and a body.
+class _SectionCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final Widget child;
+  final Widget? trailing;
+
+  const _SectionCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.child,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    return SoftCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SoftIconBadge(icon: icon, color: color, size: 36),
+              const SizedBox(width: 12),
+              Expanded(child: Text(title, style: SoftText.heading(p, size: 15.5))),
+              if (trailing != null) trailing!,
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(height: 1, thickness: 1, color: p.border),
+          const SizedBox(height: 4),
+          child,
+        ],
+      ),
+    );
   }
 }

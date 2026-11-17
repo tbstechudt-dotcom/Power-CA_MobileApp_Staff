@@ -1,21 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../app/theme.dart';
-import '../../../../core/providers/theme_provider.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
+import '../../../../shared/widgets/home_style.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import '../../../../core/services/priority_service.dart';
+import '../../../../core/services/tab_data_cache.dart';
 import '../../../auth/domain/entities/staff.dart';
 import 'jobs_filtered_page.dart';
 
-// Debug print for priority service
-import 'package:flutter/foundation.dart';
+
+/// Soft palette tone for a job status label.
+Color _jobStatusTone(SoftPalette p, String status) {
+  switch (status) {
+    case 'Priority':
+      return p.danger;
+    case 'Waiting':
+      return p.warning;
+    case 'Planning':
+      return p.accent;
+    case 'Progress':
+      return p.success;
+    case 'Work Done':
+      return p.isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488);
+    case 'Delivery':
+      return p.leave;
+    default:
+      return p.accent;
+  }
+}
 
 class JobsPage extends StatefulWidget {
   final Staff currentStaff;
@@ -44,36 +62,11 @@ class _JobsPageState extends State<JobsPage> {
 
   // Status configurations
   final List<Map<String, dynamic>> _statusConfigs = [
-    {
-      'status': 'Waiting',
-      'icon': Icons.hourglass_empty_rounded,
-      'color': const Color(0xFFF59E0B),
-      'gradient': [const Color(0xFFFBBF24), const Color(0xFFF59E0B)],
-    },
-    {
-      'status': 'Planning',
-      'icon': Icons.architecture_rounded,
-      'color': const Color(0xFF3B82F6),
-      'gradient': [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
-    },
-    {
-      'status': 'Progress',
-      'icon': Icons.rocket_launch_rounded,
-      'color': const Color(0xFF10B981),
-      'gradient': [const Color(0xFF34D399), const Color(0xFF10B981)],
-    },
-    {
-      'status': 'Work Done',
-      'icon': Icons.task_alt_rounded,
-      'color': const Color(0xFF0D9488),
-      'gradient': [const Color(0xFF2DD4BF), const Color(0xFF0D9488)],
-    },
-    {
-      'status': 'Delivery',
-      'icon': Icons.local_shipping_rounded,
-      'color': const Color(0xFF8B5CF6),
-      'gradient': [const Color(0xFFA78BFA), const Color(0xFF8B5CF6)],
-    },
+    {'status': 'Waiting', 'icon': Icons.hourglass_empty_rounded},
+    {'status': 'Planning', 'icon': Icons.architecture_rounded},
+    {'status': 'Progress', 'icon': Icons.rocket_launch_rounded},
+    {'status': 'Work Done', 'icon': Icons.task_alt_rounded},
+    {'status': 'Delivery', 'icon': Icons.local_shipping_rounded},
     // Closer status removed - not needed in jobs list
   ];
 
@@ -100,7 +93,14 @@ class _JobsPageState extends State<JobsPage> {
     super.dispose();
   }
 
+  String get _cacheKey =>
+      'jobs:${widget.currentStaff.staffId}:${widget.currentStaff.orgId}:${widget.currentStaff.locId}';
+
   Future<void> _initializeAndLoad() async {
+    // Show the last loaded jobs instantly; _loadJobs refreshes quietly.
+    final cached = TabDataCache.read<List<Map<String, dynamic>>>(_cacheKey);
+    if (cached != null) _allJobs = cached;
+
     // Set staff ID in PriorityService first
     debugPrint('JobsPage: Setting staff ID ${widget.currentStaff.staffId} in PriorityService');
     await PriorityService.setCurrentStaffId(widget.currentStaff.staffId);
@@ -127,8 +127,10 @@ class _JobsPageState extends State<JobsPage> {
 
   Future<void> _loadJobs() async {
     if (!mounted) return;
+    // Spinner only when there's nothing to show yet.
+    final hasCache = TabDataCache.read<List<Map<String, dynamic>>>(_cacheKey) != null;
     setState(() {
-      _isLoadingJobs = true;
+      _isLoadingJobs = !hasCache;
     });
 
     try {
@@ -218,6 +220,7 @@ class _JobsPageState extends State<JobsPage> {
       }
       debugPrint('DEBUG JobsPage: Status counts: $statusCounts');
 
+      TabDataCache.write(_cacheKey, jobs);
       if (!mounted) return;
       setState(() {
         _allJobs = jobs;
@@ -328,38 +331,46 @@ class _JobsPageState extends State<JobsPage> {
     });
   }
 
+
+  void _navigateToAllJobs() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => JobsFilteredPage(
+          currentStaff: widget.currentStaff,
+          statusFilter: 'All jobs',
+          jobs: _activeJobs,
+        ),
+      ),
+    ).then((_) => _loadPriorityJobs());
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textSecondaryColor;
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
-    final searchBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textPrimaryColor;
-    final searchHintColor = isDarkMode ? const Color(0xFF64748B) : AppTheme.textDisabledColor;
-    final searchIconColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final p = SoftPalette.of(context);
 
     // Update status bar style based on theme
-    _updateStatusBarStyle(isDarkMode);
+    _updateStatusBarStyle(p.isDark);
+
+    final total = _activeJobs.length;
+    final inProgress = _getJobCountByStatus('Progress');
+    final planning = _getJobCountByStatus('Planning');
+    final active = inProgress + planning;
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: scaffoldBgColor,
+      backgroundColor: p.background,
+      extendBody: true,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: Column(
-        children: [
-          // Status bar area
-          Container(
-            color: headerBgColor,
-            child: SafeArea(
-              bottom: false,
-              child: AppHeader(
-                currentStaff: widget.currentStaff,
-                onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
-              ),
+      body: HomeBackground(
+        child: Column(
+          children: [
+            AppHeader(
+              currentStaff: widget.currentStaff,
+              homeStyle: true,
+              showPlace: false,
+              onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
-          ),
 
             // Content
             Expanded(
@@ -367,398 +378,154 @@ class _JobsPageState extends State<JobsPage> {
                   ? const Center(child: CircularProgressIndicator())
                   : RefreshIndicator(
                       onRefresh: _loadJobs,
-                      color: AppTheme.primaryColor,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(12.w),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Page Title
-                            Text(
-                              'My Jobs',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w700,
-                                color: titleColor,
-                              ),
-                            ),
-                            SizedBox(height: 4.h),
-                            Text(
-                              'Track and manage your work',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w400,
-                                color: subtitleColor,
-                              ),
-                            ),
-                            SizedBox(height: 20.h),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                        children: [
+                          const HomeEyebrow('My jobs'),
+                          HomeInlineHeadline(
+                            parts: [
+                              (text: 'You have ', strong: false),
+                              (text: '$active active ${active == 1 ? 'job' : 'jobs'}', strong: true),
+                              (text: ', ', strong: false),
+                              (text: '$inProgress in progress', strong: true),
+                              (text: '.', strong: false),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
 
-                            // Summary Cards Row
-                            Row(
+                          // Client Search Field
+                          TextField(
+                            controller: _searchController,
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                            },
+                            onSubmitted: (_) => _performSearch(),
+                            style: softInputTextStyle(context),
+                            decoration: softInputDecoration(
+                              context,
+                              hint: 'Search jobs by client name',
+                              icon: Icons.search_rounded,
+                              pill: true,
+                              suffix: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _searchQuery = '';
+                                        });
+                                      },
+                                      icon: Icon(
+                                        Icons.close_rounded,
+                                        color: p.muted,
+                                        size: 20,
+                                      ),
+                                    )
+                                  : IconButton(
+                                      onPressed: _performSearch,
+                                      icon: Icon(
+                                        Icons.arrow_forward_rounded,
+                                        color: p.ink,
+                                        size: 22,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // By status
+                          HomeSectionCard(
+                            title: 'By status',
+                            subtitle: 'Tap a status to see its jobs',
+                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 4),
+                            child: Column(
                               children: [
-                                Expanded(
-                                  child: _buildSummaryCard(
-                                    context: context,
-                                    title: 'Total',
-                                    count: _activeJobs.length,
-                                    icon: Icons.work_rounded,
-                                    color: AppTheme.primaryColor,
-                                  ),
+                                HomeStatusRow(
+                                  first: true,
+                                  color: p.danger,
+                                  label: 'Priority',
+                                  caption: 'Jobs you starred',
+                                  count: '$_priorityCount',
+                                  onTap: _navigateToPriorityJobs,
                                 ),
-                                SizedBox(width: 12.w),
-                                Expanded(
-                                  child: _buildSummaryCard(
-                                    context: context,
-                                    title: 'Active',
-                                    count: _getJobCountByStatus('Progress') + _getJobCountByStatus('Planning'),
-                                    icon: Icons.pending_actions_rounded,
-                                    color: const Color(0xFF10B981),
+                                for (final config in _statusConfigs)
+                                  HomeStatusRow(
+                                    color: _jobStatusTone(p, config['status'] as String),
+                                    label: config['status'] as String,
+                                    count: '${_getJobCountByStatus(config['status'] as String)}',
+                                    onTap: () => _navigateToFilteredJobs(config['status'] as String),
                                   ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Job overview
+                          HomeSectionCard(
+                            title: 'Job overview',
+                            subtitle: '$total open ${total == 1 ? 'job' : 'jobs'} • $planning planning',
+                            trailing: HomeRoundAction(
+                              icon: Icons.north_east_rounded,
+                              tooltip: 'All jobs',
+                              onTap: _navigateToAllJobs,
+                            ),
+                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Expanded(child: HomeStat(label: 'Total', value: '$total')),
+                                    Expanded(child: HomeStat(label: 'Active', value: '$active')),
+                                    Expanded(
+                                      child: HomeStat(
+                                        label: 'Priority',
+                                        value: '$_priorityCount',
+                                        dot: p.danger,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                HomeSegmentBar(
+                                  segments: [
+                                    for (final config in _statusConfigs)
+                                      (
+                                        value: _getJobCountByStatus(config['status'] as String).toDouble(),
+                                        color: _jobStatusTone(p, config['status'] as String),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Text('By status', style: SoftText.caption(p, size: 12)),
+                                    const Spacer(),
+                                    Text(
+                                      '$total ${total == 1 ? 'job' : 'jobs'}',
+                                      style: SoftText.caption(p, size: 12),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
-
-                            // Client Search Field
-                            Container(
-                              decoration: BoxDecoration(
-                                color: searchBgColor,
-                                borderRadius: BorderRadius.circular(12.r),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _searchQuery = value;
-                                  });
-                                },
-                                onSubmitted: (_) => _performSearch(),
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: searchTextColor,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'Search by client name...',
-                                  hintStyle: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w400,
-                                    color: searchHintColor,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.search_rounded,
-                                    color: searchIconColor,
-                                    size: 22.sp,
-                                  ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() {
-                                              _searchQuery = '';
-                                            });
-                                          },
-                                          icon: Icon(
-                                            Icons.close_rounded,
-                                            color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                            size: 20.sp,
-                                          ),
-                                        )
-                                      : IconButton(
-                                          onPressed: _performSearch,
-                                          icon: Icon(
-                                            Icons.arrow_forward_rounded,
-                                            color: AppTheme.primaryColor,
-                                            size: 22.sp,
-                                          ),
-                                        ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    borderSide: BorderSide(
-                                      color: AppTheme.primaryColor,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  filled: true,
-                                  fillColor: searchBgColor,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16.w,
-                                    vertical: 14.h,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 20.h),
-
-                            // Section Title
-                            Text(
-                              'By Jobs Status',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w700,
-                                color: titleColor,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-
-                            // Priority Status Item (at top)
-                            _buildStatusListItem(
-                              status: 'Priority',
-                              icon: Icons.star_rounded,
-                              gradient: [const Color(0xFFEF4444), const Color(0xFFDC2626)],
-                              count: _priorityCount,
-                              onTap: () => _navigateToPriorityJobs(),
-                            ),
-
-                            // Status List
-                            ListView.builder(
-                              shrinkWrap: true,
-                              padding: EdgeInsets.zero,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _statusConfigs.length,
-                              itemBuilder: (context, index) {
-                                final config = _statusConfigs[index];
-                                final status = config['status'] as String;
-                                final icon = config['icon'] as IconData;
-                                final gradient = config['gradient'] as List<Color>;
-                                final count = _getJobCountByStatus(status);
-
-                                return _buildStatusListItem(
-                                  status: status,
-                                  icon: icon,
-                                  gradient: gradient,
-                                  count: count,
-                                  onTap: () => _navigateToFilteredJobs(status),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
             ),
           ],
         ),
+      ),
       bottomNavigationBar: ModernBottomNavigation(
         currentIndex: 1,
         currentStaff: widget.currentStaff,
       ),
     );
   }
-
-  Widget _buildSummaryCard({
-    required BuildContext context,
-    required String title,
-    required int count,
-    required IconData icon,
-    required Color color,
-  }) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final countColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: isDarkMode ? 0.15 : 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20.sp,
-                  color: color,
-                ),
-              ),
-              Icon(
-                Icons.trending_up_rounded,
-                size: 16.sp,
-                color: const Color(0xFF10B981),
-              ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 28.sp,
-              fontWeight: FontWeight.w800,
-              color: countColor,
-            ),
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            '$title Jobs',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: labelColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusListItem({
-    required String status,
-    required IconData icon,
-    required List<Color> gradient,
-    required int count,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(bottom: 10.h),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: gradient[1].withValues(alpha: 0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Background pattern icon
-            Positioned(
-              right: -15.w,
-              top: -15.h,
-              child: Icon(
-                icon,
-                size: 70.sp,
-                color: Colors.white.withValues(alpha: 0.12),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-              child: Row(
-                children: [
-                  // Icon container
-                  Container(
-                    width: 44.w,
-                    height: 44.h,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Icon(
-                      icon,
-                      size: 22.sp,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 14.w),
-                  // Status name
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          status,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          'Tap to view jobs',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Count badge
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Text(
-                      count.toString(),
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
-                  // Arrow
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16.sp,
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
-
-

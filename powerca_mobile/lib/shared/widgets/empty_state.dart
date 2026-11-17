@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'soft_page.dart';
+
 /// Empty State Widget
 /// Shows when there's no data to display
 class EmptyState extends StatelessWidget {
@@ -22,7 +24,7 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final p = SoftPalette.of(context);
 
     return Center(
       child: Padding(
@@ -34,41 +36,39 @@ class EmptyState extends StatelessWidget {
             if (customIcon != null)
               customIcon!
             else
-              Icon(
-                icon ?? Icons.inbox_outlined,
-                size: 80,
-                color: Colors.grey[400],
+              SoftIconBadge(
+                icon: icon ?? Icons.inbox_outlined,
+                color: p.muted,
+                size: 64,
               ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
 
             // Main message
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: Colors.grey[700],
-              ),
+              style: SoftText.heading(p, size: 17),
             ),
 
             // Description
             if (description != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 description!,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: SoftText.body(p),
               ),
             ],
 
             // Action button
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton(
+              const SizedBox(height: 22),
+              SoftPillButton(
+                label: actionLabel!,
                 onPressed: onAction,
-                child: Text(actionLabel!),
+                expand: false,
+                height: 44,
               ),
             ],
           ],

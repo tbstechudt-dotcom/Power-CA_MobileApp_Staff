@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import '../../domain/entities/comment.dart';
 import '../bloc/pinboard_bloc.dart';
 import '../bloc/pinboard_event.dart';
@@ -52,61 +51,30 @@ class _CommentsTabState extends State<CommentsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final emptyIconColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[400];
-    final emptyTextColor = isDarkMode ? const Color(0xFF94A3B8) : Colors.grey[600];
-    final emptySubtextColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[500];
-    final inputContainerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final inputFieldBgColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[100];
-    final inputTextColor = isDarkMode ? const Color(0xFFF1F5F9) : Colors.black;
-    final inputHintColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[600];
-    final dividerColor = isDarkMode ? const Color(0xFF334155) : Colors.grey[300];
+    final p = SoftPalette.of(context);
 
     return Column(
       children: [
         // Comments List
         Expanded(
           child: widget.isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(),
+              ? Center(
+                  child: CircularProgressIndicator(color: p.ink, strokeWidth: 2.4),
                 )
               : widget.comments.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.comment_outlined,
-                            size: 64.sp,
-                            color: emptyIconColor,
-                          ),
-                          SizedBox(height: 16.h),
-                          Text(
-                            'No comments yet',
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              color: emptyTextColor,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Be the first to comment!',
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: emptySubtextColor,
-                            ),
-                          ),
-                        ],
-                      ),
+                  ? const SoftMessage(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      title: 'No comments yet',
+                      message: 'Be the first to comment!',
                     )
                   : ListView.separated(
-                      padding: EdgeInsets.all(16.w),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                       itemCount: widget.comments.length,
                       separatorBuilder: (context, index) =>
-                          Divider(height: 24.h, color: dividerColor),
+                          const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final comment = widget.comments[index];
-                        return _CommentItem(comment: comment, isDarkMode: isDarkMode);
+                        return _CommentItem(comment: comment);
                       },
                     ),
         ),
@@ -114,52 +82,45 @@ class _CommentsTabState extends State<CommentsTab> {
         // Comment Input
         Container(
           decoration: BoxDecoration(
-            color: inputContainerBgColor,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              ),
-            ],
+            color: p.background,
+            border: Border(top: BorderSide(color: p.border)),
           ),
           child: SafeArea(
+            top: false,
             child: Padding(
-              padding: EdgeInsets.all(16.w),
+              padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _commentController,
                       focusNode: _commentFocusNode,
-                      style: TextStyle(color: inputTextColor),
-                      decoration: InputDecoration(
-                        hintText: 'Write a comment...',
-                        hintStyle: TextStyle(color: inputHintColor),
-                        filled: true,
-                        fillColor: inputFieldBgColor,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24.r),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                      style: softInputTextStyle(context),
+                      decoration: softInputDecoration(
+                        context,
+                        hint: 'Write a comment...',
+                        dense: true,
+                      ).copyWith(
+                        border: _roundBorder(p.border),
+                        enabledBorder: _roundBorder(p.border),
+                        focusedBorder: _roundBorder(p.ink, 1.4),
                       ),
                       maxLines: null,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _addComment(),
                     ),
                   ),
-                  SizedBox(width: 8.w),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      onPressed: _addComment,
-                      icon: const Icon(
-                        Icons.send,
-                        color: Colors.white,
+                  const SizedBox(width: 8),
+                  Material(
+                    color: p.pill,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _addComment,
+                      child: SizedBox(
+                        width: 46,
+                        height: 46,
+                        child: Icon(Icons.arrow_upward_rounded, size: 22, color: p.onPill),
                       ),
                     ),
                   ),
@@ -171,82 +132,86 @@ class _CommentsTabState extends State<CommentsTab> {
       ],
     );
   }
+
+  OutlineInputBorder _roundBorder(Color c, [double w = 1]) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(999),
+        borderSide: BorderSide(color: c, width: w),
+      );
 }
 
 class _CommentItem extends StatelessWidget {
   final Comment comment;
-  final bool isDarkMode;
 
-  const _CommentItem({required this.comment, required this.isDarkMode});
+  const _CommentItem({required this.comment});
 
   @override
   Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
     final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
-    final authorNameColor = isDarkMode ? const Color(0xFFF1F5F9) : Colors.black;
-    final dateColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[600];
-    final contentColor = isDarkMode ? const Color(0xFFCBD5E1) : Colors.grey[800];
-    final editedColor = isDarkMode ? const Color(0xFF64748B) : Colors.grey[500];
+    final initial = comment.authorName.trim().isNotEmpty
+        ? comment.authorName.trim()[0].toUpperCase()
+        : '?';
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Comment Content
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Author and Date
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      comment.authorName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14.sp,
-                        color: authorNameColor,
+    return SoftCard(
+      padding: const EdgeInsets.all(14),
+      radius: 18,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: p.accentSoft,
+            child: Text(
+              initial,
+              style: SoftText.heading(p, size: 13).copyWith(color: p.accent),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Comment Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Author and Date
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        comment.authorName,
+                        style: SoftText.heading(p, size: 14),
                       ),
                     ),
-                  ),
+                    Text(
+                      dateFormat.format(comment.createdAt),
+                      style: SoftText.caption(p, size: 11),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 6),
+
+                // Comment Text
+                Text(
+                  comment.content,
+                  style: SoftText.body(p, color: p.ink),
+                ),
+
+                // Edited indicator
+                if (comment.updatedAt != null &&
+                    comment.updatedAt != comment.createdAt) ...[
+                  const SizedBox(height: 4),
                   Text(
-                    dateFormat.format(comment.createdAt),
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: dateColor,
+                    'Edited',
+                    style: SoftText.caption(p, size: 11).copyWith(
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                 ],
-              ),
-
-              SizedBox(height: 6.h),
-
-              // Comment Text
-              Text(
-                comment.content,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  height: 1.4,
-                  color: contentColor,
-                ),
-              ),
-
-              // Edited indicator
-              if (comment.updatedAt != null &&
-                  comment.updatedAt != comment.createdAt) ...[
-                SizedBox(height: 4.h),
-                Text(
-                  'Edited',
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    color: editedColor,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

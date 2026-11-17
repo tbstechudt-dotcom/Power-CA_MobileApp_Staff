@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/providers/theme_provider.dart';
+import '../../../../core/utils/error_messages.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../pages/work_log_entry_form_page.dart';
 import '../pages/work_log_list_page.dart';
 
@@ -28,15 +30,37 @@ class ModernWorkCalendar extends StatefulWidget {
 class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
   Map<DateTime, int> _workDays = {};
   Map<DateTime, List<Map<String, dynamic>>> _workEntriesByDate = {};
+  // ignore: unused_field
   List<Map<String, dynamic>> _allWorkEntries = [];
   bool _isLoading = true;
   String? _errorMessage;
   EventList<Event> _markedDateMap = EventList<Event>(events: {});
+  int _holidaysInMonth = 0;
+  int _workingDaysInMonth = 0;
+  DateTime _displayedMonth = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    _calculateHolidays(_displayedMonth);
     _loadWorkDiaryData();
+  }
+
+  /// Count Sundays and working days in the given month
+  void _calculateHolidays(DateTime month) {
+    final firstDay = DateTime(month.year, month.month, 1);
+    final lastDay = DateTime(month.year, month.month + 1, 0);
+    int sundays = 0;
+    DateTime day = firstDay;
+    while (!day.isAfter(lastDay)) {
+      if (day.weekday == DateTime.sunday) sundays++;
+      day = day.add(const Duration(days: 1));
+    }
+    setState(() {
+      _holidaysInMonth = sundays;
+      _workingDaysInMonth = lastDay.day - sundays;
+      _displayedMonth = month;
+    });
   }
 
   Future<void> _loadWorkDiaryData() async {
@@ -65,12 +89,12 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             counts[normalized] = (counts[normalized] ?? 0) + 1;
 
             // Store full entry data
-            allEntries.add(entry as Map<String, dynamic>);
+            allEntries.add(entry);
 
             if (entriesByDate[normalized] == null) {
               entriesByDate[normalized] = [];
             }
-            entriesByDate[normalized]!.add(entry as Map<String, dynamic>);
+            entriesByDate[normalized]!.add(entry);
           } catch (e) {
             // Skip invalid dates
           }
@@ -89,8 +113,10 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
       // Notify parent that data was reloaded
       widget.onDataReloaded?.call();
     } catch (e) {
+      debugPrint('ModernWorkCalendar: load failed: $e');
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'Error loading data: $e';
+        _errorMessage = ErrorMessages.friendly(e);
         _isLoading = false;
       });
     }
@@ -139,24 +165,20 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final p = SoftPalette.of(context);
+    final cardBgColor = p.surface;
     final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textPrimaryColor;
     final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
     final iconBgColor = isDarkMode ? const Color(0xFF2563EB).withValues(alpha: 0.2) : const Color(0xFF2563EB).withValues(alpha: 0.1);
-    final errorBgColor = isDarkMode ? const Color(0xFF7F1D1D) : const Color(0xFFFFEBEE);
-    final errorTextColor = isDarkMode ? const Color(0xFFFCA5A5) : Colors.red;
+    final errorBgColor = p.tint(p.danger);
+    final errorTextColor = p.danger;
 
     return Container(
       decoration: BoxDecoration(
         color: cardBgColor,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: p.border),
+        boxShadow: p.shadow,
       ),
       padding: EdgeInsets.only(left: 16.w, right: 16.w, top: 16.h, bottom: 0),
       child: Column(
@@ -184,7 +206,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                   Text(
                     'Work Log',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
                       color: textPrimaryColor,
@@ -195,7 +217,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                     Text(
                       'Loading...',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w400,
                         color: textSecondaryColor,
@@ -205,7 +227,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                     Text(
                       '${_workDays.length} days logged',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w400,
                         color: textSecondaryColor,
@@ -214,7 +236,75 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                 ],
               ),
               const Spacer(),
-              if (_isLoading)
+              // Working days & Holidays badges
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Working days badge
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                          : const Color(0xFFD1FAE5),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.work_rounded,
+                          size: 14.sp,
+                          color: const Color(0xFF10B981),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          '$_workingDaysInMonth Working',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF10B981),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  // Holidays badge
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? const Color(0xFFEF4444).withValues(alpha: 0.15)
+                          : const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.weekend_rounded,
+                          size: 14.sp,
+                          color: const Color(0xFFEF4444),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          '$_holidaysInMonth Holidays',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_isLoading) ...[
+                SizedBox(width: 8.w),
                 SizedBox(
                   width: 20.w,
                   height: 20.h,
@@ -223,6 +313,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                     valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
                   ),
                 ),
+              ],
             ],
           ),
           SizedBox(height: 16.h),
@@ -230,24 +321,28 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
           // Error message (if any)
           if (_errorMessage != null)
             Container(
-              padding: EdgeInsets.all(12.w),
+              padding: EdgeInsets.fromLTRB(12.w, 4.h, 4.w, 4.h),
               decoration: BoxDecoration(
                 color: errorBgColor,
-                borderRadius: BorderRadius.circular(8.r),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline, color: errorTextColor),
+                  Icon(Icons.wifi_off_rounded, color: errorTextColor, size: 20),
                   SizedBox(width: 8.w),
                   Expanded(
                     child: Text(
                       _errorMessage!,
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 12.sp,
                         color: errorTextColor,
                       ),
                     ),
+                  ),
+                  TextButton(
+                    onPressed: _loadWorkDiaryData,
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -257,7 +352,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
           CalendarCarousel<Event>(
             onDayPressed: _onDateSelected,
             weekendTextStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFFEF1E05),  // RED for weekends
@@ -303,7 +398,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                               ? LinearGradient(
                                   colors: [
                                     AppTheme.primaryColor,
-                                    AppTheme.primaryColor.withOpacity(0.8),
+                                    AppTheme.primaryColor.withValues(alpha: 0.8),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -311,12 +406,12 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                               : LinearGradient(
                                   colors: isDarkMode
                                       ? [
-                                          const Color(0xFF4CAF50).withOpacity(0.3),
-                                          const Color(0xFF4CAF50).withOpacity(0.2),
+                                          const Color(0xFF4CAF50).withValues(alpha: 0.3),
+                                          const Color(0xFF4CAF50).withValues(alpha: 0.2),
                                         ]
                                       : [
-                                          const Color(0xFF4CAF50).withOpacity(0.2),
-                                          const Color(0xFF4CAF50).withOpacity(0.12),
+                                          const Color(0xFF4CAF50).withValues(alpha: 0.2),
+                                          const Color(0xFF4CAF50).withValues(alpha: 0.12),
                                         ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -325,14 +420,14 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                           boxShadow: isCurrentDate
                               ? [
                                   BoxShadow(
-                                    color: AppTheme.primaryColor.withOpacity(0.4),
+                                    color: AppTheme.primaryColor.withValues(alpha: 0.4),
                                     blurRadius: 8,
                                     offset: const Offset(0, 1),
                                   ),
                                 ]
                               : [
                                   BoxShadow(
-                                    color: const Color(0xFF4CAF50).withOpacity(isDarkMode ? 0.25 : 0.15),
+                                    color: const Color(0xFF4CAF50).withValues(alpha: isDarkMode ? 0.25 : 0.15),
                                     blurRadius: 4,
                                     offset: const Offset(0, 1),
                                   ),
@@ -344,7 +439,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                           child: Text(
                             '${day.day}',
                             style: TextStyle(
-                              fontFamily: 'Inter',
+                              fontFamily: 'Geist',
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w700,
                               color: textColor,
@@ -369,7 +464,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: dotColor.withOpacity(0.5),
+                                      color: dotColor.withValues(alpha: 0.5),
                                       blurRadius: 2,
                                     ),
                                   ],
@@ -402,7 +497,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
                               child: Text(
                                 '$entryCount',
                                 style: TextStyle(
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'Geist',
                                   fontSize: 8.sp,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
@@ -420,7 +515,7 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
               return null;
             },
             weekdayTextStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 12.sp,
               fontWeight: FontWeight.w600,
               color: isDarkMode ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
@@ -437,14 +532,14 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             markedDateMoreShowTotal: null,
             showHeader: true,
             todayTextStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 13.sp,
               fontWeight: FontWeight.w500,
               color: Colors.white,
             ),
             todayButtonColor: const Color(0xFF2563EB),
             selectedDayTextStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: Colors.white,
@@ -452,28 +547,28 @@ class _ModernWorkCalendarState extends State<ModernWorkCalendar> {
             minSelectedDate: null,
             maxSelectedDate: null,
             prevDaysTextStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFA8A8A8),  // Gray for previous month
             ),
             inactiveDaysTextStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFA8A8A8),  // Gray for next month
             ),
             onCalendarChanged: (DateTime date) {
-              // Calendar month changed - no action needed
+              _calculateHolidays(date);
             },
             daysTextStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29),  // Text color for regular days
             ),
             headerTextStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: textPrimaryColor,

@@ -31,6 +31,7 @@ import 'features/work_diary/domain/entities/job.dart';
 import 'features/work_diary/presentation/pages/work_diary_list_page.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/settings/presentation/pages/help_support_page.dart';
+import 'shared/widgets/soft_page.dart';
 
 // Global error message for display
 String? _initializationError;
@@ -122,46 +123,118 @@ class ErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        backgroundColor: Colors.red[50],
-        appBar: AppBar(
-          title: const Text('App Error'),
-          backgroundColor: Colors.red,
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'The app failed to start:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                color: Colors.white,
-                child: Text(
-                  error,
-                  style: const TextStyle(color: Colors.red, fontSize: 14),
+      home: _StartupIssueScreen(
+        title: 'App Error',
+        icon: Icons.error_outline_rounded,
+        isError: true,
+        heading: 'The app failed to start:',
+        message: error,
+        detailsLabel: 'Stack Trace:',
+        details: stack,
+      ),
+    );
+  }
+}
+
+/// Soft-styled screen shown when startup fails or completes with errors.
+class _StartupIssueScreen extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool isError;
+  final String heading;
+  final String message;
+  final String? detailsLabel;
+  final String? details;
+  final String? hint;
+
+  const _StartupIssueScreen({
+    required this.title,
+    required this.icon,
+    required this.isError,
+    required this.heading,
+    required this.message,
+    this.detailsLabel,
+    this.details,
+    this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    final tone = isError ? p.danger : p.warning;
+
+    return Scaffold(
+      backgroundColor: p.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SoftPageHeader(title: title, showBack: false),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SoftCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              SoftIconBadge(icon: icon, color: tone, size: 44),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Text(
+                                  heading,
+                                  style: SoftText.heading(p, size: 17),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: p.tint(tone),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              message,
+                              style: SoftText.body(p, color: p.danger)
+                                  .copyWith(fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          if (hint != null) ...[
+                            const SizedBox(height: 16),
+                            Text(hint!, style: SoftText.body(p)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (details != null) ...[
+                      const SizedBox(height: 20),
+                      if (detailsLabel != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6, bottom: 10),
+                          child: Text(
+                            detailsLabel!.toUpperCase(),
+                            style: SoftText.overline(p),
+                          ),
+                        ),
+                      SoftCard(
+                        padding: const EdgeInsets.all(14),
+                        child: Text(
+                          details!,
+                          style: SoftText.body(p, size: 10, color: p.ink),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Stack Trace:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                color: Colors.white,
-                child: Text(
-                  stack,
-                  style: const TextStyle(fontSize: 10),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -176,42 +249,16 @@ class PowerCAApp extends StatelessWidget {
     // Show error screen if there was an initialization error
     if (_initializationError != null) {
       return MaterialApp(
-        home: Scaffold(
-          backgroundColor: Colors.orange[50],
-          appBar: AppBar(
-            title: const Text('Initialization Warning'),
-            backgroundColor: Colors.orange,
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'App started with errors:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  color: Colors.white,
-                  width: double.infinity,
-                  child: Text(
-                    _initializationError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 14),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Please check:\n'
-                  '1. Internet connection\n'
-                  '2. Supabase configuration\n'
-                  '3. App permissions',
-                  style: TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
-          ),
+        home: _StartupIssueScreen(
+          title: 'Initialization Warning',
+          icon: Icons.warning_amber_rounded,
+          isError: false,
+          heading: 'App started with errors:',
+          message: _initializationError!,
+          hint: 'Please check:\n'
+              '1. Internet connection\n'
+              '2. Supabase configuration\n'
+              '3. App permissions',
         ),
       );
     }
@@ -236,7 +283,9 @@ class PowerCAApp extends StatelessWidget {
                 theme: AppTheme.lightTheme,
                 darkTheme: AppTheme.darkTheme,
                 themeMode: themeProvider.themeMode,
+                // ============ SECURITY GATE (PRODUCTION) ============
                 home: const SecurityGatePage(),
+                // ================================================
                 onGenerateRoute: (settings) {
                   switch (settings.name) {
                     case '/':
@@ -253,22 +302,22 @@ class PowerCAApp extends StatelessWidget {
                       );
                     case '/dashboard':
                       final staff = settings.arguments as Staff;
-                      return MaterialPageRoute(
+                      return _tabRoute(settings,
                         builder: (_) => DashboardPage(currentStaff: staff),
                       );
                     case '/jobs':
                       final staff = settings.arguments as Staff;
-                      return MaterialPageRoute(
+                      return _tabRoute(settings,
                         builder: (_) => JobsPage(currentStaff: staff),
                       );
                     case '/leave':
                       final staff = settings.arguments as Staff;
-                      return MaterialPageRoute(
+                      return _tabRoute(settings,
                         builder: (_) => LeavePage(currentStaff: staff),
                       );
                     case '/pinboard':
                       final staff = settings.arguments as Staff;
-                      return MaterialPageRoute(
+                      return _tabRoute(settings,
                         builder: (_) => PinboardPage(currentStaff: staff),
                       );
                     case '/work-diary':
@@ -532,7 +581,7 @@ class _AutoSplashScreenState extends State<AutoSplashScreen> {
             const Text(
               'POWER CA',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
@@ -545,7 +594,7 @@ class _AutoSplashScreenState extends State<AutoSplashScreen> {
             const Text(
               'Auditor WorkLog',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 color: Colors.white70,
@@ -567,4 +616,16 @@ class _AutoSplashScreenState extends State<AutoSplashScreen> {
       ),
     );
   }
+}
+
+/// Route for the bottom-nav tabs (Home, Jobs, Leave, Pinboard): switching
+/// tabs is instant, with no slide. Pages opened on top of a tab still use
+/// the theme's slide transition.
+PageRoute<void> _tabRoute(RouteSettings settings, {required WidgetBuilder builder}) {
+  return PageRouteBuilder<void>(
+    settings: settings,
+    pageBuilder: (context, _, __) => builder(context),
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+  );
 }

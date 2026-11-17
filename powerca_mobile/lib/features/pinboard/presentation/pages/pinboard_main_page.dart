@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/providers/notification_provider.dart';
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
+import '../../../../shared/widgets/home_style.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/tab_data_cache.dart';
 import '../../../auth/domain/entities/staff.dart';
 import 'pinboard_detail_page.dart';
 
@@ -35,6 +37,12 @@ class _PinboardMainPageState extends State<PinboardMainPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Show the last loaded reminders instantly; the load refreshes quietly.
+    final cached = TabDataCache.read<List<Map<String, dynamic>>>(_cacheKey);
+    if (cached != null) {
+      _reminders = cached;
+      _isLoading = false;
+    }
     _loadReminders();
 
     // Listen to tab changes
@@ -83,9 +91,13 @@ class _PinboardMainPageState extends State<PinboardMainPage>
     await notificationProvider.updatePinboardCheckTimestamp();
   }
 
+  String get _cacheKey => 'pinboard:${widget.currentStaff.staffId}';
+
   Future<void> _loadReminders() async {
+    // Spinner only when there's nothing to show yet.
+    final hasCache = TabDataCache.read<List<Map<String, dynamic>>>(_cacheKey) != null;
     setState(() {
-      _isLoading = true;
+      _isLoading = !hasCache;
       _errorMessage = null;
     });
 
@@ -152,6 +164,8 @@ class _PinboardMainPageState extends State<PinboardMainPage>
       // Check for new reminders and trigger notifications
       await _checkNewPinboardItems(reminders);
 
+      TabDataCache.write(_cacheKey, reminders);
+      if (!mounted) return;
       setState(() {
         _reminders = reminders;
         _isLoading = false;
@@ -228,14 +242,14 @@ class _PinboardMainPageState extends State<PinboardMainPage>
     return filtered;
   }
 
-  Color _getCategoryColor(int tabIndex) {
+  Color _getCategoryColor(SoftPalette p, int tabIndex) {
     switch (tabIndex) {
       case 0:
-        return AppTheme.primaryColor; // Primary blue for Due Date
+        return p.accent; // Accent blue for Due Date
       case 1:
-        return const Color(0xFF0D9488); // Teal accent for Meetings
+        return p.isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488); // Teal for Meetings
       default:
-        return Colors.grey;
+        return p.muted;
     }
   }
 
@@ -246,22 +260,76 @@ class _PinboardMainPageState extends State<PinboardMainPage>
     super.dispose();
   }
 
+  /// Due-date reminders falling between today and this Sunday.
+  int _dueThisWeekCount() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekEnd = today.add(Duration(days: DateTime.sunday - today.weekday));
+    return _reminders.where((r) {
+      if (r['category'] != 'due_date') return false;
+      final d = (r['remduedate'] ?? r['remdate']) as DateTime?;
+      if (d == null) return false;
+      final day = DateTime(d.year, d.month, d.day);
+      return !day.isBefore(today) && !day.isAfter(weekEnd);
+    }).length;
+  }
+
+  List<({String text, bool strong})> _headlineParts() {
+    if (_isLoading) {
+      return const [
+        (text: 'Loading your ', strong: false),
+        (text: 'pinboard', strong: true),
+        (text: '...', strong: false),
+      ];
+    }
+    final n = _dueThisWeekCount();
+    if (n == 0) {
+      return const [
+        (text: 'Nothing is ', strong: false),
+        (text: 'due', strong: true),
+        (text: ' this ', strong: false),
+        (text: 'week.', strong: true),
+      ];
+    }
+    return [
+      (text: 'You have ', strong: false),
+      (text: '$n ${n == 1 ? 'item' : 'items'}', strong: true),
+      (text: ' due ', strong: false),
+      (text: 'this week.', strong: true),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final searchBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final searchFieldColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF8F9FC);
-    final searchHintColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
-    final searchTextColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final tabBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final unselectedTabColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final p = SoftPalette.of(context);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Eyebrow + headline
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const HomeEyebrow('Pinboard'),
+              HomeInlineHeadline(parts: _headlineParts()),
+            ],
+          ),
+        ),
+
+        // Tab switch (blue pill for the active tab, drives the TabController)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: _SoftTabSwitch(
+            controller: _tabController,
+            labels: const ['Due dates', 'Meetings'],
+          ),
+        ),
+
         // Search Bar
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-          color: searchBgColor,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
           child: TextField(
             controller: _searchController,
             onChanged: (value) {
@@ -269,21 +337,15 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                 _searchQuery = value;
               });
             },
-            decoration: InputDecoration(
-              hintText: 'Search reminders...',
-              hintStyle: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.sp,
-                color: searchHintColor,
-              ),
-              prefixIcon: Icon(
-                Icons.search,
-                size: 20.sp,
-                color: searchHintColor,
-              ),
-              suffixIcon: _searchQuery.isNotEmpty
+            style: softInputTextStyle(context),
+            decoration: softInputDecoration(
+              context,
+              hint: 'Search reminders...',
+              icon: Icons.search_rounded,
+              pill: true,
+              suffix: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: Icon(Icons.clear, size: 18.sp, color: searchHintColor),
+                      icon: Icon(Icons.close_rounded, size: 18, color: p.muted),
                       onPressed: () {
                         _searchController.clear();
                         setState(() {
@@ -292,93 +354,22 @@ class _PinboardMainPageState extends State<PinboardMainPage>
                       },
                     )
                   : null,
-              filled: true,
-              fillColor: searchFieldColor,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10.r),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              color: searchTextColor,
             ),
           ),
         ),
-
-        // Tab Bar
-        Container(
-          color: tabBgColor,
-          child: TabBar(
-            controller: _tabController,
-            labelColor: AppTheme.primaryColor,
-            unselectedLabelColor: unselectedTabColor,
-            indicatorColor: AppTheme.primaryColor,
-            indicatorWeight: 3,
-            dividerColor: Colors.transparent,
-            labelStyle: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w400,
-            ),
-            tabs: const [
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 16),
-                    SizedBox(width: 6),
-                    Text('Due Dates'),
-                  ],
-                ),
-              ),
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.people_rounded, size: 16),
-                    SizedBox(width: 6),
-                    Text('Meetings'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        SizedBox(height: 8.h),
 
         // Tab Views
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(child: CircularProgressIndicator(color: p.ink, strokeWidth: 2.4))
               : _errorMessage != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
-                          SizedBox(height: 16.h),
-                          Text(
-                            _errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14.sp, color: isDarkMode ? const Color(0xFFF1F5F9) : null),
-                          ),
-                          SizedBox(height: 16.h),
-                          ElevatedButton.icon(
-                            onPressed: _loadReminders,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
-                          ),
-                        ],
-                      ),
+                  ? SoftMessage(
+                      icon: Icons.error_outline_rounded,
+                      title: 'Could not load reminders',
+                      message: _errorMessage,
+                      color: p.danger,
+                      actionLabel: 'Retry',
+                      onAction: _loadReminders,
                     )
                   : TabBarView(
                       controller: _tabController,
@@ -393,42 +384,30 @@ class _PinboardMainPageState extends State<PinboardMainPage>
   }
 
   Widget _buildReminderList(BuildContext context, int tabIndex) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+    final p = SoftPalette.of(context);
     final filteredReminders = _getFilteredReminders();
-    final categoryColor = _getCategoryColor(tabIndex);
-    final emptyIconColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFE0E0E0);
-    final emptyTextColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
-    final emptySubTextColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
+    final categoryColor = _getCategoryColor(p, tabIndex);
 
     if (filteredReminders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      // Plain text empty state (no icon), as in the design.
+      return RefreshIndicator(
+        onRefresh: _loadReminders,
+        color: p.ink,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(32, 48, 32, 120),
           children: [
-            Icon(
-              tabIndex == 0 ? Icons.event_available_rounded : Icons.event_busy_rounded,
-              size: 64.sp,
-              color: emptyIconColor,
-            ),
-            SizedBox(height: 16.h),
             Text(
-              tabIndex == 0 ? 'No upcoming due dates' : 'No upcoming meetings',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w500,
-                color: emptyTextColor,
-              ),
+              tabIndex == 0 ? 'No upcoming due dates.' : 'No upcoming meetings.',
+              textAlign: TextAlign.center,
+              style: SoftText.body(p, size: 15, color: p.inkSoft)
+                  .copyWith(fontWeight: FontWeight.w500),
             ),
-            SizedBox(height: 8.h),
+            const SizedBox(height: 6),
             Text(
-              'Only current and future items are shown',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: emptySubTextColor,
-              ),
+              'Only current and future items are shown.',
+              textAlign: TextAlign.center,
+              style: SoftText.caption(p, size: 12.5),
             ),
           ],
         ),
@@ -437,10 +416,11 @@ class _PinboardMainPageState extends State<PinboardMainPage>
 
     return RefreshIndicator(
       onRefresh: _loadReminders,
-      color: AppTheme.primaryColor,
-      child: ListView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+      color: p.ink,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
         itemCount: filteredReminders.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           final reminder = filteredReminders[index];
           return _buildReminderCard(context, reminder, tabIndex, categoryColor);
@@ -450,17 +430,7 @@ class _PinboardMainPageState extends State<PinboardMainPage>
   }
 
   Widget _buildReminderCard(BuildContext context, Map<String, dynamic> reminder, int tabIndex, Color categoryColor) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF080E29);
-    final notesColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF8F8E90);
-    final notesIconColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFFA8A8A8);
-    final clientColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final clientIconColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1);
-    final chevronColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1);
-    final daysUntilBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFF5F7FA);
-    final daysUntilTextColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-
+    final p = SoftPalette.of(context);
     final dateFormat = DateFormat('dd MMM yyyy');
 
     // Parse the date
@@ -473,8 +443,10 @@ class _PinboardMainPageState extends State<PinboardMainPage>
     final normalizedDate = DateTime(displayDate.year, displayDate.month, displayDate.day);
     final isDueToday = normalizedDate.compareTo(today) == 0;
     final daysUntil = normalizedDate.difference(today).inDays;
+    final notes = reminder['remnotes'] as String;
 
-    return GestureDetector(
+    return SoftCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
       onTap: () {
         Navigator.push(
           context,
@@ -486,213 +458,153 @@ class _PinboardMainPageState extends State<PinboardMainPage>
           ),
         );
       },
-      child: Container(
-        margin: EdgeInsets.only(bottom: 10.h),
-        decoration: BoxDecoration(
-          color: cardBgColor,
-          borderRadius: BorderRadius.circular(14.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              // Left accent bar
-              Container(
-                width: 4.w,
-                decoration: BoxDecoration(
-                  color: isDueToday ? AppTheme.warningColor : categoryColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(14.r),
-                    bottomLeft: Radius.circular(14.r),
-                  ),
-                ),
-              ),
-              // Main content
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.all(12.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header: Type badge and date badge
-                      Row(
-                        children: [
-                          // Type badge
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: categoryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  tabIndex == 0 ? Icons.calendar_today_rounded : Icons.people_rounded,
-                                  size: 12.sp,
-                                  color: categoryColor,
-                                ),
-                                SizedBox(width: 4.w),
-                                Text(
-                                  reminder['remtype'] as String,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 10.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: categoryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          // Days until badge
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: isDueToday
-                                  ? AppTheme.warningColor.withValues(alpha: 0.1)
-                                  : daysUntilBgColor,
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
-                            child: Text(
-                              isDueToday
-                                  ? 'Today'
-                                  : daysUntil == 1
-                                      ? 'Tomorrow'
-                                      : 'In $daysUntil days',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w600,
-                                color: isDueToday
-                                    ? AppTheme.warningColor
-                                    : daysUntilTextColor,
-                              ),
-                            ),
-                          ),
-                        ],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SoftIconBadge(
+            icon: tabIndex == 0 ? Icons.calendar_today_rounded : Icons.people_rounded,
+            color: isDueToday ? p.warning : categoryColor,
+            size: 40,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: type and days-until pills
+                Row(
+                  children: [
+                    Flexible(
+                      child: SoftStatusPill(
+                        label: reminder['remtype'] as String,
+                        color: categoryColor,
+                        showDot: false,
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Spacer(),
+                    SoftStatusPill(
+                      label: isDueToday
+                          ? 'Today'
+                          : daysUntil == 1
+                              ? 'Tomorrow'
+                              : 'In $daysUntil days',
+                      color: isDueToday ? p.warning : p.inkSoft,
+                      showDot: isDueToday,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
 
-                      SizedBox(height: 10.h),
+                // Title
+                Text(
+                  reminder['remtitle'] as String,
+                  style: SoftText.heading(p, size: 15),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
 
-                      // Title
-                      Text(
-                        reminder['remtitle'] as String,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: titleColor,
-                        ),
+                if (notes.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    notes,
+                    style: SoftText.body(p, size: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+
+                const SizedBox(height: 10),
+
+                // Footer: Client and Date
+                Row(
+                  children: [
+                    Icon(Icons.business_rounded, size: 13, color: p.muted),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        reminder['clientName'] as String,
+                        style: SoftText.caption(p),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-
-                      SizedBox(height: 6.h),
-
-                      // Notes
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.notes_rounded,
-                            size: 14.sp,
-                            color: notesIconColor,
-                          ),
-                          SizedBox(width: 6.w),
-                          Expanded(
-                            child: Text(
-                              reminder['remnotes'] as String,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w400,
-                                color: notesColor,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.event_rounded, size: 13, color: p.inkSoft),
+                    const SizedBox(width: 5),
+                    Text(
+                      dateFormat.format(displayDate),
+                      style: SoftText.caption(p).copyWith(
+                        color: p.ink,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Icon(Icons.chevron_right_rounded, size: 20, color: p.muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                      SizedBox(height: 8.h),
+/// Tab switch bound to a [TabController] (keeps swipe + tap): the active
+/// tab is a deep-blue pill, the others plain text.
+class _SoftTabSwitch extends StatelessWidget {
+  final TabController controller;
+  final List<String> labels;
 
-                      // Footer: Client and Date
-                      Row(
-                        children: [
-                          // Client
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.business_rounded,
-                                  size: 12.sp,
-                                  color: clientIconColor,
-                                ),
-                                SizedBox(width: 4.w),
-                                Expanded(
-                                  child: Text(
-                                    reminder['clientName'] as String,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 11.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: clientColor,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Date
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.event_rounded,
-                                size: 12.sp,
-                                color: categoryColor,
-                              ),
-                              SizedBox(width: 4.w),
-                              Text(
-                                dateFormat.format(displayDate),
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: categoryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+  const _SoftTabSwitch({required this.controller, required this.labels});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    final activeBg = p.isDark ? p.accent : const Color(0xFF1E3A8A);
+    final activeFg = p.isDark ? p.background : Colors.white;
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Row(
+          children: [
+            for (var i = 0; i < labels.length; i++) ...[
+              if (i > 0) const SizedBox(width: 6),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                decoration: BoxDecoration(
+                  color: controller.index == i ? activeBg : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    customBorder: const StadiumBorder(),
+                    onTap: () => controller.animateTo(i),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      child: Text(
+                        labels[i],
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: controller.index == i ? activeFg : p.inkSoft,
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-              // Right chevron
-              Padding(
-                padding: EdgeInsets.only(right: 12.w),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20.sp,
-                  color: chevronColor,
-                ),
-              ),
             ],
-          ),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 }

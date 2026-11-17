@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../domain/entities/pinboard_item.dart';
 import '../bloc/pinboard_bloc.dart';
 import '../bloc/pinboard_event.dart';
@@ -33,85 +33,52 @@ class _PinboardCategoryListPageState extends State<PinboardCategoryListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.categoryTitle),
-        elevation: 0,
-      ),
+    final p = SoftPalette.of(context);
+    return SoftScaffold(
+      title: widget.categoryTitle,
       body: BlocBuilder<PinboardBloc, PinboardState>(
         builder: (context, state) {
           if (state is PinboardLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
+            return Center(
+              child: CircularProgressIndicator(color: p.ink, strokeWidth: 2.4),
             );
           }
 
           if (state is PinboardError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64.sp,
-                    color: Colors.red,
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    state.message,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16.sp),
-                  ),
-                  SizedBox(height: 16.h),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      context.read<PinboardBloc>().add(
-                            LoadPinboardItems(category: widget.category),
-                          );
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
+            return SoftMessage(
+              icon: Icons.error_outline_rounded,
+              title: 'Something went wrong',
+              message: state.message,
+              color: p.danger,
+              actionLabel: 'Retry',
+              onAction: () {
+                context.read<PinboardBloc>().add(
+                      LoadPinboardItems(category: widget.category),
+                    );
+              },
             );
           }
 
           if (state is PinboardLoaded) {
             if (state.items.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.inbox_outlined,
-                      size: 64.sp,
-                      color: Colors.grey[400],
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'No items in ${widget.categoryTitle.toLowerCase()}',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
+              return SoftMessage(
+                icon: Icons.inbox_outlined,
+                title: 'No items in ${widget.categoryTitle.toLowerCase()}',
               );
             }
 
             return RefreshIndicator(
+              color: p.ink,
               onRefresh: () async {
                 context.read<PinboardBloc>().add(
                       RefreshPinboardItems(category: widget.category),
                     );
               },
               child: ListView.separated(
-                padding: EdgeInsets.all(16.w),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                 itemCount: state.items.length,
                 separatorBuilder: (context, index) =>
-                    SizedBox(height: 12.h),
+                    const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final item = state.items[index];
                   return _PinboardItemCard(
@@ -149,211 +116,159 @@ class _PinboardItemCard extends StatelessWidget {
     required this.onTap,
   });
 
-  Color _getCategoryColor() {
+  Color _getCategoryColor(SoftPalette p) {
     switch (item.category) {
       case PinboardCategory.dueDate:
-        return Colors.orange;
+        return p.warning;
       case PinboardCategory.meetings:
-        return Colors.blue;
+        return p.accent;
       case PinboardCategory.greetings:
-        return Colors.green;
+        return p.success;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final categoryColor = _getCategoryColor();
+    final p = SoftPalette.of(context);
+    final categoryColor = _getCategoryColor(p);
     final dateFormat = DateFormat('MMM dd, yyyy');
     final timeFormat = DateFormat('hh:mm a');
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12.r),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image (if available)
-            if (item.imageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(12.r),
-                  topRight: Radius.circular(12.r),
+    return SoftCard(
+      padding: EdgeInsets.zero,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image (if available)
+          if (item.imageUrl != null)
+            Image.network(
+              item.imageUrl!,
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 180,
+                  color: p.surfaceAlt,
+                  child: Icon(
+                    Icons.image_not_supported_outlined,
+                    size: 48,
+                    color: p.muted,
+                  ),
+                );
+              },
+            ),
+
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Text(
+                  item.title,
+                  style: SoftText.heading(p, size: 17),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Image.network(
-                  item.imageUrl!,
-                  height: 180.h,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 180.h,
-                      color: Colors.grey[300],
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 64.sp,
-                        color: Colors.grey,
-                      ),
-                    );
-                  },
+
+                const SizedBox(height: 6),
+
+                // Description
+                Text(
+                  item.description,
+                  style: SoftText.body(p),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
 
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    item.title,
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                const SizedBox(height: 12),
 
-                  SizedBox(height: 8.h),
+                // Event Date and Location
+                _metaRow(
+                  p,
+                  Icons.access_time_rounded,
+                  categoryColor,
+                  '${dateFormat.format(item.eventDate)} at ${timeFormat.format(item.eventDate)}',
+                ),
 
-                  // Description
-                  Text(
-                    item.description,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: Colors.grey[600],
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                if (item.location != null) ...[
+                  const SizedBox(height: 6),
+                  _metaRow(p, Icons.location_on_outlined, categoryColor, item.location!),
+                ],
 
-                  SizedBox(height: 12.h),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: p.border),
+                const SizedBox(height: 12),
 
-                  // Event Date and Location
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 16.sp,
-                        color: categoryColor,
-                      ),
-                      SizedBox(width: 4.w),
-                      Expanded(
-                        child: Text(
-                          '${dateFormat.format(item.eventDate)} at ${timeFormat.format(item.eventDate)}',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  if (item.location != null) ...[
-                    SizedBox(height: 4.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 16.sp,
-                          color: categoryColor,
-                        ),
-                        SizedBox(width: 4.w),
-                        Expanded(
-                          child: Text(
-                            item.location!,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Colors.grey[700],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-
-                  SizedBox(height: 12.h),
-                  const Divider(height: 1),
-                  SizedBox(height: 12.h),
-
-                  // Author and Stats
-                  Row(
-                    children: [
-                      // Author
-                      Expanded(
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 12.r,
-                              backgroundColor: categoryColor.withValues(alpha: 0.2),
-                              child: Icon(
-                                Icons.person,
-                                size: 14.sp,
-                                color: categoryColor,
-                              ),
-                            ),
-                            SizedBox(width: 6.w),
-                            Expanded(
-                              child: Text(
-                                item.authorName,
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Stats
-                      Row(
+                // Author and Stats
+                Row(
+                  children: [
+                    // Author
+                    Expanded(
+                      child: Row(
                         children: [
-                          Icon(
-                            item.isLikedByCurrentUser
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            size: 16.sp,
-                            color: item.isLikedByCurrentUser
-                                ? Colors.red
-                                : Colors.grey,
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: p.tint(categoryColor),
+                            child: Icon(
+                              Icons.person_rounded,
+                              size: 14,
+                              color: categoryColor,
+                            ),
                           ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            '${item.likesCount}',
-                            style: TextStyle(fontSize: 12.sp),
-                          ),
-                          SizedBox(width: 12.w),
-                          Icon(
-                            Icons.comment_outlined,
-                            size: 16.sp,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            '${item.commentsCount}',
-                            style: TextStyle(fontSize: 12.sp),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item.authorName,
+                              style: SoftText.caption(p).copyWith(color: p.ink),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+
+                    // Stats
+                    Icon(
+                      item.isLikedByCurrentUser
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 16,
+                      color: item.isLikedByCurrentUser ? p.danger : p.muted,
+                    ),
+                    const SizedBox(width: 4),
+                    Text('${item.likesCount}', style: SoftText.caption(p)),
+                    const SizedBox(width: 12),
+                    Icon(Icons.chat_bubble_outline_rounded, size: 15, color: p.muted),
+                    const SizedBox(width: 4),
+                    Text('${item.commentsCount}', style: SoftText.caption(p)),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _metaRow(SoftPalette p, IconData icon, Color color, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: SoftText.caption(p).copyWith(color: p.inkSoft),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
