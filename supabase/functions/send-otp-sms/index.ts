@@ -18,6 +18,27 @@ interface SendOtpRequest {
   staff_id?: number  // Optional: If provided, validates phone belongs to this staff
 }
 
+// mbstaff.phonumber is synced from the desktop app and can carry stray
+// whitespace / CR-LF (e.g. "9080834476\r\n"), so an exact match misses it.
+// Match on the last 10 digits instead; prefer preferStaffId when several
+// rows share the number.
+// deno-lint-ignore no-explicit-any
+async function findStaffByPhone(supabase: any, phone: string, preferStaffId?: number) {
+  const digits = (phone ?? '').replace(/\D/g, '').slice(-10)
+  if (digits.length !== 10) return null
+  const { data, error } = await supabase
+    .from('mbstaff')
+    .select('staff_id, phonumber, name')
+    .like('phonumber', `%${digits}%`)
+  if (error || !data) return null
+  // deno-lint-ignore no-explicit-any
+  const matches = data.filter((r: any) =>
+    String(r.phonumber ?? '').replace(/\D/g, '').slice(-10) === digits)
+  if (matches.length === 0) return null
+  // deno-lint-ignore no-explicit-any
+  return matches.find((r: any) => preferStaffId && r.staff_id === preferStaffId) ?? matches[0]
+}
+
 // Generate 6-digit OTP
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -40,8 +61,8 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     // BulkSMSGateway credentials
-    const SMS_USER = Deno.env.get('BULKSMS_USER') || 'tbsindiaudt@gmail.com'
-    const SMS_PASSWORD = Deno.env.get('BULKSMS_PASSWORD') || 'TBSSms@123'
+    const SMS_USER = Deno.env.get('BULKSMS_USER') ?? ''
+    const SMS_PASSWORD = Deno.env.get('BULKSMS_PASSWORD') ?? ''
     const SMS_SENDER = Deno.env.get('BULKSMS_SENDER') || 'TBSTEC'
     const SMS_TEMPLATE_ID = Deno.env.get('BULKSMS_TEMPLATE_ID') || '1407161157481665461'
 
@@ -66,13 +87,9 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
     // Check if phone number exists in mbstaff
-    const { data: staffData, error: staffError } = await supabase
-      .from('mbstaff')
-      .select('staff_id, phonumber, name')
-      .eq('phonumber', phone)
-      .single()
+    const staffData = await findStaffByPhone(supabase, phone, staff_id)
 
-    if (staffError || !staffData) {
+    if (!staffData) {
       return new Response(
         JSON.stringify({
           success: false,

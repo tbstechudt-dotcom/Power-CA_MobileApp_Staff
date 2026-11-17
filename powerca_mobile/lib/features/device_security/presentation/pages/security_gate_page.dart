@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
+import '../../../../shared/widgets/auth_sheet.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import '../../domain/repositories/device_security_repository.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 
@@ -208,265 +209,83 @@ class _SecurityGatePageState extends State<SecurityGatePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1E40AF),
-              Color(0xFF2563EB),
-              Color(0xFF3B82F6),
-            ],
-            stops: [0.0, 0.5, 1.0],
+    final p = SoftPalette.of(context);
+    if (_isCheckingVerification) {
+      return AuthSheet(
+        title: 'Just a moment',
+        subtitle: 'Checking this device...',
+        icon: Icons.verified_user_outlined,
+        children: [
+          const SizedBox(height: 24),
+          Center(
+            child: SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: p.ink),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: _isCheckingVerification
-              ? _buildLoadingView()
-              : _buildPhoneInputView(),
-        ),
-      ),
-    );
+        ],
+      );
+    }
+    return _buildPhoneInputView(p);
   }
 
-  Widget _buildLoadingView() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildPhoneInputView(SoftPalette p) {
+    return AuthSheet(
+      title: 'Verify your phone',
+      subtitle:
+          "Enter your registered mobile number. We'll send you a 6-digit code.",
+      icon: Icons.smartphone_rounded,
+      note: 'Use the number registered with your office.',
       children: [
-        // Logo
-        Container(
-          width: 100.w,
-          height: 100.w,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          padding: EdgeInsets.all(16.w),
-          child: Image.asset(
-            'assets/images/Logo/Power CA Logo Only-04.png',
-            fit: BoxFit.contain,
+        const SoftFieldLabel('Mobile number'),
+        // Phone input field
+        TextField(
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          style: softInputTextStyle(context),
+          decoration: softInputDecoration(
+            context,
+            hint: 'Enter 10-digit number',
+            prefixText: '+91',
           ),
         ),
-        SizedBox(height: 24.h),
-        Text(
-          'POWER CA',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 32.sp,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-            letterSpacing: 2,
-          ),
-        ),
-        SizedBox(height: 48.h),
-        const CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-        ),
-        SizedBox(height: 16.h),
-        Text(
-          'Checking verification...',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            color: Colors.white.withValues(alpha: 0.7),
-          ),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          _ErrorBanner(message: _error!),
+        ],
+        const SizedBox(height: 20),
+        // Send OTP button
+        SoftPillButton(
+          label: 'Send OTP',
+          loading: _isSendingOtp,
+          onPressed: _isSendingOtp ? null : _sendOtpWithPhone,
         ),
       ],
     );
   }
+}
 
-  Widget _buildPhoneInputView() {
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+class _ErrorBanner extends StatelessWidget {
+  final String message;
+  const _ErrorBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: p.tint(p.danger),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
         children: [
-          SizedBox(height: 60.h),
-          // Logo
-          Container(
-            width: 100.w,
-            height: 100.w,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            padding: EdgeInsets.all(16.w),
-            child: Image.asset(
-              'assets/images/Logo/Power CA Logo Only-04.png',
-              fit: BoxFit.contain,
-            ),
+          Icon(Icons.error_outline_rounded, color: p.danger, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(message, style: SoftText.body(p, size: 13, color: p.danger)),
           ),
-
-          SizedBox(height: 24.h),
-
-          // App name
-          Text(
-            'POWER CA',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 32.sp,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 2,
-            ),
-          ),
-
-          SizedBox(height: 48.h),
-
-          // Phone input section
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 32.w),
-            child: Column(
-              children: [
-                Text(
-                  'Verify Your Phone',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  'Enter your registered phone number to receive OTP',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                ),
-                SizedBox(height: 24.h),
-                // Phone input field
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16.sp,
-                      color: AppTheme.textPrimaryColor,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Enter 10-digit phone number',
-                      hintStyle: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16.sp,
-                        color: AppTheme.textMutedColor,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.phone,
-                        color: AppTheme.primaryColor,
-                        size: 22.sp,
-                      ),
-                      prefixText: '+91 ',
-                      prefixStyle: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textPrimaryColor,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 16.h,
-                      ),
-                    ),
-                  ),
-                ),
-                if (_error != null) ...[
-                  SizedBox(height: 12.h),
-                  Container(
-                    padding: EdgeInsets.all(12.w),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: Colors.white,
-                          size: 20.sp,
-                        ),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Text(
-                            _error!,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.sp,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                SizedBox(height: 24.h),
-                // Send OTP button
-                SizedBox(
-                  width: double.infinity,
-                  height: 52.h,
-                  child: ElevatedButton(
-                    onPressed: _isSendingOtp ? null : _sendOtpWithPhone,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppTheme.primaryColor,
-                      disabledBackgroundColor: Colors.white.withValues(alpha: 0.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                    ),
-                    child: _isSendingOtp
-                        ? SizedBox(
-                            width: 24.w,
-                            height: 24.h,
-                            child: const CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppTheme.primaryColor,
-                              ),
-                            ),
-                          )
-                        : Text(
-                            'Send OTP',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 60.h),
         ],
       ),
     );

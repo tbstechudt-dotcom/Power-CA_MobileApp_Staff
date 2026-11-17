@@ -9,6 +9,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// mbstaff.phonumber is synced from the desktop app and can carry stray
+// whitespace / CR-LF (e.g. "9080834476\r\n"), so an exact match misses it.
+// Match on the last 10 digits instead; prefer preferStaffId when several
+// rows share the number.
+// deno-lint-ignore no-explicit-any
+async function findStaffByPhone(supabase: any, phone: string, preferStaffId?: number) {
+  const digits = (phone ?? '').replace(/\D/g, '').slice(-10)
+  if (digits.length !== 10) return null
+  const { data, error } = await supabase
+    .from('mbstaff')
+    .select('staff_id, phonumber, name')
+    .like('phonumber', `%${digits}%`)
+  if (error || !data) return null
+  // deno-lint-ignore no-explicit-any
+  const matches = data.filter((r: any) =>
+    String(r.phonumber ?? '').replace(/\D/g, '').slice(-10) === digits)
+  if (matches.length === 0) return null
+  // deno-lint-ignore no-explicit-any
+  return matches.find((r: any) => preferStaffId && r.staff_id === preferStaffId) ?? matches[0]
+}
+
 interface VerifyOtpRequest {
   phone: string
   device_fingerprint: string
@@ -46,13 +67,9 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
     // Find staff by phone number (including name for response)
-    const { data: staffData, error: staffError } = await supabase
-      .from('mbstaff')
-      .select('staff_id, name')
-      .eq('phonumber', phone)
-      .single()
+    const staffData = await findStaffByPhone(supabase, phone)
 
-    if (staffError || !staffData) {
+    if (!staffData) {
       return new Response(
         JSON.stringify({
           success: false,

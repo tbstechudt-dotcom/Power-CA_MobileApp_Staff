@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/providers/notification_provider.dart';
-import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/tab_data_cache.dart';
 import '../../../../shared/widgets/modern_bottom_navigation.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_drawer.dart';
+import '../../../../shared/widgets/home_style.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../../auth/domain/entities/staff.dart';
 import 'apply_leave_page.dart';
 import 'leave_filtered_page.dart';
@@ -38,8 +39,6 @@ class _LeavePageState extends State<LeavePage> {
   double _usedLeaves = 0;
   double _lopDays = 0; // Loss of Pay days (when used > earned)
   double _currentMonthELUsed = 0; // EL days used in current month
-  // ignore: unused_field
-  int _pendingRequests = 0; // Number of pending leave requests
   bool _allELUsed = false; // Track if all available EL is used
 
   // Financial year dates
@@ -50,34 +49,44 @@ class _LeavePageState extends State<LeavePage> {
   List<Map<String, dynamic>> _leaveRequests = [];
   bool _isLoadingLeaveRequests = false;
 
-  // Status configurations (matching jobs page style)
-  final List<Map<String, dynamic>> _statusConfigs = [
-    {
-      'status': 'Pending',
-      'icon': Icons.pending_actions_rounded,
-      'color': const Color(0xFFF59E0B),
-      'gradient': [const Color(0xFFFBBF24), const Color(0xFFF59E0B)],
-    },
-    {
-      'status': 'Approved',
-      'icon': Icons.check_circle_rounded,
-      'color': const Color(0xFF10B981),
-      'gradient': [const Color(0xFF34D399), const Color(0xFF10B981)],
-    },
-    {
-      'status': 'Rejected',
-      'icon': Icons.cancel_rounded,
-      'color': const Color(0xFFEF4444),
-      'gradient': [const Color(0xFFF87171), const Color(0xFFEF4444)],
-    },
+  // Status rows shown on the page (tap opens the filtered list)
+  static const List<(String, IconData)> _statusConfigs = [
+    ('Pending', Icons.pending_actions_rounded),
+    ('Approved', Icons.check_circle_rounded),
+    ('Rejected', Icons.cancel_rounded),
   ];
+
+  Color _statusColor(SoftPalette p, String status) {
+    switch (status) {
+      case 'Approved':
+        return p.success;
+      case 'Rejected':
+        return p.danger;
+      default:
+        return p.warning;
+    }
+  }
+
+  static String _fmt(double v) =>
+      v == v.toInt() ? v.toInt().toString() : v.toStringAsFixed(1);
 
   @override
   void initState() {
     super.initState();
     _calculateFinancialYear();
+    // Show the last loaded leaves instantly; the load refreshes quietly.
+    final cached = TabDataCache.read<Map<String, Object>>(_cacheKey);
+    if (cached != null) {
+      _leaveRequests = cached['leaveRequests'] as List<Map<String, dynamic>>;
+      _usedLeaves = cached['usedLeaves'] as double;
+      _lopDays = cached['lopDays'] as double;
+      _currentMonthELUsed = cached['currentMonthELUsed'] as double;
+      _allELUsed = cached['allELUsed'] as bool;
+    }
     _loadLeaveRequests();
   }
+
+  String get _cacheKey => 'leave:${widget.currentStaff.staffId}';
 
   /// Check for leave status changes and trigger notifications
   Future<void> _checkLeaveStatusChanges(List<Map<String, dynamic>> leaves) async {
@@ -220,8 +229,10 @@ class _LeavePageState extends State<LeavePage> {
 
   Future<void> _loadLeaveRequests() async {
     if (!mounted) return;
+    // Spinner only when there's nothing to show yet.
+    final hasCache = TabDataCache.read<Map<String, Object>>(_cacheKey) != null;
     setState(() {
-      _isLoadingLeaveRequests = true;
+      _isLoadingLeaveRequests = !hasCache;
     });
 
     try {
@@ -320,7 +331,6 @@ class _LeavePageState extends State<LeavePage> {
       // You EARN 1 EL per month, but can USE as many as Available
       double totalUsedDays = 0;
       double currentMonthUsedDays = 0;  // Track current month usage for display
-      int pendingCount = 0;
 
       // Current month key for display
       final now = DateTime.now();
@@ -339,8 +349,6 @@ class _LeavePageState extends State<LeavePage> {
           if (monthKey == currentMonthKey) {
             currentMonthUsedDays += days;
           }
-        } else if (status == 'Pending') {
-          pendingCount++;
         }
       }
 
@@ -363,13 +371,20 @@ class _LeavePageState extends State<LeavePage> {
       // Check for status changes and trigger notifications
       await _checkLeaveStatusChanges(currentFYLeaves);
 
+      TabDataCache.write(_cacheKey, <String, Object>{
+        'leaveRequests': currentFYLeaves,
+        'usedLeaves': usedEL,
+        'lopDays': currentMonthLOP,
+        'currentMonthELUsed': currentMonthEL,
+        'allELUsed': allELUsed,
+      });
+      if (!mounted) return;
       setState(() {
         // Only show leaves from current financial year
         _leaveRequests = currentFYLeaves;
         _usedLeaves = usedEL;  // Total EL days used
         _lopDays = currentMonthLOP;  // Only show current month's LOP
         _currentMonthELUsed = currentMonthEL;  // EL used this month
-        _pendingRequests = pendingCount;
         _allELUsed = allELUsed;  // True if no more EL available
         _isLoadingLeaveRequests = false;
       });
@@ -383,14 +398,10 @@ class _LeavePageState extends State<LeavePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8F9FC);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final titleColor = isDarkMode ? const Color(0xFFF1F5F9) : AppTheme.textSecondaryColor;
-    final subtitleColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+    final p = SoftPalette.of(context);
 
     // Update status bar style based on theme
-    _updateStatusBarStyle(isDarkMode);
+    _updateStatusBarStyle(p.isDark);
 
     // Calculate available leaves
     // Available = Earned - Used EL (LOP is calculated separately per monthly limit)
@@ -398,258 +409,191 @@ class _LeavePageState extends State<LeavePage> {
     final availableLeaves = (_earnedLeaves - _usedLeaves).clamp(0.0, _earnedLeaves);
     // _lopDays is already calculated in _loadLeaveRequests() based on monthly limit
 
+    final fyLabel =
+        'FY ${DateFormat('MMM yyyy').format(_financialYearStart)} – ${DateFormat('MMM yyyy').format(_financialYearEnd)}';
+    String days(double v) => '${_fmt(v)} ${v == 1 ? 'day' : 'days'}';
+    final requestCount = _leaveRequests.length;
+
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: scaffoldBgColor,
+      backgroundColor: p.background,
+      extendBody: true,
       drawer: AppDrawer(currentStaff: widget.currentStaff),
-      body: Column(
-        children: [
-          // Status bar area
-          Container(
-            color: headerBgColor,
-            child: SafeArea(
-              bottom: false,
-              child: AppHeader(
-                currentStaff: widget.currentStaff,
-                onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
-              ),
+      body: HomeBackground(
+        child: Column(
+          children: [
+            AppHeader(
+              currentStaff: widget.currentStaff,
+              homeStyle: true,
+              showPlace: false,
+              onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
-          ),
 
-          // Content
-          Expanded(
+            // Content
+            Expanded(
               child: _isLoadingLeaveRequests
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator(color: p.accent))
                   : RefreshIndicator(
                       onRefresh: _loadLeaveRequests,
-                      color: AppTheme.primaryColor,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(12.w),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Page Title
-                            Text(
-                              'My Leaves',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w700,
-                                color: titleColor,
-                              ),
-                            ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              'FY ${DateFormat('MMM yyyy').format(_financialYearStart)} - ${DateFormat('MMM yyyy').format(_financialYearEnd)}',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w400,
-                                color: subtitleColor,
-                              ),
-                            ),
-                            SizedBox(height: 16.h),
+                      color: p.accent,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                        children: [
+                          HomeEyebrow('My leave · $fyLabel'),
+                          HomeInlineHeadline(
+                            parts: [
+                              (text: 'You have ', strong: false),
+                              (text: days(availableLeaves), strong: true),
+                              (text: ' of leave ', strong: false),
+                              (text: 'available', strong: true),
+                              (text: '.', strong: false),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
 
-                            // Summary Cards Row - 3 cards
-                            Row(
+                          // Leave balance
+                          HomeSectionCard(
+                            title: 'Leave balance',
+                            subtitle: '$fyLabel • 1 earned leave per month',
+                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: HomeStat(
+                                        label: 'Earned',
+                                        value: days(_earnedLeaves),
+                                        dot: p.accent,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: HomeStat(
+                                        label: 'Used',
+                                        value: days(_usedLeaves),
+                                        dot: p.warning,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: HomeStat(
+                                        label: 'Available',
+                                        value: days(availableLeaves),
+                                        dot: p.success,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                HomeSegmentBar(
+                                  segments: [
+                                    (value: _usedLeaves, color: p.warning),
+                                    (value: availableLeaves, color: p.success),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Text(
+                                      DateFormat('MMM yyyy').format(_financialYearStart),
+                                      style: SoftText.caption(p, size: 12),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      DateFormat('MMM yyyy').format(_financialYearEnd),
+                                      style: SoftText.caption(p, size: 12),
+                                    ),
+                                  ],
+                                ),
+
+                                // Current Month EL Info (show if any EL used this month)
+                                if (_currentMonthELUsed > 0)
+                                  _NoticeBanner(
+                                    icon: Icons.info_outline_rounded,
+                                    color: p.accent,
+                                    text:
+                                        '${DateFormat('MMMM').format(DateTime.now())}: ${_fmt(_currentMonthELUsed)} EL used. Available: ${_fmt(availableLeaves)} EL',
+                                  ),
+
+                                // All EL Used Warning
+                                if (_allELUsed)
+                                  _NoticeBanner(
+                                    icon: Icons.warning_amber_rounded,
+                                    color: p.warning,
+                                    text: 'All EL used. Additional leave will be Loss of Pay.',
+                                  ),
+
+                                // LOP Warning (if any for current month)
+                                if (_lopDays > 0)
+                                  _NoticeBanner(
+                                    icon: Icons.warning_amber_rounded,
+                                    color: p.danger,
+                                    text: 'Loss of Pay this month: ${_fmt(_lopDays)} days',
+                                    strong: true,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Requests by status
+                          HomeSectionCard(
+                            title: 'Requests',
+                            subtitle:
+                                '$requestCount ${requestCount == 1 ? 'request' : 'requests'} this financial year',
+                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 4),
+                            child: Column(
+                              children: [
+                                for (int i = 0; i < _statusConfigs.length; i++)
+                                  HomeStatusRow(
+                                    first: i == 0,
+                                    color: _statusColor(p, _statusConfigs[i].$1),
+                                    label: _statusConfigs[i].$1,
+                                    count: '${_getLeaveCountByStatus(_statusConfigs[i].$1)}',
+                                    onTap: () => _navigateToFilteredLeaves(_statusConfigs[i].$1),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Apply leave
+                          SoftCard(
+                            radius: 26,
+                            padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
+                            child: Row(
                               children: [
                                 Expanded(
-                                  child: _buildSummaryCard(
-                                    context: context,
-                                    title: 'Earned',
-                                    value: _earnedLeaves,
-                                    icon: Icons.calendar_month_rounded,
-                                    color: AppTheme.primaryColor,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Need time off?', style: SoftText.heading(p, size: 17.5)),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        'Send a leave request to your office',
+                                        style: SoftText.caption(p, size: 12),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                SizedBox(width: 8.w),
-                                Expanded(
-                                  child: _buildSummaryCard(
-                                    context: context,
-                                    title: 'Used',
-                                    value: _usedLeaves,
-                                    icon: Icons.event_busy_rounded,
-                                    color: const Color(0xFFF59E0B),
-                                  ),
-                                ),
-                                SizedBox(width: 8.w),
-                                Expanded(
-                                  child: _buildSummaryCard(
-                                    context: context,
-                                    title: 'Available',
-                                    value: availableLeaves,
-                                    icon: Icons.beach_access_rounded,
-                                    color: const Color(0xFF10B981),
-                                  ),
+                                const SizedBox(width: 10),
+                                HomeBluePill(
+                                  label: 'Apply leave',
+                                  icon: Icons.add_rounded,
+                                  onTap: _navigateToApplyLeave,
                                 ),
                               ],
                             ),
-
-                            // Current Month EL Info (show if any EL used this month)
-                            if (_currentMonthELUsed > 0)
-                              Container(
-                                margin: EdgeInsets.only(top: 12.h),
-                                padding: EdgeInsets.all(12.w),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? const Color(0xFF1E3A5F) : const Color(0xFFEFF6FF),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  border: Border.all(
-                                    color: const Color(0xFF3B82F6),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline_rounded,
-                                      size: 20.sp,
-                                      color: isDarkMode ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Expanded(
-                                      child: Text(
-                                        '${DateFormat('MMMM').format(DateTime.now())}: ${_currentMonthELUsed == _currentMonthELUsed.toInt() ? _currentMonthELUsed.toInt() : _currentMonthELUsed.toStringAsFixed(1)} EL used. Available: ${availableLeaves == availableLeaves.toInt() ? availableLeaves.toInt() : availableLeaves.toStringAsFixed(1)} EL',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.w500,
-                                          color: isDarkMode ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // All EL Used Warning
-                            if (_allELUsed)
-                              Container(
-                                margin: EdgeInsets.only(top: 12.h),
-                                padding: EdgeInsets.all(12.w),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? const Color(0xFF422006) : const Color(0xFFFEF3C7),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  border: Border.all(
-                                    color: const Color(0xFFF59E0B),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.warning_amber_rounded,
-                                      size: 20.sp,
-                                      color: isDarkMode ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Expanded(
-                                      child: Text(
-                                        'All EL used. Additional leave will be Loss of Pay.',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.w500,
-                                          color: isDarkMode ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // LOP Warning (if any for current month)
-                            if (_lopDays > 0)
-                              Container(
-                                margin: EdgeInsets.only(top: 12.h),
-                                padding: EdgeInsets.all(12.w),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? const Color(0xFF450A0A) : const Color(0xFFFEE2E2),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  border: Border.all(
-                                    color: const Color(0xFFEF4444),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.warning_amber_rounded,
-                                      size: 20.sp,
-                                      color: isDarkMode ? const Color(0xFFF87171) : const Color(0xFFEF4444),
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Expanded(
-                                      child: Text(
-                                        'Loss of Pay this month: ${_lopDays == _lopDays.toInt() ? _lopDays.toInt() : _lopDays.toStringAsFixed(1)} days',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 13.sp,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDarkMode ? const Color(0xFFF87171) : const Color(0xFFEF4444),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            const SizedBox(height: 16),
-
-                            // Section Title
-                            Text(
-                              'By Leave Status',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w700,
-                                color: titleColor,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-
-                            // Status List
-                            ListView.builder(
-                              shrinkWrap: true,
-                              padding: EdgeInsets.zero,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _statusConfigs.length,
-                              itemBuilder: (context, index) {
-                                final config = _statusConfigs[index];
-                                final status = config['status'] as String;
-                                final icon = config['icon'] as IconData;
-                                final gradient = config['gradient'] as List<Color>;
-                                final count = _getLeaveCountByStatus(status);
-
-                                return _buildStatusListItem(
-                                  status: status,
-                                  icon: icon,
-                                  gradient: gradient,
-                                  count: count,
-                                  onTap: () => _navigateToFilteredLeaves(status),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
             ),
           ],
-        ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToApplyLeave(),
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 4,
-        icon: Icon(Icons.add_rounded, size: 22.sp, color: Colors.white),
-        label: Text(
-          'Apply Leave',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
         ),
       ),
       bottomNavigationBar: ModernBottomNavigation(
@@ -672,196 +616,46 @@ class _LeavePageState extends State<LeavePage> {
       ),
     );
   }
+}
 
-  Widget _buildSummaryCard({
-    required BuildContext context,
-    required String title,
-    required double value,
-    required IconData icon,
-    required Color color,
-  }) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final valueColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final labelColor = isDarkMode ? const Color(0xFF94A3B8) : AppTheme.textMutedColor;
+/// Tinted info / warning banner.
+class _NoticeBanner extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String text;
+  final bool strong;
 
-    // Format display: show decimal only if not a whole number
-    final displayValue = value == value.toInt()
-        ? value.toInt().toString()
-        : value.toStringAsFixed(1);
+  const _NoticeBanner({
+    required this.icon,
+    required this.color,
+    required this.text,
+    this.strong = false,
+  });
 
+  @override
+  Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
     return Container(
-      padding: EdgeInsets.all(10.w),
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: isDarkMode ? 0.15 : 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: p.tint(color),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Row(
         children: [
-          // Icon
-          Container(
-            padding: EdgeInsets.all(6.w),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(
-              icon,
-              size: 18.sp,
-              color: color,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          // Value
-          Text(
-            displayValue,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 22.sp,
-              fontWeight: FontWeight.w800,
-              color: valueColor,
-            ),
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w500,
-              color: labelColor,
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: SoftText.body(p, size: 13, color: color).copyWith(
+                fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatusListItem({
-    required String status,
-    required IconData icon,
-    required List<Color> gradient,
-    required int count,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(bottom: 10.h),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: gradient[1].withValues(alpha: 0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Background pattern icon
-            Positioned(
-              right: -15.w,
-              top: -15.h,
-              child: Icon(
-                icon,
-                size: 70.sp,
-                color: Colors.white.withValues(alpha: 0.12),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-              child: Row(
-                children: [
-                  // Icon container
-                  Container(
-                    width: 44.w,
-                    height: 44.h,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Icon(
-                      icon,
-                      size: 22.sp,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 14.w),
-                  // Status name
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          status,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          'Tap to view leaves',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Count badge
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Text(
-                      count.toString(),
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
-                  // Arrow
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16.sp,
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
-
-

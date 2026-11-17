@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../app/theme.dart';
+import '../../../../shared/widgets/soft_page.dart';
 
 class ProfileHeader extends StatelessWidget {
   final String name;
@@ -17,16 +16,12 @@ class ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = SoftPalette.of(context);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 18.h),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: AppTheme.borderColor,
-            width: 1.5,
-          ),
-        ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      decoration: BoxDecoration(
+        color: p.background,
+        border: Border(bottom: BorderSide(color: p.border)),
       ),
       child: Row(
         children: [
@@ -38,55 +33,25 @@ class ProfileHeader extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF080E29), // Accent from Figma
-                  ),
+                  style: SoftText.title(p, size: 20),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 2.h),
-                Text(
-                  role,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textSecondaryColor,
-                  ),
-                ),
+                const SizedBox(height: 2),
+                Text(role, style: SoftText.caption(p, size: 13.5)),
               ],
             ),
           ),
+          const SizedBox(width: 12),
 
           // Edit Button
-          ElevatedButton(
+          SoftPillButton(
+            label: 'Edit',
+            icon: Icons.edit_outlined,
+            variant: SoftPillVariant.outline,
+            expand: false,
+            height: 40,
             onPressed: onEditPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              minimumSize: Size(0, 36.h),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Edit',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(width: 6.w),
-                Icon(Icons.edit_outlined, size: 18.sp),
-              ],
-            ),
           ),
         ],
       ),

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../core/providers/theme_provider.dart';
+import '../../../../shared/widgets/soft_page.dart';
 
 class TaskChecklistDetailPage extends StatefulWidget {
   final int jobId;
@@ -99,262 +97,93 @@ class _TaskChecklistDetailPageState extends State<TaskChecklistDetailPage> {
     }).toList();
   }
 
+
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final scaffoldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF9FAFB);
-    final headerBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final backButtonBgColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE8EDF3);
-    final backButtonBorderColor = isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D9E6);
-
-    return Scaffold(
-      backgroundColor: scaffoldBgColor,
-      appBar: AppBar(
-        backgroundColor: headerBgColor,
-        elevation: 0,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8.w),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 42.w,
-                height: 42.h,
-                decoration: BoxDecoration(
-                  color: backButtonBgColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: backButtonBorderColor,
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 18.sp,
-                    color: textSecondaryColor,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        leadingWidth: 58.w,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Task Checklist',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: textPrimaryColor,
-              ),
-            ),
-            Text(
-              widget.jobNo,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w400,
-                color: textSecondaryColor,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return SoftScaffold(
+      title: 'Task Checklist',
+      subtitle: widget.jobNo,
+      onBack: () => Navigator.pop(context),
       body: _buildBody(context),
     );
   }
 
   Widget _buildBody(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textPrimaryColor = isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1F2937);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final borderColor = isDarkMode ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
-    final emptyStateBgColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF8F9FC);
+    final p = SoftPalette.of(context);
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
-            SizedBox(height: 16.h),
-            Text(
-              'Error loading checklist',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            TextButton.icon(
-              onPressed: _loadChecklistItems,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
+      return SoftMessage(
+        icon: Icons.error_outline_rounded,
+        title: 'Error loading checklist',
+        message: _error,
+        actionLabel: 'Retry',
+        onAction: _loadChecklistItems,
+        color: p.danger,
       );
     }
 
     if (_checklistItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80.w,
-              height: 80.h,
-              decoration: BoxDecoration(
-                color: emptyStateBgColor,
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Icon(
-                Icons.checklist,
-                size: 40.sp,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              'No checklist items',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: textSecondaryColor,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'No checklist items found for this task',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: textSecondaryColor,
-              ),
-            ),
-          ],
-        ),
+      return const SoftMessage(
+        icon: Icons.checklist,
+        title: 'No checklist items',
+        message: 'No checklist items found for this task',
       );
     }
 
     return RefreshIndicator(
       onRefresh: _loadChecklistItems,
       child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
-          left: 16.w,
-          right: 16.w,
-          top: 16.w,
-          bottom: 16.w + MediaQuery.of(context).padding.bottom,
+          left: 16,
+          right: 16,
+          top: 4,
+          bottom: 24 + MediaQuery.of(context).padding.bottom,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Task Info Card
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: cardBgColor,
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
+            SoftCard(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Task',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: textSecondaryColor,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    widget.taskName,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: textPrimaryColor,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.checklist,
-                        size: 16.sp,
-                        color: textSecondaryColor,
-                      ),
-                      SizedBox(width: 6.w),
-                      Text(
-                        '${_groupedItems.length} unique ${_groupedItems.length == 1 ? 'item' : 'items'} (${_checklistItems.length} total)',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w500,
-                          color: textSecondaryColor,
+                  SoftIconBadge(icon: Icons.checklist_rounded, color: p.accent),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('TASK', style: SoftText.overline(p)),
+                        const SizedBox(height: 4),
+                        Text(widget.taskName, style: SoftText.heading(p, size: 15)),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${_groupedItems.length} unique ${_groupedItems.length == 1 ? 'item' : 'items'} (${_checklistItems.length} total)',
+                          style: SoftText.caption(p),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
 
-            SizedBox(height: 16.h),
+            const SizedBox(height: 22),
 
             // Checklist Items
-            Text(
-              'Checklist Items',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: textPrimaryColor,
-              ),
-            ),
-            SizedBox(height: 12.h),
+            const SoftSectionTitle(title: 'Checklist Items'),
 
             ListView.separated(
               shrinkWrap: true,
+              padding: EdgeInsets.zero,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _groupedItems.length,
-              separatorBuilder: (context, index) => SizedBox(height: 8.h),
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final item = _groupedItems[index];
                 final count = item['count'] as int;
@@ -363,178 +192,108 @@ class _TaskChecklistDetailPageState extends State<TaskChecklistDetailPage> {
                 final someCompleted = item['someCompleted'] as bool;
                 final doneDate = item['completeddate'];
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: cardBgColor,
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(
-                      color: isDone
-                          ? const Color(0xFF10B981).withValues(alpha: 0.3)
-                          : borderColor,
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Checkbox icon
-                        Container(
-                          width: 24.w,
-                          height: 24.w,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDone
-                                ? const Color(0xFF10B981)
-                                : Colors.transparent,
-                            border: Border.all(
-                              color: isDone
-                                  ? const Color(0xFF10B981)
-                                  : (isDarkMode ? const Color(0xFF475569) : const Color(0xFFD1D5DB)),
-                              width: 2,
-                            ),
+                return SoftCard(
+                  radius: 18,
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Checkbox icon
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDone ? p.success : Colors.transparent,
+                          border: Border.all(
+                            color: isDone ? p.success : p.border,
+                            width: 2,
                           ),
-                          child: isDone
-                              ? Icon(
-                                  Icons.check,
-                                  size: 16.sp,
-                                  color: Colors.white,
-                                )
-                              : null,
                         ),
+                        child: isDone
+                            ? Icon(Icons.check_rounded, size: 16, color: p.surface)
+                            : null,
+                      ),
 
-                        SizedBox(width: 12.w),
+                      const SizedBox(width: 12),
 
-                        // Item details
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item['checklistdesc'] ?? 'Checklist item',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.w500,
-                                        color: isDone
-                                            ? textSecondaryColor
-                                            : textPrimaryColor,
-                                        decoration: isDone
-                                            ? TextDecoration.lineThrough
-                                            : null,
-                                      ),
+                      // Item details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item['checklistdesc'] ?? 'Checklist item',
+                                    style: SoftText.body(
+                                      p,
+                                      size: 13.5,
+                                      color: isDone ? p.muted : p.ink,
+                                    ).copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      decoration: isDone ? TextDecoration.lineThrough : null,
                                     ),
                                   ),
-                                  if (count > 1) ...[
-                                    SizedBox(width: 8.w),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 6.w,
-                                        vertical: 2.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: textSecondaryColor.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(4.r),
-                                      ),
-                                      child: Text(
-                                        'x$count',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 10.sp,
-                                          fontWeight: FontWeight.w600,
-                                          color: textSecondaryColor,
-                                        ),
-                                      ),
+                                ),
+                                if (count > 1) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: p.surfaceAlt,
+                                      borderRadius: BorderRadius.circular(999),
                                     ),
-                                  ],
+                                    child: Text(
+                                      'x$count',
+                                      style: SoftText.caption(p, size: 10.5)
+                                          .copyWith(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (someCompleted) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.pending, size: 13, color: p.warning),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$completedCount of $count completed',
+                                    style: SoftText.caption(p, size: 11).copyWith(color: p.warning),
+                                  ),
                                 ],
                               ),
-                              if (someCompleted) ...[
-                                SizedBox(height: 6.h),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.pending,
-                                      size: 12.sp,
-                                      color: const Color(0xFFF59E0B),
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      '$completedCount of $count completed',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 10.sp,
-                                        fontWeight: FontWeight.w400,
-                                        color: const Color(0xFFF59E0B),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              if (isDone && doneDate != null) ...[
-                                SizedBox(height: 6.h),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      size: 12.sp,
-                                      color: const Color(0xFF10B981),
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      'All completed on ${_formatDate(doneDate)}',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 10.sp,
-                                        fontWeight: FontWeight.w400,
-                                        color: const Color(0xFF10B981),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
                             ],
-                          ),
-                        ),
-
-                        // Status badge
-                        if (isDone || someCompleted)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8.w,
-                              vertical: 4.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isDone
-                                  ? const Color(0xFF10B981).withValues(alpha: 0.1)
-                                  : const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
-                            child: Text(
-                              isDone ? 'Done' : '$completedCount/$count',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 9.sp,
-                                fontWeight: FontWeight.w600,
-                                color: isDone
-                                    ? const Color(0xFF10B981)
-                                    : const Color(0xFFF59E0B),
+                            if (isDone && doneDate != null) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.check_circle, size: 13, color: p.success),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'All completed on ${_formatDate(doneDate)}',
+                                    style: SoftText.caption(p, size: 11).copyWith(color: p.success),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      // Status badge
+                      if (isDone || someCompleted) ...[
+                        const SizedBox(width: 8),
+                        SoftStatusPill(
+                          label: isDone ? 'Done' : '$completedCount/$count',
+                          color: isDone ? p.success : p.warning,
+                          showDot: false,
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 );
               },

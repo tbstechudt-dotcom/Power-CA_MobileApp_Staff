@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
-import '../../app/theme.dart';
-import '../../core/providers/theme_provider.dart';
-import '../../features/auth/domain/entities/staff.dart';
 
-/// Modern Bottom Navigation Bar - Fully Responsive
-/// Works on all devices including Xiaomi, Samsung, etc.
-/// Uses ClipRect to absolutely prevent any overflow
-class ModernBottomNavigation extends StatefulWidget {
+import '../../features/auth/domain/entities/staff.dart';
+import '../../features/home/presentation/pages/work_log_entry_form_page.dart';
+import 'soft_page.dart';
+
+/// Bottom navigation - floating navy pill with the four tabs plus a round
+/// "+" button beside it.
+///
+/// The active tab is a white circle with a blue icon; the others are light
+/// icons on the navy pill. "+" calls [onAddPressed], or by default opens
+/// the work log form for today.
+class ModernBottomNavigation extends StatelessWidget {
   final int currentIndex;
   final Staff currentStaff;
   final VoidCallback? onAddPressed;
@@ -21,222 +23,152 @@ class ModernBottomNavigation extends StatefulWidget {
     this.onAddPressed,
   });
 
-  @override
-  State<ModernBottomNavigation> createState() => _ModernBottomNavigationState();
-}
+  static const _items = [
+    _NavItem('Home', '/dashboard', 'home stroke.svg', 'home fill.svg'),
+    _NavItem('Jobs', '/jobs', 'jobs stroke.svg', 'jobs fill.svg'),
+    _NavItem('Leave', '/leave', 'leave stroke.svg', 'leave fill.svg'),
+    _NavItem('Pinboard', '/pinboard', 'pinboard stroke.svg', 'Pinboard fill.svg'),
+  ];
 
-class _ModernBottomNavigationState extends State<ModernBottomNavigation>
-    with TickerProviderStateMixin {
-  late List<AnimationController> _controllers;
-  late List<Animation<double>> _animations;
-
-  @override
-  void initState() {
-    super.initState();
-    _controllers = List.generate(
-      4,
-      (index) => AnimationController(
-        duration: const Duration(milliseconds: 200),
-        vsync: this,
-      ),
-    );
-
-    _animations = _controllers
-        .map((controller) => Tween<double>(begin: 0.0, end: 1.0).animate(
-              CurvedAnimation(parent: controller, curve: Curves.easeInOut),
-            ),)
-        .toList();
-
-    if (widget.currentIndex < _controllers.length) {
-      _controllers[widget.currentIndex].forward();
-    }
-  }
-
-  @override
-  void didUpdateWidget(ModernBottomNavigation oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentIndex != widget.currentIndex) {
-      if (oldWidget.currentIndex < _controllers.length) {
-        _controllers[oldWidget.currentIndex].reverse();
-      }
-      if (widget.currentIndex < _controllers.length) {
-        _controllers[widget.currentIndex].forward();
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
+  static const double _barHeight = 62;
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final bgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final p = SoftPalette.of(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    // Increased height for better visibility
-    const double navContentHeight = 64.0;
-    final totalHeight = navContentHeight + bottomPadding;
-
-    return ClipRect(
-      child: Container(
-        height: totalHeight,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16.r),
-            topRight: Radius.circular(16.r),
-          ),
-          boxShadow: [
+    final navBg = p.isDark ? p.surfaceAlt : p.pill;
+    final shadow = p.isDark
+        ? const <BoxShadow>[]
+        : [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, -2),
+              color: const Color(0xFF0B1A30).withValues(alpha: 0.22),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Nav content area - fixed height with clip
-            ClipRect(
-              child: SizedBox(
-                height: navContentHeight,
-                child: Row(
-                  children: [
-                    _buildNavItem(
-                      context: context,
-                      iconPath: 'assets/icons/powerca icons/home stroke.svg',
-                      selectedIconPath: 'assets/icons/powerca icons/home fill.svg',
-                      label: 'Home',
-                      index: 0,
-                      animation: _animations[0],
-                      onTap: () => _navigateTo(context, '/dashboard', 0),
-                    ),
-                    _buildNavItem(
-                      context: context,
-                      iconPath: 'assets/icons/powerca icons/jobs stroke.svg',
-                      selectedIconPath: 'assets/icons/powerca icons/jobs fill.svg',
-                      label: 'Jobs',
-                      index: 1,
-                      animation: _animations[1],
-                      onTap: () => _navigateTo(context, '/jobs', 1),
-                    ),
-                    _buildNavItem(
-                      context: context,
-                      iconPath: 'assets/icons/powerca icons/leave stroke.svg',
-                      selectedIconPath: 'assets/icons/powerca icons/leave fill.svg',
-                      label: 'Leave',
-                      index: 2,
-                      animation: _animations[2],
-                      onTap: () => _navigateTo(context, '/leave', 2),
-                    ),
-                    _buildNavItem(
-                      context: context,
-                      iconPath: 'assets/icons/powerca icons/pinboard stroke.svg',
-                      selectedIconPath: 'assets/icons/powerca icons/Pinboard fill.svg',
-                      label: 'Pinboard',
-                      index: 3,
-                      animation: _animations[3],
-                      onTap: () => _navigateTo(context, '/pinboard', 3),
-                    ),
-                  ],
+          ];
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 6, 20, bottomPadding > 0 ? bottomPadding + 4 : 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Tab pill
+          Container(
+            height: _barHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 7),
+            decoration: BoxDecoration(
+              color: navBg,
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: shadow,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (int i = 0; i < _items.length; i++) _buildItem(context, p, i),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Add button
+          Semantics(
+            button: true,
+            label: 'Add work log',
+            child: Material(
+              color: navBg,
+              shape: const CircleBorder(),
+              elevation: 0,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onAddPressed ?? () => _openTodayLog(context),
+                child: Container(
+                  width: _barHeight,
+                  height: _barHeight,
+                  decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: shadow),
+                  child: Icon(Icons.add_rounded, size: 28, color: p.isDark ? p.ink : Colors.white),
                 ),
               ),
             ),
-            // Bottom safe area padding
-            if (bottomPadding > 0)
-              SizedBox(height: bottomPadding),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItem(BuildContext context, SoftPalette p, int index) {
+    final item = _items[index];
+    final selected = index == currentIndex;
+    final iconColor = selected
+        ? p.accent
+        : (p.isDark ? p.muted : Colors.white.withValues(alpha: 0.62));
+
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: item.label,
+      child: Tooltip(
+        message: item.label,
+        child: InkResponse(
+          onTap: () => _navigateTo(context, item.route, index),
+          radius: 28,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            width: 50,
+            height: 48,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              color: selected ? (p.isDark ? p.ink : Colors.white) : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: SvgPicture.asset(
+              'assets/icons/powerca icons/${selected ? item.selectedIcon : item.icon}',
+              width: 21,
+              height: 21,
+              colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem({
-    required BuildContext context,
-    required String iconPath,
-    required String selectedIconPath,
-    required String label,
-    required int index,
-    required Animation<double> animation,
-    required VoidCallback onTap,
-  }) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final isSelected = widget.currentIndex == index;
-    final unselectedColor = isDarkMode ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
-
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8.r),
-          splashColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-          highlightColor: AppTheme.primaryColor.withValues(alpha: 0.05),
-          child: Container(
-            height: 64,
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // SVG Icon (no background)
-                SvgPicture.asset(
-                  isSelected ? selectedIconPath : iconPath,
-                  width: 20,
-                  height: 20,
-                  colorFilter: ColorFilter.mode(
-                    isSelected
-                        ? AppTheme.primaryColor
-                        : unselectedColor,
-                    BlendMode.srcIn,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Label
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 10.sp,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected
-                        ? AppTheme.primaryColor
-                        : unselectedColor,
-                    height: 1.0,
-                  ),
-                  overflow: TextOverflow.clip,
-                  maxLines: 1,
-                ),
-              ],
-            ),
-          ),
+  void _openTodayLog(BuildContext context) {
+    final now = DateTime.now();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkLogEntryFormPage(
+          selectedDate: DateTime(now.year, now.month, now.day),
+          staffId: currentStaff.staffId,
         ),
       ),
     );
   }
 
   void _navigateTo(BuildContext context, String route, int index) {
-    if (widget.currentIndex != index) {
-      if (index == 0) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          route,
-          (route) => false,
-          arguments: widget.currentStaff,
-        );
-      } else {
-        Navigator.pushReplacementNamed(
-          context,
-          route,
-          arguments: widget.currentStaff,
-        );
-      }
+    if (currentIndex == index) return;
+    if (index == 0) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        route,
+        (route) => false,
+        arguments: currentStaff,
+      );
+    } else {
+      Navigator.pushReplacementNamed(
+        context,
+        route,
+        arguments: currentStaff,
+      );
     }
   }
+}
+
+class _NavItem {
+  final String label;
+  final String route;
+  final String icon;
+  final String selectedIcon;
+  const _NavItem(this.label, this.route, this.icon, this.selectedIcon);
 }

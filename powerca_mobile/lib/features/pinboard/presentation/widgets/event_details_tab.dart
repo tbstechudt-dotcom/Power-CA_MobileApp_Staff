@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../domain/entities/pinboard_item.dart';
 import '../bloc/pinboard_bloc.dart';
 import '../bloc/pinboard_event.dart';
@@ -14,14 +14,14 @@ class EventDetailsTab extends StatelessWidget {
     required this.item,
   });
 
-  Color _getCategoryColor() {
+  Color _getCategoryColor(SoftPalette p) {
     switch (item.category) {
       case PinboardCategory.dueDate:
-        return Colors.orange;
+        return p.warning;
       case PinboardCategory.meetings:
-        return Colors.blue;
+        return p.accent;
       case PinboardCategory.greetings:
-        return Colors.green;
+        return p.success;
     }
   }
 
@@ -38,243 +38,159 @@ class EventDetailsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categoryColor = _getCategoryColor();
+    final p = SoftPalette.of(context);
+    final categoryColor = _getCategoryColor(p);
     final dateFormat = DateFormat('EEEE, MMMM dd, yyyy');
     final timeFormat = DateFormat('hh:mm a');
     final createdFormat = DateFormat('MMM dd, yyyy - hh:mm a');
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Category Badge
-          Container(
-            padding: EdgeInsets.all(16.w),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: categoryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20.r),
-                border: Border.all(color: categoryColor, width: 1),
-              ),
-              child: Text(
-                _getCategoryName(),
-                style: TextStyle(
-                  color: categoryColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12.sp,
-                ),
-              ),
-            ),
-          ),
+          SoftStatusPill(label: _getCategoryName(), color: categoryColor),
+
+          const SizedBox(height: 14),
 
           // Title
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: Text(
-              item.title,
-              style: TextStyle(
-                fontSize: 24.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          Text(item.title, style: SoftText.title(p, size: 24)),
 
-          SizedBox(height: 16.h),
+          const SizedBox(height: 16),
 
           // Author and Like Button
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
+          SoftCard(
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
             child: Row(
               children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: p.tint(categoryColor),
+                  child: Icon(Icons.person_rounded, size: 18, color: categoryColor),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.authorName,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
+                      Text(item.authorName, style: SoftText.heading(p, size: 15)),
+                      const SizedBox(height: 2),
                       Text(
                         'Posted on ${createdFormat.format(item.createdAt)}',
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.grey[600],
-                        ),
+                        style: SoftText.caption(p),
                       ),
                     ],
                   ),
                 ),
                 // Like Button
-                IconButton(
-                  onPressed: () {
-                    context.read<PinboardBloc>().add(
-                          ToggleLikeEvent(item.id),
-                        );
-                  },
-                  icon: Icon(
-                    item.isLikedByCurrentUser
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    color: item.isLikedByCurrentUser
-                        ? Colors.red
-                        : Colors.grey,
+                Material(
+                  color: item.isLikedByCurrentUser ? p.tint(p.danger) : p.surfaceAlt,
+                  shape: const StadiumBorder(),
+                  child: InkWell(
+                    customBorder: const StadiumBorder(),
+                    onTap: () {
+                      context.read<PinboardBloc>().add(
+                            ToggleLikeEvent(item.id),
+                          );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            item.isLikedByCurrentUser
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            size: 18,
+                            color: item.isLikedByCurrentUser ? p.danger : p.muted,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${item.likesCount}',
+                            style: SoftText.caption(p, size: 13).copyWith(
+                              color: p.ink,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                Text(
-                  '${item.likesCount}',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(width: 8.w),
               ],
             ),
           ),
 
-          SizedBox(height: 24.h),
-          const Divider(height: 1),
-          SizedBox(height: 24.h),
+          const SizedBox(height: 12),
 
-          // Event Date and Time
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: Row(
+          // Event Date and Time / Location
+          SoftCard(
+            child: Column(
               children: [
-                Container(
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: categoryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(
-                    Icons.access_time,
+                _detailRow(
+                  p,
+                  icon: Icons.access_time_rounded,
+                  color: categoryColor,
+                  label: 'DATE & TIME',
+                  value: dateFormat.format(item.eventDate),
+                  secondary: timeFormat.format(item.eventDate),
+                ),
+                if (item.location != null) ...[
+                  Divider(height: 28, color: p.border),
+                  _detailRow(
+                    p,
+                    icon: Icons.location_on_outlined,
                     color: categoryColor,
-                    size: 28.sp,
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Date & Time',
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        dateFormat.format(item.eventDate),
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        timeFormat.format(item.eventDate),
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Location (if available)
-          if (item.location != null) ...[
-            SizedBox(height: 20.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(12.w),
-                    decoration: BoxDecoration(
-                      color: categoryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Icon(
-                      Icons.location_on,
-                      color: categoryColor,
-                      size: 28.sp,
-                    ),
-                  ),
-                  SizedBox(width: 16.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Location',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          item.location!,
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+                    label: 'LOCATION',
+                    value: item.location!,
                   ),
                 ],
-              ),
-            ),
-          ],
-
-          SizedBox(height: 24.h),
-          const Divider(height: 1),
-          SizedBox(height: 24.h),
-
-          // Description
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Description',
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                Text(
-                  item.description,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    height: 1.6,
-                    color: Colors.grey[800],
-                  ),
-                ),
               ],
             ),
           ),
 
-          SizedBox(height: 32.h),
+          const SizedBox(height: 20),
+
+          // Description
+          const SoftSectionTitle(title: 'Description'),
+          Text(
+            item.description,
+            style: SoftText.body(p, size: 15).copyWith(height: 1.6),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _detailRow(
+    SoftPalette p, {
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+    String? secondary,
+  }) {
+    return Row(
+      children: [
+        SoftIconBadge(icon: icon, color: color, size: 46),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: SoftText.overline(p)),
+              const SizedBox(height: 4),
+              Text(value, style: SoftText.heading(p, size: 15)),
+              if (secondary != null) ...[
+                const SizedBox(height: 2),
+                Text(secondary, style: SoftText.body(p, size: 13)),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

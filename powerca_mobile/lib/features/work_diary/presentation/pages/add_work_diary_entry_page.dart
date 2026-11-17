@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../app/theme.dart';
+import '../../../../shared/widgets/soft_page.dart';
+import '../../../../shared/widgets/soft_ui.dart';
 import '../../../auth/domain/entities/staff.dart';
 import '../../domain/entities/job.dart';
 import '../../domain/entities/work_diary_entry.dart';
@@ -55,87 +55,37 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.entry != null;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 8.w),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 42.w,
-                height: 42.h,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8EDF3),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFD1D9E6),
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 18.sp,
-                    color: AppTheme.textSecondaryColor,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        leadingWidth: 58.w,
-        title: Text(
-          isEditing ? 'Edit Entry' : 'Add Entry',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textPrimaryColor,
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1.5,
-            color: const Color(0xFFE9F0F8),
-          ),
-        ),
-      ),
+    return SoftScaffold(
+      title: isEditing ? 'Edit Entry' : 'Add Entry',
+      onBack: () => Navigator.pop(context),
+      bottomBar: _buildSaveButton(isEditing),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: EdgeInsets.all(16.w),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           children: [
             // Job name
             _buildInfoCard(),
 
-            SizedBox(height: 16.h),
+            const SizedBox(height: 20),
 
             // Date picker
             _buildDatePicker(),
 
-            SizedBox(height: 16.h),
+            const SizedBox(height: 18),
 
             // Hours input
             _buildHoursInput(),
 
-            SizedBox(height: 16.h),
+            const SizedBox(height: 18),
 
             // Notes input
             _buildNotesInput(),
-
-            SizedBox(height: 24.h),
-
-            // Save button
-            _buildSaveButton(isEditing),
           ],
         ),
       ),
@@ -143,42 +93,25 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
   }
 
   Widget _buildInfoCard() {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE3EFFF),
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final p = SoftPalette.of(context);
+    return SoftCard(
+      child: Row(
         children: [
-          Text(
-            'Job',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w400,
-              color: AppTheme.textSecondaryColor,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            widget.job.jobName,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimaryColor,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            widget.job.clientName ?? 'No Client',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w400,
-              color: AppTheme.textPrimaryColor,
+          SoftIconBadge(icon: Icons.work_outline_rounded, color: p.accent),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('JOB', style: SoftText.overline(p)),
+                const SizedBox(height: 4),
+                Text(widget.job.jobName, style: SoftText.heading(p, size: 15)),
+                const SizedBox(height: 4),
+                Text(
+                  widget.job.clientName ?? 'No Client',
+                  style: SoftText.body(p, size: 13),
+                ),
+              ],
             ),
           ),
         ],
@@ -187,226 +120,126 @@ class _AddWorkDiaryEntryPageState extends State<AddWorkDiaryEntryPage> {
   }
 
   Widget _buildDatePicker() {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: const Color(0xFFE9F0F8),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Date',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textPrimaryColor,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          InkWell(
-            onTap: () async {
-              // Get current date at midnight (00:00:00) for firstDate
-              final now = DateTime.now();
-              final today = DateTime(now.year, now.month, now.day);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SoftFieldLabel('Date'),
+        SoftPickerField(
+          value: _formatDate(_selectedDate),
+          placeholder: 'Select date',
+          icon: Icons.calendar_today_rounded,
+          onTap: () async {
+            // Get current date at midnight (00:00:00) for firstDate
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
 
-              final pickedDate = await showDatePicker(
-                context: context,
-                initialDate: _selectedDate.isBefore(today) ? today : _selectedDate,
-                firstDate: today, // Only allow current date and future dates
-                lastDate: DateTime(2030),
-              );
-              if (pickedDate != null) {
-                setState(() {
-                  _selectedDate = pickedDate;
-                });
-              }
-            },
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: const Color(0xFFE9F0F8),
-                  width: 1,
-                ),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _formatDate(_selectedDate),
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w400,
-                      color: AppTheme.textPrimaryColor,
-                    ),
-                  ),
-                  Icon(
-                    Icons.calendar_today,
-                    size: 20.sp,
-                    color: AppTheme.primaryColor,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+            final pickedDate = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate.isBefore(today) ? today : _selectedDate,
+              firstDate: today, // Only allow current date and future dates
+              lastDate: DateTime(2030),
+            );
+            if (pickedDate != null) {
+              setState(() {
+                _selectedDate = pickedDate;
+              });
+            }
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildHoursInput() {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: const Color(0xFFE9F0F8),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Actual Hours',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textPrimaryColor,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SoftFieldLabel('Actual Hours'),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Hours
+            Expanded(
+              child: TextFormField(
+                controller: _hoursController,
+                keyboardType: TextInputType.number,
+                style: softInputTextStyle(context),
+                decoration: softInputDecoration(
+                  context,
+                  hint: 'Hours',
+                  icon: Icons.schedule_rounded,
+                ).copyWith(suffixText: 'hrs'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Required';
+                  }
+                  final hours = int.tryParse(value);
+                  if (hours == null || hours < 0) {
+                    return 'Invalid';
+                  }
+                  return null;
+                },
+              ),
             ),
-          ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              // Hours
-              Expanded(
-                child: TextFormField(
-                  controller: _hoursController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Hours',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Required';
-                    }
-                    final hours = int.tryParse(value);
-                    if (hours == null || hours < 0) {
-                      return 'Invalid';
-                    }
-                    return null;
-                  },
-                ),
+            const SizedBox(width: 12),
+            // Minutes
+            Expanded(
+              child: TextFormField(
+                controller: _minutesController,
+                keyboardType: TextInputType.number,
+                style: softInputTextStyle(context),
+                decoration: softInputDecoration(
+                  context,
+                  hint: 'Minutes',
+                  icon: Icons.timer_outlined,
+                ).copyWith(suffixText: 'min'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Required';
+                  }
+                  final minutes = int.tryParse(value);
+                  if (minutes == null || minutes < 0 || minutes >= 60) {
+                    return 'Invalid';
+                  }
+                  return null;
+                },
               ),
-              SizedBox(width: 16.w),
-              // Minutes
-              Expanded(
-                child: TextFormField(
-                  controller: _minutesController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Minutes',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Required';
-                    }
-                    final minutes = int.tryParse(value);
-                    if (minutes == null || minutes < 0 || minutes >= 60) {
-                      return 'Invalid';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
   Widget _buildNotesInput() {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: const Color(0xFFE9F0F8),
-          width: 1,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SoftFieldLabel('Notes'),
+        TextFormField(
+          controller: _notesController,
+          maxLines: 5,
+          style: softInputTextStyle(context),
+          decoration: softInputDecoration(
+            context,
+            hint: 'Enter details about the work done...',
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter some notes';
+            }
+            return null;
+          },
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Notes',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textPrimaryColor,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          TextFormField(
-            controller: _notesController,
-            maxLines: 5,
-            decoration: InputDecoration(
-              hintText: 'Enter details about the work done...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter some notes';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
+      ],
     );
   }
 
   Widget _buildSaveButton(bool isEditing) {
-    return ElevatedButton(
+    return SoftPillButton(
+      label: isEditing ? 'Update Entry' : 'Save Entry',
+      icon: Icons.check_rounded,
       onPressed: _saveEntry,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.primaryColor,
-        padding: EdgeInsets.symmetric(vertical: 16.h),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-      ),
-      child: Text(
-        isEditing ? 'Update Entry' : 'Save Entry',
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 16.sp,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
     );
   }
 

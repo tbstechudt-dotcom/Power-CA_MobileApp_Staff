@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../app/theme.dart';
 import '../../../../core/config/injection.dart';
+import '../../../../core/services/tab_data_cache.dart';
+import '../../../auth/domain/repositories/auth_repository.dart';
+import '../../../../shared/widgets/auth_sheet.dart';
+import '../../../../shared/widgets/soft_page.dart';
 import '../../domain/repositories/device_security_repository.dart';
 import '../bloc/device_security_bloc.dart';
 import '../bloc/device_security_event.dart';
@@ -115,6 +117,16 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       );
     }
 
+    // A freshly verified device always signs in again: drop any login left
+    // over from before, so the verified staff member can't land in an older
+    // (possibly someone else's) session.
+    try {
+      await getIt<AuthRepository>().clearStaffSession();
+    } catch (e) {
+      debugPrint('Error clearing old session after OTP: $e');
+    }
+    TabDataCache.clear();
+
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -133,188 +145,78 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: AppTheme.textPrimaryColor,
-            size: 20.sp,
+    final p = SoftPalette.of(context);
+    return BlocListener<DeviceSecurityBloc, DeviceSecurityState>(
+      listener: (context, state) async {
+        if (state is DeviceSecurityError) {
+          setState(() {
+            _hasError = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else if (state is OtpVerified) {
+          // OTP verified - store verification data locally and navigate
+          _handleOtpVerified(state);
+        }
+      },
+      child: AuthSheet(
+        title: 'Check your messages',
+        subtitle: "We've sent a 6-digit code to",
+        subtitleExtra: Text(widget.maskedPhone),
+        icon: Icons.sms_outlined,
+        showBack: true,
+        onBack: () => Navigator.of(context).pop(),
+        children: [
+          // OTP Input
+          OtpInputField(
+            length: 6,
+            onCompleted: _onOtpCompleted,
+            hasError: _hasError,
+            onChanged: (value) {
+              setState(() {
+                _otpValue = value;
+                _hasError = false;
+              });
+            },
           ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: BlocListener<DeviceSecurityBloc, DeviceSecurityState>(
-        listener: (context, state) async {
-          if (state is DeviceSecurityError) {
-            setState(() {
-              _hasError = true;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
+          const SizedBox(height: 18),
+          // Timer
+          Text(
+            _canResend ? 'Code expired' : 'Code expires in $_formattedTime',
+            textAlign: TextAlign.center,
+            style: SoftText.caption(p, size: 13),
+          ),
+          const SizedBox(height: 22),
+          // Verify Button
+          BlocBuilder<DeviceSecurityBloc, DeviceSecurityState>(
+            builder: (context, state) {
+              final isLoading = state is OtpVerifying;
+              return SoftPillButton(
+                label: 'Verify',
+                loading: isLoading,
+                onPressed: _otpValue.length == 6 && !isLoading
+                    ? () => _onOtpCompleted(_otpValue)
+                    : null,
+              );
+            },
+          ),
+          const SizedBox(height: 6),
+          // Resend (enabled once the timer runs out)
+          Center(
+            child: TextButton(
+              onPressed: _canResend ? _onResendOtp : null,
+              style: TextButton.styleFrom(
+                foregroundColor: p.accent,
+                disabledForegroundColor: p.muted,
               ),
-            );
-          } else if (state is OtpVerified) {
-            // OTP verified - store verification data locally and navigate
-            _handleOtpVerified(state);
-          }
-        },
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 40.h),
-                // Icon
-                Container(
-                  width: 80.w,
-                  height: 80.h,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.phone_android,
-                    size: 40.sp,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-                SizedBox(height: 32.h),
-                // Title
-                Text(
-                  'Verify Your Phone',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 24.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimaryColor,
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                // Description
-                Text(
-                  'We\'ve sent a 6-digit OTP to',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w400,
-                    color: AppTheme.textSecondaryColor,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  widget.maskedPhone,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimaryColor,
-                  ),
-                ),
-                SizedBox(height: 48.h),
-                // OTP Input
-                OtpInputField(
-                  length: 6,
-                  onCompleted: _onOtpCompleted,
-                  hasError: _hasError,
-                  onChanged: (value) {
-                    setState(() {
-                      _otpValue = value;
-                      _hasError = false;
-                    });
-                  },
-                ),
-                SizedBox(height: 32.h),
-                // Timer / Resend
-                if (!_canResend)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.timer_outlined,
-                        size: 18.sp,
-                        color: AppTheme.textMutedColor,
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Expires in $_formattedTime',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.textMutedColor,
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  TextButton(
-                    onPressed: _onResendOtp,
-                    child: Text(
-                      'Resend OTP',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                  ),
-                const Spacer(),
-                // Verify Button
-                BlocBuilder<DeviceSecurityBloc, DeviceSecurityState>(
-                  builder: (context, state) {
-                    final isLoading = state is OtpVerifying;
-                    return SizedBox(
-                      width: double.infinity,
-                      height: 52.h,
-                      child: ElevatedButton(
-                        onPressed: _otpValue.length == 6 && !isLoading
-                            ? () => _onOtpCompleted(_otpValue)
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                        ),
-                        child: isLoading
-                            ? SizedBox(
-                                width: 24.w,
-                                height: 24.h,
-                                child: const CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : Text(
-                                'Verify',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                      ),
-                    );
-                  },
-                ),
-                SizedBox(height: 32.h),
-              ],
+              child: const Text('Resend code'),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
