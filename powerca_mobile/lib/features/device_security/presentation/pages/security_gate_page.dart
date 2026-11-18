@@ -8,9 +8,9 @@ import '../../../../shared/widgets/soft_ui.dart';
 import '../../domain/repositories/device_security_repository.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 
-/// TEMPORARY: skips the phone / OTP step in every build type.
-/// TODO: Set back to false before releasing the app.
-const bool _skipPhoneVerification = true;
+/// Skips the phone / OTP step in every build type when true.
+/// Must stay false in released builds.
+const bool _skipPhoneVerification = false;
 
 /// Security Gate Page
 /// This is the FIRST screen shown when app launches
