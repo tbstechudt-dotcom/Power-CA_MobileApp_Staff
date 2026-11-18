@@ -11,7 +11,7 @@ import 'meeting_page.dart';
 
 /// Home "Appointments" card: open meetings (upcoming, or past and waiting
 /// for an outcome) plus an "Add meeting" button. Reloads from
-/// `j_appointments` whenever [AppointmentStore] writes.
+/// `mbappointments` whenever [AppointmentStore] writes.
 class AppointmentsCard extends StatefulWidget {
   final Staff currentStaff;
   final int maxItems;
