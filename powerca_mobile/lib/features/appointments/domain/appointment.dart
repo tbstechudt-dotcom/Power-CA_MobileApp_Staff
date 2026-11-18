@@ -41,7 +41,7 @@ enum AppointmentStatus {
       values.firstWhere((s) => s.code == c?.trim(), orElse: () => AppointmentStatus.active);
 }
 
-/// A row of `j_appointments`.
+/// A row of `mbappointments`.
 @immutable
 class Appointment {
   final int id; // appo_id

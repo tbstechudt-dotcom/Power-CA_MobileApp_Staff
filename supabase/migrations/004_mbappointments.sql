@@ -1,5 +1,5 @@
 -- =====================================================
--- j_appointments: client / contact meetings booked from the mobile app
+-- mbappointments: client / contact meetings booked from the mobile app
 --
 -- Written by the "Add meeting" screen (Appointment tab) and updated by the
 -- Outcome tab. Rescheduling marks the old row appo_status = 'R' and inserts
@@ -14,17 +14,17 @@
 --     tables (source = 'M' for mobile rows) so reverse sync can pick it up.
 -- =====================================================
 
-CREATE SEQUENCE IF NOT EXISTS public.j_appointments_appo_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.mbappointments_appo_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
     MAXVALUE 99999          -- appo_id is numeric(5,0)
     NO CYCLE;
 
-CREATE TABLE IF NOT EXISTS public.j_appointments
+CREATE TABLE IF NOT EXISTS public.mbappointments
 (
     appo_id             numeric(5,0) NOT NULL
-                        DEFAULT nextval('public.j_appointments_appo_id_seq'::regclass)
+                        DEFAULT nextval('public.mbappointments_appo_id_seq'::regclass)
                         PRIMARY KEY,
     org_id              numeric(3,0) NOT NULL,                    -- from login
     loc_id              numeric(3,0) NOT NULL,                    -- from login
@@ -60,19 +60,19 @@ CREATE TABLE IF NOT EXISTS public.j_appointments
     created_at          timestamp with time zone DEFAULT now(),
     updated_at          timestamp with time zone DEFAULT now(),
 
-    CONSTRAINT j_appointments_meetmode_chk  CHECK (appmeetmode IN ('D', 'V')),
-    CONSTRAINT j_appointments_isclient_chk  CHECK (appo_isclientexist IN ('E', 'N')),
-    CONSTRAINT j_appointments_status_chk    CHECK (appo_status IN ('A', 'R', 'C')),
-    CONSTRAINT j_appointments_resched_chk   CHECK (appisreschedule IN ('Y', 'N'))
+    CONSTRAINT mbappointments_meetmode_chk  CHECK (appmeetmode IN ('D', 'V')),
+    CONSTRAINT mbappointments_isclient_chk  CHECK (appo_isclientexist IN ('E', 'N')),
+    CONSTRAINT mbappointments_status_chk    CHECK (appo_status IN ('A', 'R', 'C')),
+    CONSTRAINT mbappointments_resched_chk   CHECK (appisreschedule IN ('Y', 'N'))
 );
 
-ALTER SEQUENCE public.j_appointments_appo_id_seq OWNED BY public.j_appointments.appo_id;
+ALTER SEQUENCE public.mbappointments_appo_id_seq OWNED BY public.mbappointments.appo_id;
 
-CREATE INDEX IF NOT EXISTS j_appointments_staff_date_idx
-    ON public.j_appointments (sporgid, appo_mdate);
+CREATE INDEX IF NOT EXISTS mbappointments_staff_date_idx
+    ON public.mbappointments (sporgid, appo_mdate);
 
 -- Keep updated_at current on every update
-CREATE OR REPLACE FUNCTION public.j_appointments_set_updated_at()
+CREATE OR REPLACE FUNCTION public.mbappointments_set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -82,22 +82,25 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS j_appointments_updated_at ON public.j_appointments;
-CREATE TRIGGER j_appointments_updated_at
-    BEFORE UPDATE ON public.j_appointments
-    FOR EACH ROW EXECUTE FUNCTION public.j_appointments_set_updated_at();
+DROP TRIGGER IF EXISTS mbappointments_updated_at ON public.mbappointments;
+CREATE TRIGGER mbappointments_updated_at
+    BEFORE UPDATE ON public.mbappointments
+    FOR EACH ROW EXECUTE FUNCTION public.mbappointments_set_updated_at();
 
 -- =====================================================
 -- Row Level Security (same open policy as the other mobile tables; the app
 -- uses its own mbstaff login, not Supabase Auth)
 -- =====================================================
-ALTER TABLE public.j_appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mbappointments ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Mobile app can manage appointments" ON public.j_appointments;
-CREATE POLICY "Mobile app can manage appointments" ON public.j_appointments
+DROP POLICY IF EXISTS "Mobile app can manage appointments" ON public.mbappointments;
+CREATE POLICY "Mobile app can manage appointments" ON public.mbappointments
     FOR ALL USING (true) WITH CHECK (true);
 
-GRANT ALL ON public.j_appointments TO authenticated;
-GRANT ALL ON public.j_appointments TO anon;
-GRANT USAGE, SELECT ON SEQUENCE public.j_appointments_appo_id_seq TO authenticated;
-GRANT USAGE, SELECT ON SEQUENCE public.j_appointments_appo_id_seq TO anon;
+GRANT ALL ON public.mbappointments TO authenticated;
+GRANT ALL ON public.mbappointments TO anon;
+GRANT USAGE, SELECT ON SEQUENCE public.mbappointments_appo_id_seq TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.mbappointments_appo_id_seq TO anon;
+
+-- Make the new table visible to the app's API straight away
+NOTIFY pgrst, 'reload schema';
