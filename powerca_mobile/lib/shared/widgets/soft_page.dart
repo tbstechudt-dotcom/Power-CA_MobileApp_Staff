@@ -184,15 +184,22 @@ class SoftScaffold extends StatelessWidget {
       bottomNavigationBar: bottomNavigationBar ??
           (bottomBar == null
               ? null
-              : SafeArea(
-                  top: false,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                    decoration: BoxDecoration(
-                      color: p.background,
-                      border: Border(top: BorderSide(color: p.border)),
+              // Scaffold leaves its bottom bar behind the keyboard, so lift
+              // it by the keyboard height to keep the action reachable.
+              : Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(context).bottom,
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                      decoration: BoxDecoration(
+                        color: p.background,
+                        border: Border(top: BorderSide(color: p.border)),
+                      ),
+                      child: bottomBar,
                     ),
-                    child: bottomBar,
                   ),
                 )),
       body: SafeArea(

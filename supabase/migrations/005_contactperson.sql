@@ -2,7 +2,7 @@
 -- contactperson: contact person master (prospects / non-client contacts)
 --
 -- Created from the "New contact" option of the Add meeting screen.
--- j_appointments.appo_con_id holds contactperson.con_id for meetings with
+-- mbappointments.appo_con_id holds contactperson.con_id for meetings with
 -- appo_isclientexist = 'N'.
 --
 -- Additions to the original spec (same as the other mobile tables):
