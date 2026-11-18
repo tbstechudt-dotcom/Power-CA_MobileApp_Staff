@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../auth/domain/entities/staff.dart';
 import '../domain/appointment.dart';
 
-/// Reads and writes `j_appointments` in Supabase.
+/// Reads and writes `mbappointments` in Supabase.
 ///
 /// Widgets listen to [instance]; it notifies after every write so the Home
 /// card reloads.
@@ -12,7 +12,7 @@ class AppointmentStore extends ChangeNotifier {
   AppointmentStore._();
   static final AppointmentStore instance = AppointmentStore._();
 
-  static const _table = 'j_appointments';
+  static const _table = 'mbappointments';
 
   SupabaseClient get _db => Supabase.instance.client;
 

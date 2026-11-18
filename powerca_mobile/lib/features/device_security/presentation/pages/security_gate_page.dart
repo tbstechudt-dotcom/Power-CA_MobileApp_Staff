@@ -8,6 +8,10 @@ import '../../../../shared/widgets/soft_ui.dart';
 import '../../domain/repositories/device_security_repository.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 
+/// TEMPORARY: skips the phone / OTP step in every build type.
+/// TODO: Set back to false before releasing the app.
+const bool _skipPhoneVerification = true;
+
 /// Security Gate Page
 /// This is the FIRST screen shown when app launches
 /// Simplified Flow (No Fingerprint):
@@ -60,7 +64,8 @@ class _SecurityGatePageState extends State<SecurityGatePage> {
       final securityRepository = getIt<DeviceSecurityRepository>();
 
       // Check local storage for verified phone (NO fingerprint needed)
-      final isVerified = await securityRepository.isDeviceVerifiedLocally();
+      final isVerified = _skipPhoneVerification ||
+          await securityRepository.isDeviceVerifiedLocally();
 
       if (!mounted) return;
 

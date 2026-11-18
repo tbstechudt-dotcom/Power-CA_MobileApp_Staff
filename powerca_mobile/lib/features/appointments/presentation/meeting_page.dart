@@ -11,7 +11,7 @@ import '../domain/appointment.dart';
 import 'party_picker_sheet.dart';
 
 /// "Add meeting" page with two tabs:
-///  * Appointment - who, how, when, duration and purpose (`j_appointments`)
+///  * Appointment - who, how, when, duration and purpose (`mbappointments`)
 ///  * Outcome     - actual time spent, key person met, optional reschedule
 ///
 /// Opened empty from the Home "Add meeting" button, or with [appointment]
