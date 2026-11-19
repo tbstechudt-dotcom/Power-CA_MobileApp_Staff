@@ -29,7 +29,7 @@ class AuthSheet extends StatelessWidget {
   final VoidCallback? onBack;
   final Widget? footer;
 
-  /// Small muted line at the bottom of the sheet ("Version 2.0.0").
+  /// Small muted line at the bottom of the sheet ("Version 2.0.1").
   final String? note;
 
   const AuthSheet({
