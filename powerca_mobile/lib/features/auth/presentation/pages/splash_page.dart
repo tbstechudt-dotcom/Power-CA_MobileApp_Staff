@@ -114,7 +114,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
       title: 'Auditor WorkLog',
       subtitle: 'Track work hours, manage tasks and stay in sync with your office.',
       icon: Icons.work_outline_rounded,
-      note: 'Version 2.0.0',
+      note: 'Version 2.0.1',
       children: [
         AnimatedBuilder(
           animation: _animationController,
